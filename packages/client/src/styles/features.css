@@ -688,3 +688,237 @@
     transition: none;
   }
 }
+
+/* Quest Board — clickable items */
+.quest-board-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.quest-board-item-btn:hover .quest-board-title {
+  color: var(--color-banner-red);
+}
+
+.quest-board-item-btn:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: -2px;
+  border-radius: 2px;
+}
+
+/* Quest audit badge (on quest board cards) */
+.quest-audit-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.quest-audit-badge--pass {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #2e7d32;
+}
+
+.quest-audit-badge--gaps {
+  background: #fff8e1;
+  color: #6d4c00;
+  border: 1px solid #f9a825;
+}
+
+/* Spec audit panel */
+.spec-audit-panel {
+  margin: 1rem 0;
+  border: 1px solid var(--color-stone-border);
+  border-radius: 4px;
+  padding: 0.75rem;
+  background: var(--color-parchment);
+}
+
+.spec-audit-heading {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--color-text);
+  margin: 0 0 0.75rem;
+}
+
+.spec-audit-result {
+  min-height: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.spec-audit-empty {
+  font-style: italic;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.spec-audit-pass {
+  color: #1b5e20;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.spec-audit-gaps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.spec-audit-gap-item {
+  margin: 0;
+}
+
+.spec-audit-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.spec-audit-success {
+  color: #1b5e20;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.spec-audit-error {
+  color: #c62828;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Gap chips */
+@keyframes gap-chip-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+
+.gap-chip {
+  border: 1px solid var(--color-stone-border);
+  border-left-width: 4px;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--color-parchment);
+}
+
+.gap-chip--block {
+  border-left-color: var(--color-banner-red);
+  animation: gap-chip-pulse 2s ease-in-out infinite;
+}
+
+.gap-chip--warn {
+  border-left-color: #f9a825;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gap-chip--block {
+    animation: none;
+  }
+}
+
+[data-reduced-motion='true'] .gap-chip--block {
+  animation: none;
+}
+
+.gap-chip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.gap-chip-severity {
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8b1a1a;
+  background: #ffebee;
+  border: 1px solid #c62828;
+  border-radius: 2px;
+  padding: 0.1rem 0.35rem;
+  display: inline-block;
+  align-self: flex-start;
+}
+
+.gap-chip-reason {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.gap-chip-navigate {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.65rem;
+  white-space: nowrap;
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-stone-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.gap-chip-navigate:hover {
+  border-color: var(--color-stone-dark);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.gap-chip-navigate:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gap-chip-navigate {
+    transition: none;
+  }
+}
+
+/* War Room quest detail */
+.war-room-quest-detail {
+  margin-top: 0.25rem;
+}
+
+.war-room-quest-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--color-text);
+  margin: 0 0 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.war-room-loading,
+.war-room-load-error {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  margin: 0.5rem 0;
+}

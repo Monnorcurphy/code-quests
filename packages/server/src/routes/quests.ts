@@ -1,8 +1,10 @@
 import { Router, Response } from 'express';
 import Database from 'better-sqlite3';
 import { z } from 'zod';
-import { QuestStatusSchema, EquipmentSchema, SpecAuditSchema } from '@code-quests/shared';
+import { QuestStatusSchema, EquipmentSchema, SpecAuditSchema, QuestSchema } from '@code-quests/shared';
 import { validate } from '../middleware/validate';
+import { auditQuest } from '../audit/audit-quest';
+import { getAuditAdapter } from '../agents/select-adapter';
 
 const CreateQuestSchema = z.object({
   title: z.string().min(1),
@@ -163,6 +165,29 @@ export function createQuestsRouter(db: Database.Database): Router {
     }
     const updated = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
     res.json(rowToApi(updated));
+  });
+
+  router.post('/:id/audit', (req, res) => {
+    const row = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow | undefined;
+    if (!row) {
+      res.status(404).json({ error: 'Quest not found' });
+      return;
+    }
+    void (async () => {
+      try {
+        const quest = QuestSchema.parse(rowToApi(row));
+        const adapter = getAuditAdapter();
+        const audit = await auditQuest(quest, adapter);
+        const now = new Date().toISOString();
+        db.prepare('UPDATE quests SET spec_audit_json = ?, updated_at = ? WHERE id = ?')
+          .run(JSON.stringify(audit), now, req.params.id);
+        res.json(audit);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        process.stderr.write(`[quests] POST /quests/:id/audit failed: ${msg}\n`);
+        res.status(500).json({ error: 'Failed to run audit' });
+      }
+    })();
   });
 
   router.delete('/:id', (req, res) => {

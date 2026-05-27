@@ -7,6 +7,7 @@ import {
   SkillSchema,
   ToolSchema,
   MCPServerSchema,
+  SpecAuditSchema,
 } from '@code-quests/shared';
 import type { Equipment } from '@code-quests/shared';
 
@@ -104,6 +105,8 @@ export const api = {
       postJson(QuestSchema, '/quests', input),
     patch: (id: string, body: PatchQuestInput) =>
       patchJson(QuestSchema, `/quests/${id}`, body),
+    audit: (id: string) =>
+      postJson(SpecAuditSchema, `/quests/${id}/audit`, {}),
   },
   epics: {
     list: () => fetchJson(z.array(EpicSchema), '/epics'),

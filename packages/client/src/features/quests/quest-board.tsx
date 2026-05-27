@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Quest, QuestStatus } from '@code-quests/shared';
 import { api } from '../../lib/api';
+import { useTownStore } from '../../stores/town-store';
 
 const STATUS_LABELS: Record<QuestStatus, string> = {
   idle: 'Drafted',
@@ -20,7 +21,29 @@ const STATUS_CLASS: Record<QuestStatus, string> = {
   user_blocked: 'quest-badge quest-badge--blocked',
 };
 
+function AuditBadge({ quest }: { quest: Quest }) {
+  if (quest.specAudit === null) return null;
+  if (quest.specAudit.gaps.length === 0) {
+    return (
+      <span className="quest-audit-badge quest-audit-badge--pass" aria-label="Audit: all checks pass">
+        ✓ Ready
+      </span>
+    );
+  }
+  return (
+    <span
+      className="quest-audit-badge quest-audit-badge--gaps"
+      aria-label={`Audit: ${quest.specAudit.gaps.length} gap${quest.specAudit.gaps.length === 1 ? '' : 's'}`}
+    >
+      ⚠ {quest.specAudit.gaps.length} {quest.specAudit.gaps.length === 1 ? 'gap' : 'gaps'}
+    </span>
+  );
+}
+
 export default function QuestBoard() {
+  const setSelectedQuestId = useTownStore((s) => s.setSelectedQuestId);
+  const setActiveModal = useTownStore((s) => s.setActiveModal);
+
   const { data: rawData, isLoading, error } = useQuery({
     queryKey: ['quests'],
     queryFn: api.quests.list,
@@ -51,19 +74,35 @@ export default function QuestBoard() {
     );
   }
 
+  function openQuestDetail(quest: Quest) {
+    setSelectedQuestId(quest.id);
+    setActiveModal('draft');
+  }
+
   return (
     <ul className="quest-board-list" role="list" aria-label="Quest board" tabIndex={0}>
       {quests.map((quest) => (
         <li key={quest.id} className="quest-board-item">
-          <span className="quest-board-title">{quest.title}</span>
-          <span className={STATUS_CLASS[quest.status]} aria-label={`Status: ${STATUS_LABELS[quest.status]}`}>
-            {STATUS_LABELS[quest.status]}
-          </span>
-          {quest.acceptanceCriteria.length > 0 && (
-            <span className="quest-board-ac-count">
-              {quest.acceptanceCriteria.length} AC
+          <button
+            type="button"
+            className="quest-board-item-btn"
+            onClick={() => openQuestDetail(quest)}
+            aria-label={`View quest: ${quest.title}`}
+          >
+            <span className="quest-board-title">{quest.title}</span>
+            <span
+              className={STATUS_CLASS[quest.status as QuestStatus]}
+              aria-label={`Status: ${STATUS_LABELS[quest.status as QuestStatus]}`}
+            >
+              {STATUS_LABELS[quest.status as QuestStatus]}
             </span>
-          )}
+            {quest.acceptanceCriteria.length > 0 && (
+              <span className="quest-board-ac-count">
+                {quest.acceptanceCriteria.length} AC
+              </span>
+            )}
+            <AuditBadge quest={quest} />
+          </button>
         </li>
       ))}
     </ul>
