@@ -25,11 +25,9 @@ export default function RecruitModal({ onCancel, onSuccess }: RecruitModalProps)
   const [nameError, setNameError] = useState<string | null>(null);
 
   const onSuccessRef = useRef(onSuccess);
-  const onCancelRef = useRef(onCancel);
 
   useEffect(() => {
     onSuccessRef.current = onSuccess;
-    onCancelRef.current = onCancel;
   });
 
   const queryClient = useQueryClient();
@@ -110,6 +108,10 @@ export default function RecruitModal({ onCancel, onSuccess }: RecruitModalProps)
 
   return (
     <div className="recruit-form-container">
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {isSubmitting ? 'Submitting…' : ''}
+      </p>
+
       {isSuccess && (
         <p className="recruit-success" role="status" aria-live="polite">
           Adventurer recruited! Welcome to the guild.
@@ -164,7 +166,7 @@ export default function RecruitModal({ onCancel, onSuccess }: RecruitModalProps)
           <button type="submit" disabled={disabled} aria-busy={isSubmitting ? 'true' : undefined}>
             {isSubmitting ? 'Recruiting…' : 'Recruit'}
           </button>
-          <button type="button" onClick={onCancelRef.current} disabled={disabled}>
+          <button type="button" onClick={onCancel} disabled={disabled}>
             Cancel
           </button>
         </div>
