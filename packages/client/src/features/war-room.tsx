@@ -4,6 +4,7 @@ import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
 import DraftForm from './quests/draft-form';
 import SpecAuditPanel from './quests/spec-audit-panel';
+import DispatchButton from './quests/dispatch-button';
 import { useRunAudit } from './quests/use-run-audit';
 import { api } from '../lib/api';
 import type { Quest } from '@code-quests/shared';
@@ -79,6 +80,7 @@ function QuestDetailSection({
         runError={runError}
         runSuccess={runSuccess}
       />
+      <DispatchButton quest={quest} />
       <div className="form-actions">
         <button type="button" className="btn-secondary" onClick={onDraftAnother}>
           Draft new quest

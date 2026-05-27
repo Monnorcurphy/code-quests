@@ -901,6 +901,93 @@
   }
 }
 
+/* Dispatch section */
+.dispatch-section {
+  margin: 0.75rem 0;
+}
+
+.dispatch-success {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  color: #2e7d32;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.dispatch-error {
+  background: #fce4ec;
+  border: 1px solid #f48fb1;
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  color: #c62828;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.dispatch-blocked {
+  background: #fff8e1;
+  border: 1px solid #f9a825;
+  border-left: 4px solid var(--color-banner-red);
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.dispatch-blocked-heading {
+  font-size: 0.875rem;
+  font-weight: bold;
+  color: #5a1a1a;
+  margin: 0 0 0.5rem;
+}
+
+.dispatch-blocked-gaps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.dispatch-bypass-btn {
+  font-size: 0.875rem;
+  padding: 0.4rem 0.75rem;
+}
+
+/* Parchment-style bypass confirmation panel */
+.dispatch-confirm-panel {
+  background: #f4e8c8;
+  border: 2px solid #c8a87a;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(92, 60, 20, 0.18), inset 0 0 0 1px #e8d4a0;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.dispatch-confirm-title {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: #5a1a1a;
+  margin: 0 0 0.5rem;
+}
+
+.dispatch-confirm-body {
+  font-size: 0.875rem;
+  color: #5c4828;
+  margin: 0 0 0.75rem;
+  font-style: italic;
+}
+
+.dispatch-confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 /* War Room quest detail */
 .war-room-quest-detail {
   margin-top: 0.25rem;

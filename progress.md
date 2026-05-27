@@ -1,20 +1,33 @@
 # Progress — Phase 3
 
-Previous task progress archived to metrics/progress-before-emerald.md
+Previous task progress archived to metrics/progress-before-fluorite.md
 
-## emerald — Spec-audit warning UI + town-routing chips
+## fluorite — Dispatch action (POST /quests/:id/dispatch + UI button)
 
 **Status:** Complete
 
-**What was built:**
-- `POST /quests/:id/audit` server endpoint — runs `auditQuest()`, persists result to `spec_audit_json`, returns `SpecAudit`
-- `api.quests.audit(id)` client method for calling the endpoint
-- `use-run-audit.ts` — TanStack Query mutation hook with cache invalidation
-- `gap-chip.tsx` — accessible chip with "BLOCKING" text label for block-severity gaps, "Go to {building}" button with full aria-label
-- `spec-audit-panel.tsx` — renders null/empty/gap states with GapChip list and "Run audit" button (loading/success/error states)
-- `town-store.ts` — added `goToBuilding(building)` action mapping SpecGapBuilding to SceneKey via `sceneRouter.emitDoorEnter`
-- `war-room.tsx` — redesigned to show quest detail view (with SpecAuditPanel + run audit) when selectedQuestId is set, draft form otherwise; success auto-dismisses after 3s
-- `quest-board.tsx` — cards are now clickable buttons opening War Room with the quest selected; "✓ Ready" / "⚠ N gaps" audit badges shown per card
-- CSS — gap chip pulse animation (disabled under prefers-reduced-motion), spec-audit-panel, quest-audit-badge, gap-chip styles
-- Server tests: 4 new tests for `POST /quests/:id/audit`
-- Client tests: 13 new tests for `SpecAuditPanel` covering null/pass/gaps states, BLOCKING label, chip navigation, aria-labels, run audit button states
+### Backend
+- Added `POST /quests/:id/dispatch` to `packages/server/src/routes/quests.ts`
+  - Checks status is `idle`, returns 409 if already dispatched
+  - Runs `auditQuest()` via `getAuditAdapter()`
+  - If block gaps and no `?bypass=true` → 409 with `{ error, audit }`
+  - Otherwise: sets `status='active'`, `ac_locked_at=now()`, `spec_audit_json` with `bypassed` flag, returns 200 quest
+- New test file `packages/server/src/__tests__/dispatch.test.ts` (7 tests covering: 404, 409 non-idle, 409 block gaps, 200 success, 200 bypass, AC lock after dispatch, non-AC patch still works)
+
+### Frontend
+- Extended `ApiError` in `packages/client/src/lib/api.ts` with `data?: unknown` to carry raw 409 body (audit included)
+- Added `api.quests.dispatch(id, bypass?)` to the api client
+- New component `packages/client/src/features/quests/dispatch-button.tsx`
+  - Three UX states: idle "Dispatch quest", loading (spinner + disabled), success (3s auto-dismiss then close modal)
+  - On 409 with block gaps: shows audit inline with "Dispatch anyway" button
+  - "Dispatch anyway" triggers parchment-style confirm panel with 2-second countdown before confirm enables
+  - Error state (non-409) persists until user action
+- Mounted `<DispatchButton quest={quest} />` in `QuestDetailSection` of `packages/client/src/features/war-room.tsx`
+- Added dispatch CSS classes to `packages/client/src/styles/features.css`
+- New test file `packages/client/src/__tests__/dispatch-button.test.tsx` (10 tests covering all UX states, countdown, bypass flow, error persistence)
+
+### Verify
+- All 112 server tests pass (7 new dispatch tests)
+- All 240 client tests pass (10 new dispatch-button tests)
+- `pnpm typecheck` clean
+- `pnpm lint` clean
