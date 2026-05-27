@@ -225,11 +225,58 @@ describe('GuildHallScene', () => {
   });
 });
 
+describe('ArmoryScene', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let scene: any;
+  let mockStore: ReturnType<typeof buildMockStore>;
+
+  beforeEach(async () => {
+    vi.mocked(sceneRouter.setInteractives).mockClear();
+    vi.mocked(sceneRouter.emitDoorEnter).mockClear();
+    mockStore = buildMockStore();
+    const { ArmoryScene } = await import('../armory-scene');
+    scene = new ArmoryScene();
+    buildScene(scene, mockStore);
+  });
+
+  it('has sceneKey "armory"', () => {
+    expect(scene.sceneKey).toBe('armory');
+  });
+
+  it('has a single return door to town-square', () => {
+    expect(scene.doorConfigs[0].targetScene).toBe('town-square');
+  });
+
+  it('registers both return door and armory-loadout interactives', () => {
+    const calls = vi.mocked(sceneRouter.setInteractives).mock.calls;
+    const lastCall = calls[calls.length - 1][0];
+    const ids = lastCall.map((i: { id: string }) => i.id);
+    expect(ids).toContain('town-square');
+    expect(ids).toContain('armory-loadout');
+  });
+
+  it('activating armory-loadout sets activeModal to "armory-loadout"', () => {
+    const calls = vi.mocked(sceneRouter.setInteractives).mock.calls;
+    const lastCall = calls[calls.length - 1][0];
+    const item = lastCall.find((i: { id: string }) => i.id === 'armory-loadout');
+    item?.onActivate();
+    expect(mockStore.setActiveModal).toHaveBeenCalledWith('armory-loadout');
+  });
+
+  it('does not auto-open coming-soon on create', () => {
+    expect(mockStore.setActiveModal).not.toHaveBeenCalledWith('coming-soon');
+  });
+
+  it('shutdown clears activeModal', () => {
+    scene.__triggerShutdown();
+    expect(mockStore.setActiveModal).toHaveBeenCalledWith(null);
+  });
+});
+
 const PLACEHOLDER_SCENES = [
   { name: 'OracleScene', key: 'oracle', module: '../oracle-scene' },
   { name: 'LibraryScene', key: 'library', module: '../library-scene' },
   { name: 'TavernScene', key: 'tavern', module: '../tavern-scene' },
-  { name: 'ArmoryScene', key: 'armory', module: '../armory-scene' },
   { name: 'HallOfReturnsScene', key: 'hall-of-returns', module: '../hall-of-returns-scene' },
 ] as const;
 

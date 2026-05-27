@@ -4,6 +4,7 @@ import { useTownStore } from '../stores/town-store';
 import TownSquare from '../features/town-square';
 import WarRoom from '../features/war-room';
 import GuildHall from '../features/guild/guild-hall';
+import LoadoutPanel from '../features/armory/loadout-panel';
 import ComingSoonPanel from './coming-soon-panel';
 import { sceneRouter } from '../game/scene-router';
 import { isTownSceneKey } from '../game/scene-registry';
@@ -21,10 +22,6 @@ const COMING_SOON_CONTENT: Partial<Record<TownSceneKey, { title: string; descrip
   tavern: {
     title: 'Tavern',
     description: 'Edge Cases — arriving in Phase 3.',
-  },
-  armory: {
-    title: 'Armory',
-    description: 'Equipment Loadout — arriving in Phase 3.',
   },
   'hall-of-returns': {
     title: 'Hall of Returns',
@@ -69,6 +66,9 @@ export function HUDOverlayManager() {
   }
   if (activeModal === 'guild-hall') {
     return <GuildHall />;
+  }
+  if (activeModal === 'armory-loadout') {
+    return <LoadoutPanel onClose={() => setActiveModal(null)} />;
   }
   if (activeModal === 'coming-soon' && comingSoonContent) {
     return (
