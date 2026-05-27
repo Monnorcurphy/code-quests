@@ -1,12 +1,16 @@
 # Progress — Phase 4
 
-Previous task progress archived to metrics/progress-before-akershus.md
+Previous task progress archived to metrics/progress-before-cartagena.md
 
-## akershus — WebSocket realtime channel
+## Task cartagena — Claude Code subprocess adapter
 
-- Added `ws` + `@types/ws` to `packages/server`
-- Created `packages/server/src/realtime/quest-channel.ts`: `attachQuestChannel(server)` mounts a WS server at `/realtime`; `QuestChannel.publishQuestEvent(questId, event)` broadcasts to subscribed sockets only; loopback-only auth (rejects non-127.0.0.1/::1 with code 1008); 30s ping / 60s idle timeout
-- Updated `packages/server/src/index.ts`: hoisted Express app onto `http.createServer(app)`; `attachQuestChannel` wired in; `getQuestChannel()` exported for downstream services
-- Created `packages/client/src/lib/logger.ts`: thin logger wrapping console.warn for production diagnostic output
-- Created `packages/client/src/lib/quest-socket.ts`: `subscribe(questId, onEvent): unsubscribe`; auto-reconnect with exponential backoff (capped at 10 s); validates every frame through `AgentEventSchema`; drops malformed frames after logging
-- Tests: 11 server integration + unit tests, 10 client unit tests with fake WebSocket
+**Status:** Complete
+
+**What was built:**
+- `packages/server/src/agents/cc-adapter.ts` — implements `AgentAdapter.spawn()` against the Claude Code binary. Includes `MissingBinaryError`, `findBinPath()`, async stream-json parser, `AsyncQueue<T>` iterable, FAILURE_PATTERNS (goblin_linter / imp_typecheck / ogre_failing_test), temp `.mcp.json` wiring, SIGTERM/SIGKILL cancel with 5s grace, cleanup on all exit paths.
+- `packages/server/src/agents/adapter.ts` — added `adventurerClass?` and `mcpServers?` to `AgentSpawnInput`.
+- `packages/server/src/agents/select-adapter.ts` — wired `createCcAdapter()` and `findBinPath()` from cc-adapter; removed old placeholder.
+- `packages/server/src/agents/__tests__/cc-adapter.test.ts` — 3 tests: success path + cleanup, non-zero exit → failed, cancel() closes stream + cleanup.
+- `packages/server/src/agents/__tests__/cc-adapter-missing-binary.test.ts` — 2 tests: MissingBinaryError thrown when binary not found.
+
+**Verify:** 145 server tests pass, 0 typecheck errors, 0 lint errors. All packages green (480 total tests passing).
