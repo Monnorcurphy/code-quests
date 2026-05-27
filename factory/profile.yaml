@@ -1,0 +1,52 @@
+# profiles/node-react.yaml — Node.js + React/TypeScript projects
+
+name: code-quests
+description: Code Quests - TypeScript+React+Phaser+Express monorepo with pnpm
+
+install: pnpm install
+build: pnpm build
+test: pnpm test
+typecheck: pnpm typecheck
+lint: pnpm lint
+
+# File naming convention
+naming: kebab-case
+
+# Secrets patterns
+secrets_patterns: 'sk-\|AKIA\|api_key\s*=\|SECRET_KEY\|PRIVATE_KEY'
+
+# Debug print patterns
+debug_patterns: 'console\.log'
+
+# Dependency directory (skip install if present)
+deps_dir: node_modules
+
+# Dev server for smoke test
+smoke_test: ./scripts/smoke-test.sh
+
+# Dev server cleanup
+dev_processes: [node, vite]
+dev_ports: [5173, 3000, 4173]
+
+# Key files for fingerprinting (context optimization)
+key_files:
+  - package.json
+  - tsconfig.json
+  - src/App.tsx
+  - src/types.ts
+  - src/lib/api.ts
+
+# Applicable checks (skip stack-specific checks that don't apply)
+checks:
+  - no-secrets
+  - binary-assets
+  - contrast-classes
+  - error-handling
+  - conditional-assertions
+  - no-eval
+  - input-validation
+  - prompt-injection
+  - no-debug-prints
+  - naming
+  - file-size
+  - git-clean
