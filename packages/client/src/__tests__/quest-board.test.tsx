@@ -33,6 +33,7 @@ const makeQuest = (overrides: Partial<Quest> = {}): Quest => ({
   agentId: null,
   equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
   specAudit: null,
+  failureSummary: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   ...overrides,

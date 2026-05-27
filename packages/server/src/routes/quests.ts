@@ -1,11 +1,25 @@
 import { Router, Response } from 'express';
 import Database from 'better-sqlite3';
 import { z } from 'zod';
-import { QuestStatusSchema, EquipmentSchema, SpecAuditSchema, QuestSchema, QuestAcListSchema, AdventurerSchema, AgentSchema } from '@code-quests/shared';
+import {
+  QuestStatusSchema,
+  EquipmentSchema,
+  SpecAuditSchema,
+  QuestSchema,
+  QuestAcListSchema,
+  AdventurerSchema,
+  AgentSchema,
+  FailureSummarySchema,
+  FailureSummaryRecommendationSchema,
+} from '@code-quests/shared';
+import type { AgentEvent } from '@code-quests/shared';
 import { validate } from '../middleware/validate';
 import { auditQuest } from '../audit/audit-quest';
 import { getAuditAdapter } from '../agents/select-adapter';
 import { autoMatch } from '../services/auto-match';
+import { runQuest, getActiveHandle } from '../services/quest-runner';
+import { transitionQuestStatus, InvalidTransitionError } from '../services/quest-status';
+import { findAgentByQuest, endAgent } from '../services/agents-service';
 
 const CreateQuestSchema = z.object({
   title: z.string().min(1),
@@ -39,6 +53,7 @@ type QuestRow = {
   agent_id: string | null;
   equipment_json: string;
   spec_audit_json: string | null;
+  failure_summary_json: string | null;
   created_at: string;
   updated_at: string;
   ac_locked_at: string | null;
@@ -58,6 +73,7 @@ function rowToApi(row: QuestRow) {
     agentId: row.agent_id,
     equipment: JSON.parse(row.equipment_json) as Record<string, unknown>,
     specAudit: row.spec_audit_json ? JSON.parse(row.spec_audit_json) : null,
+    failureSummary: row.failure_summary_json ? JSON.parse(row.failure_summary_json) : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     acLockedAt: row.ac_locked_at,
@@ -80,8 +96,57 @@ function assertReferenceExists(
   return true;
 }
 
-export function createQuestsRouter(db: Database.Database): Router {
+function loadAdventurerRow(db: Database.Database, id: string) {
+  const r = db.prepare('SELECT * FROM adventurers WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+  if (!r) return null;
+  return AdventurerSchema.parse({
+    id: r['id'],
+    name: r['name'],
+    class: r['class'],
+    modelId: r['model_id'],
+    createdAt: r['created_at'],
+    stats: JSON.parse(r['stats_json'] as string),
+    specializations: JSON.parse(r['specializations_json'] as string),
+    scars: JSON.parse(r['scars_json'] as string),
+  });
+}
+
+export function createQuestsRouter(
+  db: Database.Database,
+  getChannel: () => { publishQuestEvent: (questId: string, event: AgentEvent) => void } | undefined = () => undefined,
+): Router {
   const router = Router();
+
+  router.get('/active', (_req, res) => {
+    const questRows = db.prepare(
+      "SELECT q.*, a.id AS a_id, a.adventurer_id AS a_adv_id, a.started_at AS a_started_at, a.ended_at AS a_ended_at, a.pid AS a_pid, a.exit_code AS a_exit_code FROM quests q LEFT JOIN agents a ON a.quest_id = q.id AND a.ended_at IS NULL WHERE q.status = 'active' ORDER BY q.created_at",
+    ).all() as (QuestRow & {
+      a_id: string | null;
+      a_adv_id: string | null;
+      a_started_at: string | null;
+      a_ended_at: string | null;
+      a_pid: number | null;
+      a_exit_code: number | null;
+    })[];
+
+    const result = questRows.map((row) => {
+      const quest = rowToApi(row);
+      const agent =
+        row.a_id !== null
+          ? AgentSchema.parse({
+              id: row.a_id,
+              adventurerId: row.a_adv_id,
+              questId: row.id,
+              startedAt: row.a_started_at,
+              endedAt: row.a_ended_at ?? null,
+              pid: row.a_pid ?? null,
+              exitCode: row.a_exit_code ?? null,
+            })
+          : null;
+      return { ...quest, agent };
+    });
+    res.json(result);
+  });
 
   router.get('/', (_req, res) => {
     const rows = db.prepare('SELECT * FROM quests ORDER BY created_at').all() as QuestRow[];
@@ -284,14 +349,156 @@ export function createQuestsRouter(db: Database.Database): Router {
         db.prepare(
           'UPDATE quests SET status = ?, ac_locked_at = ?, spec_audit_json = ?, updated_at = ? WHERE id = ?',
         ).run('active', now, JSON.stringify(finalAudit), now, req.params.id);
-        const updated = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
-        res.json(rowToApi(updated));
+
+        const adventurer = chosenAdventurerId ? loadAdventurerRow(db, chosenAdventurerId) : null;
+        if (!adventurer) {
+          res.status(500).json({ error: 'Failed to load adventurer for dispatch' });
+          return;
+        }
+
+        const activeQuest = QuestSchema.parse(rowToApi(
+          db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow,
+        ));
+        const channel = getChannel();
+        const { agent, done } = await runQuest(activeQuest, adventurer, {
+          db,
+          publishEvent: channel ? (questId, evt) => channel.publishQuestEvent(questId, evt) : undefined,
+        });
+        void done;
+
+        const finalRow = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
+        res.json({ ...rowToApi(finalRow), agentId: agent.id });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         process.stderr.write(`[quests] POST /quests/:id/dispatch failed: ${msg}\n`);
         res.status(500).json({ error: 'Failed to dispatch quest' });
       }
     })();
+  });
+
+  router.post('/:id/complete', (req, res) => {
+    const row = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow | undefined;
+    if (!row) {
+      res.status(404).json({ error: 'Quest not found' });
+      return;
+    }
+    if (row.status !== 'active') {
+      res.status(409).json({ error: 'Quest must be active to complete manually' });
+      return;
+    }
+    const BodySchema = z.object({ summary: z.string().optional() });
+    const bodyResult = BodySchema.safeParse(req.body ?? {});
+    if (!bodyResult.success) {
+      res.status(400).json({ error: 'Invalid request body', details: bodyResult.error.issues });
+      return;
+    }
+    try {
+      transitionQuestStatus(db, req.params.id, 'active', 'complete');
+      const agent = findAgentByQuest(db, req.params.id);
+      if (agent && agent.endedAt === null) {
+        endAgent(db, agent.id, 0);
+      }
+      const updated = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
+      res.json(rowToApi(updated));
+    } catch (err) {
+      if (err instanceof InvalidTransitionError) {
+        res.status(409).json({ error: err.message });
+        return;
+      }
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[quests] POST /quests/:id/complete failed: ${msg}\n`);
+      res.status(500).json({ error: 'Failed to complete quest' });
+    }
+  });
+
+  router.post('/:id/fail', (req, res) => {
+    const row = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow | undefined;
+    if (!row) {
+      res.status(404).json({ error: 'Quest not found' });
+      return;
+    }
+    if (row.status !== 'active') {
+      res.status(409).json({ error: 'Quest must be active to fail manually' });
+      return;
+    }
+    const BodySchema = z.object({
+      summary: z.string().min(1),
+      recommendation: FailureSummaryRecommendationSchema.optional(),
+    });
+    const bodyResult = BodySchema.safeParse(req.body ?? {});
+    if (!bodyResult.success) {
+      res.status(400).json({ error: 'Invalid request body', details: bodyResult.error.issues });
+      return;
+    }
+    const { summary, recommendation } = bodyResult.data;
+    const failureSummary = FailureSummarySchema.parse({
+      reason: summary,
+      recommendation: recommendation ?? 'repost_with_clarification',
+    });
+    try {
+      const now = new Date().toISOString();
+      const result = db
+        .prepare(
+          "UPDATE quests SET status = 'failed', failure_summary_json = ?, updated_at = ? WHERE id = ? AND status = 'active'",
+        )
+        .run(JSON.stringify(failureSummary), now, req.params.id) as { changes: number };
+      if (result.changes === 0) {
+        res.status(409).json({ error: 'Quest must be active to fail manually' });
+        return;
+      }
+      const agent = findAgentByQuest(db, req.params.id);
+      if (agent && agent.endedAt === null) {
+        endAgent(db, agent.id, 1);
+      }
+      const updated = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
+      res.json(rowToApi(updated));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[quests] POST /quests/:id/fail failed: ${msg}\n`);
+      res.status(500).json({ error: 'Failed to fail quest' });
+    }
+  });
+
+  router.post('/:id/cancel', (req, res) => {
+    const row = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow | undefined;
+    if (!row) {
+      res.status(404).json({ error: 'Quest not found' });
+      return;
+    }
+    if (row.status !== 'active') {
+      res.status(409).json({ error: 'Only active quests can be cancelled' });
+      return;
+    }
+    const failureSummary = FailureSummarySchema.parse({
+      reason: 'User cancelled',
+      recommendation: 'retire',
+    });
+    try {
+      const now = new Date().toISOString();
+      const result = db
+        .prepare(
+          "UPDATE quests SET status = 'failed', failure_summary_json = ?, updated_at = ? WHERE id = ? AND status = 'active'",
+        )
+        .run(JSON.stringify(failureSummary), now, req.params.id) as { changes: number };
+      if (result.changes === 0) {
+        res.status(409).json({ error: 'Only active quests can be cancelled' });
+        return;
+      }
+      const agent = findAgentByQuest(db, req.params.id);
+      if (agent && agent.endedAt === null) {
+        endAgent(db, agent.id, null);
+      }
+      const handle = getActiveHandle(req.params.id);
+      if (handle) {
+        void handle.cancel('user cancelled');
+      }
+      const updated = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
+      res.json(rowToApi(updated));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[quests] POST /quests/:id/cancel failed: ${msg}\n`);
+      res.status(500).json({ error: 'Failed to cancel quest' });
+    }
   });
 
   router.delete('/:id', (req, res) => {

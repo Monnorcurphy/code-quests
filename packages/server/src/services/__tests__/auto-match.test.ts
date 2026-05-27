@@ -41,6 +41,7 @@ function makeQuest(overrides: Partial<Quest> = {}): Quest {
     agentId: null,
     equipment: overrides.equipment ?? { skillIds: [], toolIds: [], mcpServerIds: [] },
     specAudit: null,
+    failureSummary: null,
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
     ...overrides,

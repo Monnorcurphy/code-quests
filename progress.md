@@ -1,15 +1,18 @@
 # Progress — Phase 4
 
-Previous task progress archived to metrics/progress-before-castillo-de-san-marcos.md
+Previous task progress archived to metrics/progress-before-edinburgh.md
 
-## castillo-de-san-marcos — Auto-match service
+## Task edinburgh — Dispatch wiring + quest lifecycle endpoints
 
-**Status:** Done
+**Status:** DONE
 
 **What was built:**
-- `packages/server/src/services/auto-match.ts` — `autoMatch(quest, guild, activeAgents)` function implementing the 4-rule selection algorithm: exclude busy, class fit, specialization match, tiebreak by net wins then createdAt
-- `packages/server/src/services/__tests__/auto-match.test.ts` — 20 table-driven tests covering all rule paths and the null-return case
-- `packages/server/src/routes/quests.ts` — Extended `POST /quests/:id/dispatch` to resolve adventurer before audit: body `adventurerId` (with 400 validation), pre-assigned quest adventurerId, then autoMatch(), then 409 NO_ADVENTURER if none available
-- `packages/server/src/__tests__/dispatch.test.ts` — Added 5 new cases: auto-match, body adventurerId override, bad adventurerId 400, NO_ADVENTURER 409, pre-assigned adventurerId
+- `packages/shared/src/quest.ts` — Added `FailureSummarySchema` with `recommendation` enum (`retry`, `repost_with_clarification`, `retire`) and `failureSummary` field on `QuestSchema`
+- `packages/server/src/services/quest-status.ts` — New. `transitionQuestStatus(db, questId, from, to)` with `InvalidTransitionError` for guarded status changes
+- `packages/server/src/services/quest-runner.ts` — New. `runQuest(quest, adventurer, deps)` spawns agent via `getQuestAdapter().spawn()`, creates agents row, fans events to WS channel, transitions quest on `completed`/`failed` events. Returns `{ agent, done }` — background loop runs detached from request handler
+- `packages/server/src/routes/quests.ts` — Extended dispatch to call `runQuest()` after status transition; added `POST /:id/complete`, `POST /:id/fail`, `POST /:id/cancel`, `GET /active`
+- `packages/server/src/index.ts` — Passes channel getter to `createQuestsRouter` (lazy binding)
+- `packages/server/src/__tests__/quest-runner.test.ts` — End-to-end tests with offline adapter
+- `packages/server/src/__tests__/quest-lifecycle.test.ts` — Tests for complete/fail/cancel/active endpoints and re-dispatch guard
 
-**Verification:** 175 tests pass, 0 lint errors, 0 typecheck errors
+**Verify results:** 193 tests pass (17 test files), typecheck clean, lint clean.

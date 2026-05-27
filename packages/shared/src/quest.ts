@@ -2,6 +2,19 @@ import { z } from 'zod';
 import { EquipmentSchema } from './equipment';
 import { SpecAuditSchema } from './spec-audit';
 
+export const FailureSummaryRecommendationSchema = z.enum([
+  'retry',
+  'repost_with_clarification',
+  'retire',
+]);
+export type FailureSummaryRecommendation = z.infer<typeof FailureSummaryRecommendationSchema>;
+
+export const FailureSummarySchema = z.object({
+  reason: z.string().default(''),
+  recommendation: FailureSummaryRecommendationSchema,
+});
+export type FailureSummary = z.infer<typeof FailureSummarySchema>;
+
 export const AC_MAX_LENGTH = 500;
 export const AC_MAX_COUNT = 15;
 export const QuestAcItemSchema = z.string().trim().min(1).max(AC_MAX_LENGTH);
@@ -31,6 +44,7 @@ export const QuestSchema = z.object({
   agentId: z.string().nullable(),
   equipment: EquipmentSchema.default({ skillIds: [], toolIds: [], mcpServerIds: [] }),
   specAudit: SpecAuditSchema.nullable().default(null),
+  failureSummary: FailureSummarySchema.nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
