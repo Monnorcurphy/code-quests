@@ -7,8 +7,7 @@ import { useTownStore } from '../../stores/town-store';
 import { sceneRouter } from '../scene-router';
 import type { SceneKey } from '../scene-registry';
 
-const SCENE_WIDTH = 2400;
-const SCENE_BOUNDS = { min: 0, max: SCENE_WIDTH };
+const DEFAULT_SCENE_WIDTH = 2400;
 const GROUND_COLOR = 0x8b7355;
 const GROUND_Y = 680;
 const GROUND_HEIGHT = 80;
@@ -40,6 +39,10 @@ export abstract class BaseTownScene extends Phaser.Scene {
   abstract get defaultSpawnX(): number;
   abstract get doorConfigs(): DoorConfig[];
 
+  protected get sceneWidth(): number {
+    return DEFAULT_SCENE_WIDTH;
+  }
+
   init(data: SceneInitData): void {
     this._spawnX = data.spawnX ?? this.defaultSpawnX;
   }
@@ -52,10 +55,11 @@ export abstract class BaseTownScene extends Phaser.Scene {
     const reducedMotion =
       window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
 
+    const sceneBounds = { min: 0, max: this.sceneWidth };
     this.cameras.main.setBackgroundColor('#c8b89a');
-    this.add.rectangle(SCENE_WIDTH / 2, GROUND_Y, SCENE_WIDTH, GROUND_HEIGHT, GROUND_COLOR);
+    this.add.rectangle(this.sceneWidth / 2, GROUND_Y, this.sceneWidth, GROUND_HEIGHT, GROUND_COLOR);
 
-    this.player = new Player(this, this._spawnX, PLAYER_Y, SCENE_BOUNDS, { reducedMotion });
+    this.player = new Player(this, this._spawnX, PLAYER_Y, sceneBounds, { reducedMotion });
 
     this.doors = this.doorConfigs.map(
       (cfg) =>
