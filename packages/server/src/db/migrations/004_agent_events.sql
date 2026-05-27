@@ -1,0 +1,1 @@
+ALTER TABLE agents ADD COLUMN events_json TEXT NOT NULL DEFAULT '[]';

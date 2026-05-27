@@ -8,17 +8,13 @@ import Tavern from '../features/tavern';
 import Library from '../features/library';
 import GuildHall from '../features/guild/guild-hall';
 import LoadoutPanel from '../features/armory/loadout-panel';
+import HallOfReturns from '../features/hall-of-returns';
 import ComingSoonPanel from './coming-soon-panel';
 import { sceneRouter } from '../game/scene-router';
 import { isTownSceneKey } from '../game/scene-registry';
 import type { TownSceneKey } from '../game/scene-registry';
 
-const COMING_SOON_CONTENT: Partial<Record<TownSceneKey, { title: string; description: string }>> = {
-  'hall-of-returns': {
-    title: 'Hall of Returns',
-    description: 'Completed/Failed Quests — arriving in Phase 9.',
-  },
-};
+const COMING_SOON_CONTENT: Partial<Record<TownSceneKey, { title: string; description: string }>> = {};
 
 export function HUDOverlayManager() {
   const activeModal = useTownStore((s) => s.activeModal);
@@ -69,6 +65,9 @@ export function HUDOverlayManager() {
   }
   if (activeModal === 'library') {
     return <Library />;
+  }
+  if (activeModal === 'hall-of-returns') {
+    return <HallOfReturns />;
   }
   if (activeModal === 'coming-soon' && comingSoonContent) {
     return (

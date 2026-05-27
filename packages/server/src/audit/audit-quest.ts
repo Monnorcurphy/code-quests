@@ -93,12 +93,14 @@ export async function auditQuest(quest: Quest, adapter: AgentAdapter): Promise<S
 
   let llmGaps: SpecGap[] = [];
   try {
-    const raw = await adapter.complete({
-      system: AUDIT_SYSTEM,
-      prompt: buildPrompt(quest),
-      maxTokens: 1024,
-    });
-    llmGaps = parseLlmGaps(raw);
+    if (adapter.complete) {
+      const raw = await adapter.complete({
+        system: AUDIT_SYSTEM,
+        prompt: buildPrompt(quest),
+        maxTokens: 1024,
+      });
+      llmGaps = parseLlmGaps(raw);
+    }
   } catch {
     // adapter failure — deterministic gaps still surface
   }

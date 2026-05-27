@@ -28,7 +28,7 @@ vi.mock('../lib/api', async (importOriginal) => {
     ...original,
     api: {
       adventurers: { list: vi.fn().mockResolvedValue([]) },
-      quests: { list: vi.fn().mockResolvedValue([]), create: vi.fn() },
+      quests: { list: vi.fn().mockResolvedValue([]), create: vi.fn(), returned: vi.fn().mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 }) },
       epics: { list: vi.fn().mockResolvedValue([]) },
     },
   };
@@ -134,12 +134,12 @@ describe('Town — Phaser mode', () => {
     expect(screen.getByRole('heading', { name: 'Guild Hall', level: 2 })).toBeDefined();
   });
 
-  it('renders coming-soon overlay for placeholder scene when activeModal is coming-soon', async () => {
+  it('renders HallOfReturns panel when activeModal is hall-of-returns', async () => {
     renderAtPath('/town/hall-of-returns');
     await screen.findByTestId('phaser-mount');
 
     await act(() => {
-      useTownStore.setState({ activeModal: 'coming-soon' });
+      useTownStore.setState({ activeModal: 'hall-of-returns' });
     });
 
     expect(screen.getByRole('dialog')).toBeDefined();

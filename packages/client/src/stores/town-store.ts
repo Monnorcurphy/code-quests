@@ -18,7 +18,7 @@ interface TownState {
   currentScene: SceneKey;
   playerX: number;
   facing: 'left' | 'right';
-  activeModal: 'recruit' | 'draft' | 'quest-board' | 'guild-hall' | 'coming-soon' | 'armory-loadout' | 'oracle' | 'library' | 'tavern' | null;
+  activeModal: 'recruit' | 'draft' | 'quest-board' | 'guild-hall' | 'coming-soon' | 'armory-loadout' | 'oracle' | 'library' | 'tavern' | 'hall-of-returns' | null;
   selectedQuestId: string | null;
   setScene: (scene: SceneKey) => void;
   setPlayerX: (x: number) => void;
@@ -26,6 +26,7 @@ interface TownState {
   setActiveModal: (modal: TownState['activeModal']) => void;
   setSelectedQuestId: (id: string | null) => void;
   goToBuilding: (building: SpecGapBuilding) => void;
+  goToHallOfReturns: () => void;
 }
 
 export const useTownStore = create<TownState>((set) => ({
@@ -43,5 +44,9 @@ export const useTownStore = create<TownState>((set) => ({
     const sceneKey = BUILDING_SCENE_KEYS[building];
     set({ activeModal: null, currentScene: sceneKey });
     sceneRouter.emitDoorEnter({ sceneKey, spawnX: BUILDING_SPAWN_X });
+  },
+  goToHallOfReturns: () => {
+    set({ activeModal: null, currentScene: 'hall-of-returns' });
+    sceneRouter.emitDoorEnter({ sceneKey: 'hall-of-returns', spawnX: BUILDING_SPAWN_X });
   },
 }));

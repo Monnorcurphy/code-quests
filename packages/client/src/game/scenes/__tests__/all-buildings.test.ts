@@ -388,8 +388,8 @@ for (const { name, key, module: modulePath } of PLACEHOLDER_SCENES) {
       );
     });
 
-    it('sets activeModal to "coming-soon" on create', () => {
-      expect(mockStore.setActiveModal).toHaveBeenCalledWith('coming-soon');
+    it('sets activeModal to "hall-of-returns" on create', () => {
+      expect(mockStore.setActiveModal).toHaveBeenCalledWith('hall-of-returns');
     });
 
     it('shutdown clears activeModal', () => {

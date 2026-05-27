@@ -18,7 +18,7 @@ vi.mock('../../lib/api', async (importOriginal) => {
     ...original,
     api: {
       adventurers: { list: vi.fn().mockResolvedValue([]) },
-      quests: { list: vi.fn().mockResolvedValue([]), get: vi.fn(), create: vi.fn(), patch: vi.fn() },
+      quests: { list: vi.fn().mockResolvedValue([]), get: vi.fn(), create: vi.fn(), patch: vi.fn(), returned: vi.fn().mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 }) },
       epics: { list: vi.fn().mockResolvedValue([]) },
       equipment: {
         skills: vi.fn().mockResolvedValue([]),
@@ -111,9 +111,10 @@ describe('HUDOverlayManager', () => {
     expect(screen.getByRole('heading', { name: 'Armory — Equipment Loadout', level: 2 })).toBeDefined();
   });
 
-  it('renders ComingSoonPanel for hall-of-returns when activeModal is coming-soon', async () => {
+  it('renders HallOfReturns panel when activeModal is hall-of-returns', async () => {
     renderAtScene('hall-of-returns');
-    await act(() => { useTownStore.setState({ activeModal: 'coming-soon' }); });
+    await act(() => { useTownStore.setState({ activeModal: 'hall-of-returns' }); });
+    expect(screen.getByRole('dialog')).toBeDefined();
     expect(screen.getByRole('heading', { name: 'Hall of Returns', level: 2 })).toBeDefined();
   });
 

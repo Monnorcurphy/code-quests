@@ -1,5 +1,5 @@
-export { QuestStatusSchema, QuestSchema, EpicSchema, AC_MAX_LENGTH, AC_MAX_COUNT, QuestAcItemSchema, QuestAcListSchema } from './quest';
-export type { QuestStatus, Quest, Epic } from './quest';
+export { QuestStatusSchema, QuestSchema, EpicSchema, AC_MAX_LENGTH, AC_MAX_COUNT, QuestAcItemSchema, QuestAcListSchema, FailureSummarySchema, FailureSummaryRecommendationSchema } from './quest';
+export type { QuestStatus, Quest, Epic, FailureSummary, FailureSummaryRecommendation } from './quest';
 
 export { AdventurerClassSchema, AdventurerSchema } from './adventurer';
 export type { AdventurerClass, Adventurer } from './adventurer';
@@ -14,3 +14,6 @@ export {
   SpecAuditSchema,
 } from './spec-audit';
 export type { SpecGapBuilding, SpecGapSeverity, SpecGap, SpecAudit } from './spec-audit';
+
+export { AgentSchema, AgentEventSchema } from './agent';
+export type { Agent, AgentEvent } from './agent';

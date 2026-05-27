@@ -3,13 +3,81 @@ import {
   AdventurerSchema,
   AdventurerClassSchema,
   QuestSchema,
+  QuestStatusSchema,
   EpicSchema,
   SkillSchema,
   ToolSchema,
   MCPServerSchema,
   SpecAuditSchema,
+  AgentEventSchema,
 } from '@code-quests/shared';
-import type { Equipment } from '@code-quests/shared';
+import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummaryRecommendation } from '@code-quests/shared';
+
+const ReturnedAgentSchema = z.object({
+  id: z.string(),
+  startedAt: z.string(),
+  endedAt: z.string().nullable(),
+  events: z.array(AgentEventSchema),
+});
+
+const ReturnedAdventurerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  class: AdventurerClassSchema,
+});
+
+// Use required fields (no .default()) to avoid Zod v3 addQuestionMarks making them optional
+const ReturnedQuestBaseSchema = z.object({
+  id: z.string(),
+  epicId: z.string().nullable(),
+  title: z.string(),
+  description: z.string(),
+  acceptanceCriteria: z.array(z.string()),
+  edgeCases: z.array(z.string()),
+  context: z.string(),
+  status: QuestStatusSchema,
+  adventurerId: z.string().nullable(),
+  agentId: z.string().nullable(),
+  failureSummary: z.object({
+    reason: z.string(),
+    recommendation: z.enum(['retry', 'repost_with_clarification', 'retire']),
+  }).nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  adventurer: ReturnedAdventurerSchema.nullable(),
+  agent: ReturnedAgentSchema.nullable(),
+});
+
+export const ReturnedQuestSchema = ReturnedQuestBaseSchema;
+
+const ReturnedQuestsPageSchema = z.object({
+  items: z.array(ReturnedQuestSchema),
+  total: z.number(),
+  limit: z.number(),
+  offset: z.number(),
+});
+
+export type ReturnedAdventurer = { id: string; name: string; class: AdventurerClass };
+export type ReturnedAgent = { id: string; startedAt: string; endedAt: string | null; events: AgentEvent[] };
+export type ReturnedQuestFailureSummary = { reason: string; recommendation: FailureSummaryRecommendation };
+export type ReturnedQuest = {
+  id: string;
+  epicId: string | null;
+  title: string;
+  description: string;
+  acceptanceCriteria: string[];
+  edgeCases: string[];
+  context: string;
+  status: QuestStatus;
+  adventurerId: string | null;
+  agentId: string | null;
+  failureSummary: ReturnedQuestFailureSummary | null;
+  createdAt: string;
+  updatedAt: string;
+  adventurer: ReturnedAdventurer | null;
+  agent: ReturnedAgent | null;
+};
+export type ReturnedQuestsPage = z.infer<typeof ReturnedQuestsPageSchema>;
 
 const BASE_URL = ''; // same-origin via Vite proxy
 
@@ -105,6 +173,7 @@ export const api = {
   },
   quests: {
     list: () => fetchJson(z.array(QuestSchema), '/quests'),
+    active: () => fetchJson(z.array(QuestSchema), '/quests/active'),
     get: (id: string) => fetchJson(QuestSchema, `/quests/${id}`),
     create: (input: CreateQuestInput) =>
       postJson(QuestSchema, '/quests', input),
@@ -114,6 +183,13 @@ export const api = {
       postJson(SpecAuditSchema, `/quests/${id}/audit`, {}),
     dispatch: (id: string, bypass = false) =>
       postJson(QuestSchema, `/quests/${id}/dispatch${bypass ? '?bypass=true' : ''}`, {}),
+    cancel: (id: string) =>
+      postJson(QuestSchema, `/quests/${id}/cancel`, {}),
+    returned: (opts?: { limit?: number; offset?: number }) =>
+      fetchJson(
+        ReturnedQuestsPageSchema,
+        `/quests/returned?limit=${opts?.limit ?? 20}&offset=${opts?.offset ?? 0}`,
+      ),
   },
   epics: {
     list: () => fetchJson(z.array(EpicSchema), '/epics'),
