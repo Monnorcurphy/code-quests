@@ -13,6 +13,10 @@
 
 set -euo pipefail
 
+# FACTORY_DIR is only set when called from new-project.sh; fall back to empty
+# so the `${FACTORY_DIR}/themes` candidate is just a missing path (handled).
+FACTORY_DIR="${FACTORY_DIR:-}"
+
 PHASE="${1:?Usage: ./core/scripts/slice-spec.sh <phase-number>}"
 OUTPUT_DIR="specs/phase-${PHASE}"
 mkdir -p "${OUTPUT_DIR}"
