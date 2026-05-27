@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import Database from 'better-sqlite3';
 import { z } from 'zod';
-import { QuestStatusSchema, EquipmentSchema, SpecAuditSchema, QuestSchema } from '@code-quests/shared';
+import { QuestStatusSchema, EquipmentSchema, SpecAuditSchema, QuestSchema, QuestAcListSchema } from '@code-quests/shared';
 import { validate } from '../middleware/validate';
 import { auditQuest } from '../audit/audit-quest';
 import { getAuditAdapter } from '../agents/select-adapter';
@@ -10,8 +10,8 @@ const CreateQuestSchema = z.object({
   title: z.string().min(1),
   epicId: z.string().min(1).nullable().default(null),
   description: z.string().default(''),
-  acceptanceCriteria: z.array(z.string()).default([]),
-  edgeCases: z.array(z.string()).default([]),
+  acceptanceCriteria: QuestAcListSchema.default([]),
+  edgeCases: QuestAcListSchema.default([]),
   context: z.string().default(''),
   status: QuestStatusSchema.default('idle'),
   adventurerId: z.string().min(1).nullable().default(null),

@@ -40,7 +40,7 @@ export class TavernScene extends BaseBuildingScene {
 
     sceneRouter.setInteractives([this.returnDoorInteractive]);
 
-    useTownStore.getState().setActiveModal('coming-soon');
+    useTownStore.getState().setActiveModal('tavern');
 
     this.events.once('shutdown', () => {
       useTownStore.getState().setActiveModal(null);

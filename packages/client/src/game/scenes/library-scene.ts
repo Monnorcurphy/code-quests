@@ -37,7 +37,7 @@ export class LibraryScene extends BaseBuildingScene {
 
     sceneRouter.setInteractives([this.returnDoorInteractive]);
 
-    useTownStore.getState().setActiveModal('coming-soon');
+    useTownStore.getState().setActiveModal('library');
 
     this.events.once('shutdown', () => {
       useTownStore.getState().setActiveModal(null);

@@ -227,6 +227,27 @@ describe('PATCH /quests/:id', () => {
     expect(res.status).toBe(400);
     expect(res.body.field).toBe('status');
   });
+
+  it('rejects PATCH with more than 15 acceptance criteria', async () => {
+    const tooManyAcs = Array.from({ length: 16 }, (_, i) => `Criterion ${i + 1}`);
+    const res = await request(app).patch('/quests/quest-patch').send({ acceptanceCriteria: tooManyAcs });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeTruthy();
+  });
+
+  it('rejects PATCH with an acceptance criterion exceeding 500 characters', async () => {
+    const longAc = 'a'.repeat(501);
+    const res = await request(app).patch('/quests/quest-patch').send({ acceptanceCriteria: [longAc] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeTruthy();
+  });
+
+  it('rejects PATCH with more than 15 edge cases', async () => {
+    const tooManyEc = Array.from({ length: 16 }, (_, i) => `Edge case ${i + 1}`);
+    const res = await request(app).patch('/quests/quest-patch').send({ edgeCases: tooManyEc });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeTruthy();
+  });
 });
 
 describe('specAudit round-trip', () => {
