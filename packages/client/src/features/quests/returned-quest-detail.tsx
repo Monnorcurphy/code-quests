@@ -25,6 +25,7 @@ function formatEventText(event: AgentEvent): string {
     case 'completed': return '🎉 Quest completed!';
     case 'failed': return `💀 Quest failed${event.reason ? `: ${event.reason}` : ''}`;
     case 'log': return event.message;
+    case 'scene_change': return `🗺 Scene: ${event.to}`;
   }
 }
 

@@ -74,6 +74,7 @@ const makeQuest = (overrides: Partial<Quest> = {}): Quest => ({
   equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
   specAudit: null,
   failureSummary: null,
+  currentScene: 'quest-forest' as const,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   ...overrides,

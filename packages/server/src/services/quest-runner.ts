@@ -4,6 +4,9 @@ import type { AgentHandle } from '../agents/adapter';
 import { createAgent, endAgent } from './agents-service';
 import { getQuestAdapter } from '../agents/select-adapter';
 import { transitionQuestStatus, InvalidTransitionError } from './quest-status';
+import { advanceQuestScene } from './quest-scene-progression';
+
+export const PROGRESS_EVENTS_PER_SCENE = 3;
 
 export interface RunQuestDeps {
   db: Database.Database;
@@ -16,6 +19,7 @@ export interface QuestRunResult {
 }
 
 const activeHandles = new Map<string, AgentHandle>();
+const progressCountByQuest = new Map<string, number>();
 
 export function getActiveHandle(questId: string): AgentHandle | undefined {
   return activeHandles.get(questId);
@@ -53,6 +57,7 @@ export async function runQuest(
   db.prepare('UPDATE quests SET agent_id = ?, updated_at = ? WHERE id = ?').run(agent.id, now, quest.id);
 
   activeHandles.set(quest.id, handle);
+  progressCountByQuest.set(quest.id, 0);
 
   const done = (async () => {
     const collectedEvents: AgentEvent[] = [];
@@ -64,7 +69,39 @@ export async function runQuest(
       for await (const event of handle.events()) {
         collectedEvents.push(event);
         publishEvent?.(quest.id, event);
+
+        if (event.type === 'progress') {
+          const count = (progressCountByQuest.get(quest.id) ?? 0) + 1;
+          progressCountByQuest.set(quest.id, count);
+          if (count % PROGRESS_EVENTS_PER_SCENE === 0) {
+            const transition = advanceQuestScene(db, quest.id);
+            if (transition) {
+              const sceneEvent: AgentEvent = {
+                type: 'scene_change',
+                timestamp: new Date().toISOString(),
+                from: transition.from,
+                to: transition.to,
+              };
+              collectedEvents.push(sceneEvent);
+              publishEvent?.(quest.id, sceneEvent);
+            }
+          }
+        }
+
         if (event.type === 'completed') {
+          let transition = advanceQuestScene(db, quest.id);
+          while (transition) {
+            const sceneEvent: AgentEvent = {
+              type: 'scene_change',
+              timestamp: new Date().toISOString(),
+              from: transition.from,
+              to: transition.to,
+            };
+            collectedEvents.push(sceneEvent);
+            publishEvent?.(quest.id, sceneEvent);
+            if (transition.to === 'quest-boss-room') break;
+            transition = advanceQuestScene(db, quest.id);
+          }
           try {
             transitionQuestStatus(db, quest.id, 'active', 'complete');
           } catch (err) {
@@ -113,6 +150,7 @@ export async function runQuest(
       }
     } finally {
       activeHandles.delete(quest.id);
+      progressCountByQuest.delete(quest.id);
     }
   })();
 

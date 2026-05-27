@@ -54,6 +54,7 @@ type QuestRow = {
   equipment_json: string;
   spec_audit_json: string | null;
   failure_summary_json: string | null;
+  current_scene: string;
   created_at: string;
   updated_at: string;
   ac_locked_at: string | null;
@@ -74,6 +75,7 @@ function rowToApi(row: QuestRow) {
     equipment: JSON.parse(row.equipment_json) as Record<string, unknown>,
     specAudit: row.spec_audit_json ? JSON.parse(row.spec_audit_json) : null,
     failureSummary: row.failure_summary_json ? JSON.parse(row.failure_summary_json) : null,
+    currentScene: row.current_scene,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     acLockedAt: row.ac_locked_at,
