@@ -1,52 +1,33 @@
-# BUG: BuildingModal still uses inline focus trap instead of useFocusTrap hook
+# BUG: Two "dispatch" buttons render simultaneously when block gaps are shown
 
 **Severity:** LOW
-**File(s):** `packages/client/src/routes/town.tsx`
+**File(s):** packages/client/src/features/quests/dispatch-button.tsx
 
 ## Problem
 
-`BuildingModal` contains a 25-line inline focus trap (Tab cycling + Escape handling) that is functionally identical to the `useFocusTrap` hook extracted in task bran. The hook was extracted because GuildHall and TownSquare were the 3rd occurrence of the same pattern — but the 1st occurrence (BuildingModal) was not migrated.
+When a dispatch attempt returns a 409 with block gaps, the component renders:
 
-This means two independent implementations now exist for the same behavior. If the Tab cycling logic or the Escape handler ever needs to change, it must be updated in two places, and they can silently diverge.
+- The "Dispatch anyway" panel inside `{blockAudit && !showBypassConfirm && (...)}` (lines 115–136), AND
+- The main "Dispatch quest" button inside `{!showBypassConfirm && !success && (...)}` (lines 178–188).
 
-Additionally, `BuildingModal` retains `onCloseRef` + its sync effect solely to pass the callback into the inline keydown handler — boilerplate the hook was designed to eliminate.
+Both are visible to the user at the same time. The "Dispatch quest" button calls `handleDispatch()`, which clears `blockAudit` and re-issues `mutate(false)` — the same flow the user just triggered, which the server will reject for the same reasons.
+
+For a sighted user this looks like two side-by-side affordances with no clear distinction between them. For a screen-reader user it reads as two consecutive "dispatch" actions with no indication that one is a bypass path and the other is a retry. This violates the "What do I do next?" principle in `rules/domain/frontend/ux-design.md`: the user should be guided to one clear next step.
 
 ## Expected
 
-`code-quality.md` Rule of Three: after extracting a shared helper, all occurrences should use it. The hook exists precisely for `BuildingModal`'s pattern.
+When `blockAudit` is set (i.e., there are unresolved block gaps), the primary "Dispatch quest" button should be hidden — the only forward affordances should be:
+- "Dispatch anyway" (escape hatch with countdown), and
+- The Go-to-Building chips in the audit, which fix the underlying problem.
 
 ## Fix
 
-Refactor `BuildingModal` to use `useFocusTrap`:
+Update the render guard for the primary dispatch button so it also hides when `blockAudit` is non-null:
 
 ```tsx
-function BuildingModal({ building, onClose }: BuildingModalProps) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useFocusTrap(onClose);
-
-  useEffect(() => {
-    closeRef.current?.focus();
-  }, []);
-
-  return (
-    <div
-      className="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-    >
-      <div ref={panelRef} className="modal-panel">
-        <h2 id="modal-title" className="modal-title">
-          {building.name}
-        </h2>
-        <p className="modal-body">Coming in Phase 2 — Phaser scene</p>
-        <button ref={closeRef} className="modal-close" onClick={onClose}>
-          Close
-        </button>
-      </div>
-    </div>
-  );
-}
+{!showBypassConfirm && !success && !blockAudit && (
+  <button … onClick={handleDispatch} …>{isPending ? 'Dispatching…' : 'Dispatch quest'}</button>
+)}
 ```
 
-Remove the `onCloseRef`, its sync effect, the entire 25-line keydown handler, and the `panelRef` declaration — all replaced by `useFocusTrap(onClose)`. Add `import { useFocusTrap } from '../lib/use-focus-trap';`.
+Add a test asserting that the "Dispatch quest" button is not in the DOM once the 409 audit has been rendered.
