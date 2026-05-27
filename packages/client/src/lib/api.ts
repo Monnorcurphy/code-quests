@@ -6,7 +6,7 @@ import {
   EpicSchema,
 } from '@code-quests/shared';
 
-const BASE_URL = 'http://localhost:4001';
+const BASE_URL = ''; // same-origin via Vite proxy
 
 const ApiErrorBodySchema = z.object({
   error: z.string(),
