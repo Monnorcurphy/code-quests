@@ -1,11 +1,16 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import GuildHall from '../features/guild/guild-hall';
 import TownSquare from '../features/town-square';
 import WarRoom from '../features/war-room';
 import { useFocusTrap } from '../lib/use-focus-trap';
+import { SceneKeyboardNav } from '../components/scene-keyboard-nav';
+import { sceneRouter } from '../game/scene-router';
+import type { SceneNavItem } from '../game/scene-router';
+import { isTownSceneKey } from '../game/scene-registry';
+import type { SceneKey, TownSceneKey } from '../game/scene-registry';
 
 const USE_PHASER = import.meta.env.VITE_PHASER_TOWN !== 'false';
-// Lazy-loaded so Phaser is only imported when USE_PHASER is true (not in jsdom tests)
 const PhaserMount = lazy(() => import('../game/phaser-mount'));
 
 const BUILDINGS = [
@@ -116,15 +121,63 @@ function HtmlTown() {
   );
 }
 
+export function PhaserTown() {
+  const { sceneKey: rawSceneKey } = useParams<{ sceneKey?: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const locationState = location.state as { spawnX?: number } | null;
+  const sceneKeyParam = rawSceneKey ?? '';
+  const validSceneKey: TownSceneKey | 'boot' = isTownSceneKey(sceneKeyParam)
+    ? sceneKeyParam
+    : 'boot';
+
+  const mountScene = useRef<SceneKey>(validSceneKey === 'boot' ? 'boot' : validSceneKey);
+  const hasMounted = useRef(false);
+  const [navItems, setNavItems] = useState<SceneNavItem[]>([]);
+
+  useEffect(() => {
+    return sceneRouter.onInteractivesChange(setNavItems);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = sceneRouter.onDoorEnter(({ sceneKey, spawnX }) => {
+      navigate(`/town/${sceneKey}`, { state: { spawnX } });
+    });
+    return unsubscribe;
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+    sceneRouter.goToScene(validSceneKey, { spawnX: locationState?.spawnX });
+  }, [validSceneKey, locationState?.spawnX]);
+
+  const currentBuilding = BUILDINGS.find((b) => b.id === validSceneKey);
+
+  return (
+    <main style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+      {currentBuilding && (
+        <h1
+          style={{ position: 'absolute', left: '-9999px', top: 0 }}
+          aria-live="polite"
+        >
+          {currentBuilding.name}
+        </h1>
+      )}
+      <SceneKeyboardNav items={navItems} />
+      <Suspense fallback={null}>
+        <PhaserMount initialScene={mountScene.current} />
+      </Suspense>
+    </main>
+  );
+}
+
 export default function Town() {
   if (USE_PHASER) {
-    return (
-      <main style={{ width: '100vw', height: '100vh' }}>
-        <Suspense fallback={null}>
-          <PhaserMount initialScene="boot" />
-        </Suspense>
-      </main>
-    );
+    return <PhaserTown />;
   }
 
   return <HtmlTown />;

@@ -5,6 +5,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/town" element={<Town />} />
+      <Route path="/town/:sceneKey" element={<Town />} />
       <Route path="*" element={<Navigate to="/town" replace />} />
     </Routes>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import { getGameConfig } from './game-config';
+import { sceneRouter } from './scene-router';
 import type { SceneKey } from './scene-registry';
 
 interface PhaserMountProps {
@@ -10,18 +11,22 @@ interface PhaserMountProps {
 export default function PhaserMount({ initialScene }: PhaserMountProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
+  const initialSceneRef = useRef(initialScene);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const config = getGameConfig(containerRef.current, initialScene);
-    gameRef.current = new Phaser.Game(config);
+    const config = getGameConfig(containerRef.current, initialSceneRef.current);
+    const game = new Phaser.Game(config);
+    gameRef.current = game;
+    sceneRouter.init(game);
 
     return () => {
-      gameRef.current?.destroy(true);
+      game.destroy(true);
+      sceneRouter.init(null);
       gameRef.current = null;
     };
-  }, [initialScene]);
+  }, []);
 
   return (
     <div
