@@ -1116,6 +1116,330 @@
   cursor: not-allowed;
 }
 
+/* Hall of Returns */
+.hall-of-returns-panel {
+  max-width: 780px;
+}
+
+.hall-of-returns-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.hall-of-returns-header .modal-title {
+  margin: 0;
+}
+
+.hall-of-returns-loading,
+.hall-of-returns-error,
+.hall-of-returns-empty {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  margin: 1rem 0;
+}
+
+.hall-of-returns-error {
+  color: #8b1a1a;
+}
+
+.hall-of-returns-empty {
+  font-style: italic;
+}
+
+.hall-of-returns-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 560px) {
+  .hall-of-returns-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Columns */
+.return-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.return-column-heading {
+  font-size: 0.95rem;
+  font-weight: bold;
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid var(--color-stone-border);
+}
+
+.return-column--complete .return-column-heading {
+  color: #1b5e20;
+  border-bottom-color: #2e7d32;
+}
+
+.return-column--failed .return-column-heading {
+  color: #8b1a1a;
+  border-bottom-color: #c62828;
+}
+
+.return-column-count {
+  font-weight: normal;
+  font-size: 0.85rem;
+}
+
+.return-column-empty {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  margin: 0;
+}
+
+/* Quest return cards */
+.return-card-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.return-card-item {
+  margin: 0;
+}
+
+.return-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  background: var(--color-parchment);
+  border: 1px solid var(--color-stone-border);
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.return-card--complete:hover {
+  border-color: #2e7d32;
+  background: #f1f8f1;
+}
+
+.return-card--failed:hover {
+  border-color: #c62828;
+  background: #fff5f5;
+}
+
+.return-card:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .return-card {
+    transition: none;
+  }
+}
+
+[data-reduced-motion='true'] .return-card {
+  transition: none;
+}
+
+.return-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.return-card-title {
+  font-weight: bold;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.return-card-adventurer {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.return-card-adventurer-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.return-card-adventurer-class {
+  text-transform: capitalize;
+}
+
+.return-card-duration {
+  color: var(--color-stone);
+}
+
+.return-card-log {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.return-card-log-line {
+  font-size: 0.775rem;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.return-card-failure-rec {
+  font-size: 0.775rem;
+  font-style: italic;
+  color: #8b1a1a;
+  margin: 0;
+  text-transform: capitalize;
+}
+
+/* Returned quest detail */
+.return-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.return-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.return-detail-back {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  padding: 0.4rem 0.75rem;
+}
+
+.return-detail-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--color-text);
+  margin: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.return-detail-adventurer {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.return-detail-adventurer-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.return-detail-adventurer-class {
+  text-transform: capitalize;
+}
+
+.return-detail-duration {
+  color: var(--color-stone);
+}
+
+.return-detail-failure {
+  background: #fff5f5;
+  border: 1px solid #f48fb1;
+  border-left: 4px solid #c62828;
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+}
+
+.return-detail-failure-reason,
+.return-detail-failure-rec {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  margin: 0 0 0.35rem;
+}
+
+.return-detail-failure-rec {
+  margin: 0;
+}
+
+.return-detail-log-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.return-detail-log-heading {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.return-detail-log-empty {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  margin: 0;
+}
+
+.return-detail-log {
+  list-style: none;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+  background: #f4e8c8;
+  border: 1px solid #c8a87a;
+  border-radius: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  counter-reset: log-counter;
+}
+
+.return-detail-log-item {
+  font-size: 0.825rem;
+  color: #3c2c10;
+  line-height: 1.4;
+}
+
+.return-detail-phase9-note {
+  background: #f9f5e8;
+  border: 1px solid #d4b87a;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+}
+
+.return-detail-phase9-note p {
+  font-size: 0.825rem;
+  color: #5c4828;
+  font-style: italic;
+  margin: 0;
+}
+
 /* Town Square active quest badge */
 .town-square-active-quest {
   background: #e3f2fd;
