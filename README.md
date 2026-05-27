@@ -120,12 +120,59 @@ pnpm check:assets # verify all asset licenses are recorded
 
 The Phaser canvas is opaque to screen readers. A visually-hidden `<nav aria-label="Scene interactions">` mirrors every in-scene interactive as a button — keyboard and screen-reader users can reach all functionality without touching the canvas.
 
+## Phase 4 walkthrough
+
+Phase 4 introduces the full quest-execution pipeline: spawn an agent subprocess, stream progress live, and inspect the result in the Hall of Returns.
+
+### Offline demo (no API key required)
+
+The default configuration uses the **offline adapter** — a deterministic event sequence that simulates a real agent run without spending any tokens.
+
+```bash
+# Start both servers
+pnpm dev
+
+# (Optional) seed demo data — idempotent
+pnpm --filter=@code-quests/server tsx src/scripts/seed-dev.ts
+```
+
+Then in the browser at `http://localhost:5173`:
+
+1. **Town Square** — walk to the Quest Board banner and press Enter (or click "Quest Board" in the hidden nav)
+2. Select "Phase 4 Demo: Notify users on quest completion" → War Room opens
+3. Click **Run Audit** → all checks should pass
+4. Click **Dispatch Quest** → the adventurer sets out
+5. The **Active Quest Panel** streams live events (progress, combat, completed)
+6. Once complete, click **Return to Hall of Returns**
+7. The quest appears under "Victorious" — click it to see the full combat log
+
+### Using real Claude Code (optional)
+
+Set two environment variables before starting the server:
+
+```bash
+# Enable real agent (Claude Code subprocess)
+export CODE_QUESTS_USE_REAL_AGENT=1
+
+# Optional: path to claude binary if not on PATH
+export CODE_QUESTS_CLAUDE_BIN=/usr/local/bin/claude
+
+pnpm dev
+```
+
+The ANTHROPIC_API_KEY must be set in your environment for the real adapter to authenticate.
+
+### Cancellation
+
+During an active quest, a **Cancel quest** button appears in the War Room. Clicking it opens a confirmation dialog. On confirm, the agent subprocess receives SIGTERM, the quest transitions to `failed` with recommendation `retire`, and the result appears in the Hall of Returns under "Returned in Defeat."
+
 ## Phase roadmap
 
 | Phase | Status | Content |
 |---|---|---|
 | 1 | Done | Recruit + draft + Quest Board (HTML) |
 | 2 | Done | Pixel-art Phaser town, 8 scenes, HUD overlays, settings |
-| 3 | Next | Oracle, Tavern, Armory real functionality |
-| 9 | Future | Hall of Returns (post-quest retrospective) |
+| 3 | Done | Oracle, Tavern, Armory, dispatch flow |
+| 4 | Done | Agent subprocess adapter, WebSocket stream, Hall of Returns |
+| 9 | Future | Re-post / Retire buttons, feedback loop |
 | 10 | Future | Library (learning loop + bestiary) |
