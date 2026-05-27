@@ -6,6 +6,7 @@ import WarRoom from '../features/war-room';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { SceneKeyboardNav } from '../components/scene-keyboard-nav';
 import { sceneRouter } from '../game/scene-router';
+import { useTownStore } from '../stores/town-store';
 import type { SceneNavItem } from '../game/scene-router';
 import { isTownSceneKey } from '../game/scene-registry';
 import type { SceneKey, TownSceneKey } from '../game/scene-registry';
@@ -60,13 +61,34 @@ function BuildingModal({ building, onClose }: BuildingModalProps) {
 }
 
 function HtmlTown() {
-  const [openBuilding, setOpenBuilding] = useState<BuildingId | null>(null);
+  const [openBuilding, setOpenBuilding] = useState<Exclude<BuildingId, 'town-square'> | null>(null);
   const triggerRefs = useRef<Map<BuildingId, HTMLButtonElement>>(new Map());
+  const setActiveModal = useTownStore((s) => s.setActiveModal);
+  const activeModal = useTownStore((s) => s.activeModal);
+
+  // Reset store modal state on unmount so tests and navigations start clean
+  useEffect(() => {
+    return () => setActiveModal(null);
+  }, [setActiveModal]);
 
   const activeBuilding = BUILDINGS.find((b) => b.id === openBuilding) ?? null;
+  const isTownSquareOpen = activeModal === 'quest-board' || activeModal === 'recruit';
+
+  // Return focus to Town Square trigger when overlay closes
+  const prevActiveModal = useRef(activeModal);
+  useEffect(() => {
+    if (prevActiveModal.current !== null && activeModal === null) {
+      triggerRefs.current.get('town-square')?.focus();
+    }
+    prevActiveModal.current = activeModal;
+  }, [activeModal]);
 
   function handleOpen(id: BuildingId) {
-    setOpenBuilding(id);
+    if (id === 'town-square') {
+      setActiveModal('quest-board');
+      return;
+    }
+    setOpenBuilding(id as Exclude<BuildingId, 'town-square'>);
   }
 
   function handleClose() {
@@ -89,7 +111,7 @@ function HtmlTown() {
       <ul
         className="building-grid"
         role="list"
-        aria-hidden={activeBuilding !== null ? 'true' : undefined}
+        aria-hidden={activeBuilding !== null || isTownSquareOpen ? 'true' : undefined}
       >
         {BUILDINGS.map((building) => (
           <li key={building.id}>
@@ -108,12 +130,12 @@ function HtmlTown() {
         ))}
       </ul>
 
+      <TownSquare />
+
       {openBuilding === 'guild-hall' && <GuildHall onClose={handleClose} />}
-      {openBuilding === 'town-square' && <TownSquare onClose={handleClose} />}
       {openBuilding === 'war-room' && <WarRoom onClose={handleClose} />}
       {activeBuilding &&
         activeBuilding.id !== 'guild-hall' &&
-        activeBuilding.id !== 'town-square' &&
         activeBuilding.id !== 'war-room' && (
           <BuildingModal building={activeBuilding} onClose={handleClose} />
         )}
@@ -168,6 +190,7 @@ export function PhaserTown() {
         </h1>
       )}
       <SceneKeyboardNav items={navItems} />
+      <TownSquare />
       <Suspense fallback={null}>
         <PhaserMount initialScene={mountScene.current} />
       </Suspense>

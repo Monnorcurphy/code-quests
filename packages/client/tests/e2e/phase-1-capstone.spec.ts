@@ -108,7 +108,8 @@ test.describe('Phase 1 capstone — end-to-end walkthrough', () => {
     await page.getByLabel('Class').selectOption('scout');
     await page.getByRole('button', { name: /^Recruit$/ }).click();
     await expect(page.getByText('Adventurer recruited! Welcome to the guild.')).toBeVisible();
-    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape'); // recruit → quest-board
+    await page.keyboard.press('Escape'); // quest-board → closed
 
     // Draft a unique quest
     await page.getByRole('button', { name: /War Room/i }).click();

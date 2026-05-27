@@ -1,24 +1,32 @@
 # Progress — Phase 2
 
-Previous task progress archived to metrics/progress-before-deer.md
+Previous task progress archived to metrics/progress-before-elephant.md
 
-## Task deer — Scene routing, transitions, and player state persistence
+## Task elephant — Town Square scene (entry + Quest Board + recruit banner)
 
-**Status:** Complete
+**Status:** Done
 
 **What was built:**
-- `packages/client/src/game/scene-registry.ts` — Added 8 town scene keys + `isTownSceneKey` guard + `TOWN_SCENE_KEYS` array
-- `packages/client/src/game/scene-router.ts` — `SceneRouter` singleton: `goToScene(key, opts?)` with 300ms fade (0ms under reduced-motion), `emitDoorEnter`/`onDoorEnter` for React↔Phaser bridge
-- `packages/client/src/game/entities/door.ts` — `Door` class: proximity detection (60px radius), gold outline highlight when in range, `tryEnter()` emits door event
-- `packages/client/src/game/scenes/base-town-scene.ts` — Abstract `BaseTownScene` Phaser scene: parchment background, ground, player spawn via `init()` data, door wiring, controller, fade-in on create
-- `packages/client/src/game/phaser-mount.tsx` — Updated to register game with `sceneRouter.init()` on mount, use stable initial scene ref (no game recreation on URL changes)
-- `packages/client/src/routes/town.tsx` — Split into `HtmlTown` (test mode) and `PhaserTown` (Phaser mode); Phaser mode reads `/town/:sceneKey` from URL, listens for door-enter events → pushes to history, calls `goToScene` on URL changes
-- `packages/client/src/app.tsx` — Added `/town/:sceneKey` route
-- `packages/client/src/components/scene-keyboard-nav.tsx` — Visually-hidden but tabbable nav mirroring scene interactives for screen reader access
+- `TownSquareScene` — extends `BaseTownScene`; 3200px wide; 7 building doors; `QuestBoardInteractive` + `RecruitBannerInteractive` at center; player spawns at x=1600; sign-post labels above each door
+- `QuestBoardInteractive` — Phaser entity with proximity detection; activates → `setActiveModal('quest-board')`
+- `RecruitBannerInteractive` — same pattern; activates → `setActiveModal('recruit')`
+- `PlaceholderScene` factory — registers placeholder Phaser scenes for all 7 buildings (war-room, oracle, library, tavern, armory, guild-hall, hall-of-returns); shows building name + Escape to return
+- `features/town-square.tsx` — refactored from Phase 1 modal into a store-driven HUD overlay; renders `QuestBoardPanel` or `RecruitPanel` based on `town-store.activeModal`; works in both HTML (opened by building button) and Phaser (triggered by scene interactive) modes
+- `stores/town-store.ts` — added `'quest-board'` to `activeModal` type; added `setActiveModal` action
+- `game/game-config.ts` — imports all scene files so Phaser game includes all registered scenes
+- `BaseTownScene` — added `protected get sceneWidth()` hook so subclasses can override the default 2400px width
+- `scene-keyboard-nav` mirror for Town Square: Quest Board, Recruit Banner + 7 Door labels
 
 **Tests added:**
-- `scene-router.test.ts` — 9 tests: fade/instant transitions, reduced-motion, spawn-point passing, door-enter pub/sub
-- `entities/__tests__/door.test.ts` — 6 tests: proximity detection, tryEnter guard, label/x exposure
-- `components/__tests__/scene-keyboard-nav.test.tsx` — 7 tests: render, click, Enter key, Tab order, visually-hidden style
+- `src/game/scenes/__tests__/town-square-scene.test.ts` — 13 unit tests: scene key, defaultSpawnX, sceneWidth, door count, door targets, interactive labels, activations, shutdown cleanup, update pause
+- `tests/e2e/town-square.spec.ts` — 9 Playwright tests covering: open, quest board visibility, recruit modal flow, Escape close, cancel return, empty state, accessibility (zero violations)
 
-**Verify result:** 111 tests pass, typecheck clean, lint clean
+**Acceptance criteria status:**
+- ✅ Town Square scene renders with 7 doors and 2 interactives
+- ✅ Player spawns at center (1600)
+- ✅ Quest Board + Escape → HUD overlay opens/closes
+- ✅ Recruit Banner → recruit modal; POST to /adventurers still works
+- ✅ 7 doors → placeholder scenes showing building name
+- ✅ scene-keyboard-nav mirror: Quest Board, Recruit Banner, Door: War Room, etc.
+- ✅ Phase 1 capstone E2E tests still pass (HTML mode unchanged, store cleanup added)
+- ✅ Zero axe-core violations
