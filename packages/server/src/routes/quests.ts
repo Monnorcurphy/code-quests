@@ -190,6 +190,42 @@ export function createQuestsRouter(db: Database.Database): Router {
     })();
   });
 
+  router.post('/:id/dispatch', (req, res) => {
+    const row = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow | undefined;
+    if (!row) {
+      res.status(404).json({ error: 'Quest not found' });
+      return;
+    }
+    if (row.status !== 'idle') {
+      res.status(409).json({ error: 'Quest already dispatched' });
+      return;
+    }
+    const bypass = req.query['bypass'] === 'true';
+    void (async () => {
+      try {
+        const quest = QuestSchema.parse(rowToApi(row));
+        const adapter = getAuditAdapter();
+        const audit = await auditQuest(quest, adapter);
+        const blockGaps = audit.gaps.filter((g) => g.severity === 'block');
+        if (blockGaps.length > 0 && !bypass) {
+          res.status(409).json({ error: 'Quest has blocking audit gaps — fix them or dispatch with ?bypass=true', audit });
+          return;
+        }
+        const finalAudit = { ...audit, bypassed: bypass };
+        const now = new Date().toISOString();
+        db.prepare(
+          'UPDATE quests SET status = ?, ac_locked_at = ?, spec_audit_json = ?, updated_at = ? WHERE id = ?',
+        ).run('active', now, JSON.stringify(finalAudit), now, req.params.id);
+        const updated = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
+        res.json(rowToApi(updated));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        process.stderr.write(`[quests] POST /quests/:id/dispatch failed: ${msg}\n`);
+        res.status(500).json({ error: 'Failed to dispatch quest' });
+      }
+    })();
+  });
+
   router.delete('/:id', (req, res) => {
     const existing = db.prepare('SELECT id FROM quests WHERE id = ?').get(req.params.id);
     if (!existing) {
