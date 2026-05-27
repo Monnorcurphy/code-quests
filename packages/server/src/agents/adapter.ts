@@ -1,13 +1,15 @@
-import type { AgentEvent, Equipment } from '@code-quests/shared';
+import type { AgentEvent, Equipment, MCPServer } from '@code-quests/shared';
 
 export interface AgentSpawnInput {
   questId: string;
   adventurerId: string;
   adventurerName: string;
+  adventurerClass?: string;
   modelId: string;
   description: string;
   acceptanceCriteria: string[];
   equipment: Equipment;
+  mcpServers?: MCPServer[];
   cwd?: string;
 }
 
