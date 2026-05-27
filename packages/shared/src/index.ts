@@ -14,3 +14,6 @@ export {
   SpecAuditSchema,
 } from './spec-audit';
 export type { SpecGapBuilding, SpecGapSeverity, SpecGap, SpecAudit } from './spec-audit';
+
+export { AgentSchema, AgentEventSchema } from './agent';
+export type { Agent, AgentEvent } from './agent';

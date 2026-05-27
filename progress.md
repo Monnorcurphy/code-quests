@@ -1,7 +1,14 @@
-# Progress — Phase 3
+# Progress — Phase 4
 
-Previous task progress archived to metrics/progress-before-garnet.md
+Previous task progress archived to metrics/progress-before-agra-fort.md
 
-## task garnet — Phase 3 capstone (COMPLETE)
+## agra-fort — AgentAdapter v2 + agents-table lifecycle service
 
-Built and wired all Phase 3 building panels: Oracle (acceptance criteria), Tavern (edge cases), Library (quest context). Updated oracle/tavern/library Phaser scenes to open real panels instead of coming-soon. Updated HUD overlay manager to render the new panels. Added active-quest badge to Town Square. Updated seed-dev with a gapped quest. Created unit tests for oracle, tavern, library. Created Playwright E2E spec for phase-3-capstone. All 437 tests pass (client 267, server 112, shared 58). Typecheck and lint clean.
+- Added `AgentSchema` and `AgentEventSchema` (discriminated union) to `packages/shared/src/agent.ts`; re-exported from `index.ts`
+- Widened `AgentAdapter` interface to make `complete()` optional and add optional `spawn(input: AgentSpawnInput): Promise<AgentHandle>` with full `AgentSpawnInput` and `AgentHandle` types
+- Extended `offlineAdapter` with a `spawn()` implementation that yields a deterministic 4-event sequence (progress → combat → progress → completed) on `setImmediate` cadence; `awaitExit()` resolves with `exitCode: 0` after events drain
+- Added `getQuestAdapter()` to `select-adapter.ts` that returns offline adapter by default; returns a throwing stub when `CODE_QUESTS_USE_REAL_AGENT=1` and `claude` binary resolves (real impl deferred to `cartagena`)
+- Added `003_agent_indexes.sql` migration with idempotent indexes on `agents(quest_id)` and `agents(adventurer_id)`
+- Created `agents-service.ts` with `createAgent`, `endAgent`, `findAgentByQuest`, `findActiveAgents`; all reads parse through `AgentSchema`
+- Guarded `adapter.complete?.()` call in `audit-quest.ts` to handle now-optional interface
+- 129 tests passing; typecheck and lint clean
