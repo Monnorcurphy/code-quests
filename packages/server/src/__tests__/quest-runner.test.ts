@@ -481,6 +481,60 @@ describe('runQuest scene progression heuristic', () => {
     }
   });
 
+  it('persists scene_change events to agents.events_json', async () => {
+    insertAdventurer(db, 'adv-persist');
+    insertQuest(db, 'q-persist', 'adv-persist');
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-persist',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            // Emit exactly PROGRESS_EVENTS_PER_SCENE progress events → triggers one heuristic scene_change
+            for (let i = 0; i < PROGRESS_EVENTS_PER_SCENE; i++) {
+              yield { type: 'progress', timestamp: ts, message: `Step ${i + 1}` };
+            }
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-persist');
+    const adventurer = parseAdventurer(db, 'adv-persist');
+
+    const { agent, done } = await runQuest(quest, adventurer, { db });
+    await done;
+
+    const agentRow = db.prepare('SELECT events_json FROM agents WHERE id = ?').get(agent.id) as {
+      events_json: string | null;
+    };
+    expect(agentRow.events_json).toBeTruthy();
+    const events = JSON.parse(agentRow.events_json!) as AgentEvent[];
+
+    const sceneChangeEvents = events.filter((e) => e.type === 'scene_change');
+    expect(sceneChangeEvents.length).toBeGreaterThan(0);
+
+    // Heuristic scene_change: forest → cave
+    const heuristicChange = sceneChangeEvents[0];
+    expect(heuristicChange.type).toBe('scene_change');
+    if (heuristicChange.type === 'scene_change') {
+      expect(heuristicChange.from).toBe('quest-forest');
+      expect(heuristicChange.to).toBe('quest-cave');
+    }
+
+    // Completion-driven scene_changes must include the terminal one ending at boss-room
+    const lastChange = sceneChangeEvents[sceneChangeEvents.length - 1];
+    expect(lastChange.type).toBe('scene_change');
+    if (lastChange.type === 'scene_change') {
+      expect(lastChange.to).toBe('quest-boss-room');
+    }
+  });
+
   it('does not double-emit scene_change when already at boss-room on completed', async () => {
     insertAdventurer(db, 'adv-atboss');
     // Insert quest already at boss-room

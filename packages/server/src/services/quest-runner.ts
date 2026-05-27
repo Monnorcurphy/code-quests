@@ -76,12 +76,14 @@ export async function runQuest(
           if (count % PROGRESS_EVENTS_PER_SCENE === 0) {
             const transition = advanceQuestScene(db, quest.id);
             if (transition) {
-              publishEvent?.(quest.id, {
+              const sceneEvent: AgentEvent = {
                 type: 'scene_change',
                 timestamp: new Date().toISOString(),
                 from: transition.from,
                 to: transition.to,
-              });
+              };
+              collectedEvents.push(sceneEvent);
+              publishEvent?.(quest.id, sceneEvent);
             }
           }
         }
@@ -89,12 +91,14 @@ export async function runQuest(
         if (event.type === 'completed') {
           let transition = advanceQuestScene(db, quest.id);
           while (transition) {
-            publishEvent?.(quest.id, {
+            const sceneEvent: AgentEvent = {
               type: 'scene_change',
               timestamp: new Date().toISOString(),
               from: transition.from,
               to: transition.to,
-            });
+            };
+            collectedEvents.push(sceneEvent);
+            publishEvent?.(quest.id, sceneEvent);
             if (transition.to === 'quest-boss-room') break;
             transition = advanceQuestScene(db, quest.id);
           }
