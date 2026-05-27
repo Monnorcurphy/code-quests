@@ -12,7 +12,11 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "${REPO_ROOT}" ] || [ ! -d "${REPO_ROOT}/.git" ]; then
+    echo "  Error: commit-metrics.sh could not locate the repo root from ${SCRIPT_DIR}" >&2
+    exit 1
+fi
 METRICS_DIR="${REPO_ROOT}/metrics"
 
 # ── Argument parsing ──
@@ -92,12 +96,17 @@ elif [ "${BRANCH_EXISTS}" = "remote" ]; then
 else
     # Brand new orphan branch
     git -C "${REPO_ROOT}" worktree add --detach "${WORKTREE_DIR}" 2>/dev/null
-    (
-        cd "${WORKTREE_DIR}"
-        git checkout --orphan "${METRICS_BRANCH}"
-        git rm -rf . 2>/dev/null || true
-        git commit --allow-empty -m "metrics: initialize ${METRICS_BRANCH}"
-    ) >/dev/null 2>&1
+    if [ -d "${WORKTREE_DIR}" ]; then
+        (
+            set -e
+            cd "${WORKTREE_DIR}"
+            # Guard: refuse to run destructive ops outside the worktree dir
+            [ "$(pwd)" = "${WORKTREE_DIR}" ] || exit 1
+            git checkout --orphan "${METRICS_BRANCH}"
+            git rm -rf . 2>/dev/null || true
+            git commit --allow-empty -m "metrics: initialize ${METRICS_BRANCH}"
+        ) >/dev/null 2>&1
+    fi
 fi
 
 if [ ! -d "${WORKTREE_DIR}" ]; then
@@ -145,7 +154,10 @@ esac
 
 # ── Step 5: Commit in worktree ──
 (
+    set -e
     cd "${WORKTREE_DIR}"
+    # Guard: refuse to run destructive ops outside the worktree dir
+    [ "$(pwd)" = "${WORKTREE_DIR}" ] || exit 1
     git add metrics/ 2>/dev/null
 
     if git diff --cached --quiet 2>/dev/null; then
