@@ -1,4 +1,29 @@
-export type SceneKey = 'boot' | 'test-scene';
+export type SceneKey =
+  | 'boot'
+  | 'test-scene'
+  | 'town-square'
+  | 'war-room'
+  | 'oracle'
+  | 'library'
+  | 'tavern'
+  | 'armory'
+  | 'guild-hall'
+  | 'hall-of-returns';
+
+export const TOWN_SCENE_KEYS: readonly SceneKey[] = [
+  'town-square',
+  'war-room',
+  'oracle',
+  'library',
+  'tavern',
+  'armory',
+  'guild-hall',
+  'hall-of-returns',
+] as const;
+
+export function isTownSceneKey(key: string): key is SceneKey {
+  return (TOWN_SCENE_KEYS as readonly string[]).includes(key);
+}
 
 type SceneConstructor = new () => object;
 
