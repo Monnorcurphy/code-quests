@@ -135,7 +135,7 @@ describe('Town — Phaser mode', () => {
   });
 
   it('renders coming-soon overlay for placeholder scene when activeModal is coming-soon', async () => {
-    renderAtPath('/town/oracle');
+    renderAtPath('/town/hall-of-returns');
     await screen.findByTestId('phaser-mount');
 
     await act(() => {
@@ -143,10 +143,7 @@ describe('Town — Phaser mode', () => {
     });
 
     expect(screen.getByRole('dialog')).toBeDefined();
-    expect(screen.getByRole('heading', { name: 'Oracle', level: 2 })).toBeDefined();
-    expect(
-      screen.getByText('Refine Acceptance Criteria — arriving in Phase 3.'),
-    ).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Hall of Returns', level: 2 })).toBeDefined();
   });
 
   it('renders the aria-live heading for the current building', async () => {

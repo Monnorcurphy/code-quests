@@ -225,13 +225,121 @@ describe('GuildHallScene', () => {
   });
 });
 
+describe('ArmoryScene', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let scene: any;
+  let mockStore: ReturnType<typeof buildMockStore>;
+
+  beforeEach(async () => {
+    vi.mocked(sceneRouter.setInteractives).mockClear();
+    vi.mocked(sceneRouter.emitDoorEnter).mockClear();
+    mockStore = buildMockStore();
+    const { ArmoryScene } = await import('../armory-scene');
+    scene = new ArmoryScene();
+    buildScene(scene, mockStore);
+  });
+
+  it('has sceneKey "armory"', () => {
+    expect(scene.sceneKey).toBe('armory');
+  });
+
+  it('has a single return door to town-square', () => {
+    expect(scene.doorConfigs[0].targetScene).toBe('town-square');
+  });
+
+  it('registers both return door and armory-loadout interactives', () => {
+    const calls = vi.mocked(sceneRouter.setInteractives).mock.calls;
+    const lastCall = calls[calls.length - 1][0];
+    const ids = lastCall.map((i: { id: string }) => i.id);
+    expect(ids).toContain('town-square');
+    expect(ids).toContain('armory-loadout');
+  });
+
+  it('activating armory-loadout sets activeModal to "armory-loadout"', () => {
+    const calls = vi.mocked(sceneRouter.setInteractives).mock.calls;
+    const lastCall = calls[calls.length - 1][0];
+    const item = lastCall.find((i: { id: string }) => i.id === 'armory-loadout');
+    item?.onActivate();
+    expect(mockStore.setActiveModal).toHaveBeenCalledWith('armory-loadout');
+  });
+
+  it('does not auto-open coming-soon on create', () => {
+    expect(mockStore.setActiveModal).not.toHaveBeenCalledWith('coming-soon');
+  });
+
+  it('shutdown clears activeModal', () => {
+    scene.__triggerShutdown();
+    expect(mockStore.setActiveModal).toHaveBeenCalledWith(null);
+  });
+});
+
+const PHASE3_BUILDING_SCENES = [
+  { name: 'OracleScene', key: 'oracle', module: '../oracle-scene', modal: 'oracle' },
+  { name: 'LibraryScene', key: 'library', module: '../library-scene', modal: 'library' },
+  { name: 'TavernScene', key: 'tavern', module: '../tavern-scene', modal: 'tavern' },
+] as const;
+
 const PLACEHOLDER_SCENES = [
-  { name: 'OracleScene', key: 'oracle', module: '../oracle-scene' },
-  { name: 'LibraryScene', key: 'library', module: '../library-scene' },
-  { name: 'TavernScene', key: 'tavern', module: '../tavern-scene' },
-  { name: 'ArmoryScene', key: 'armory', module: '../armory-scene' },
   { name: 'HallOfReturnsScene', key: 'hall-of-returns', module: '../hall-of-returns-scene' },
 ] as const;
+
+for (const { name, key, module: modulePath, modal } of PHASE3_BUILDING_SCENES) {
+  describe(name, () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let scene: any;
+    let mockStore: ReturnType<typeof buildMockStore>;
+
+    beforeEach(async () => {
+      vi.mocked(sceneRouter.setInteractives).mockClear();
+      vi.mocked(sceneRouter.emitDoorEnter).mockClear();
+      mockStore = buildMockStore();
+      const mod = await import(modulePath);
+      const SceneClass = mod[name];
+      scene = new SceneClass();
+      buildScene(scene, mockStore);
+    });
+
+    it(`has sceneKey "${key}"`, () => {
+      expect(scene.sceneKey).toBe(key);
+    });
+
+    it('has a single return door to town-square', () => {
+      const configs = scene.doorConfigs;
+      expect(configs).toHaveLength(1);
+      expect(configs[0].targetScene).toBe('town-square');
+    });
+
+    it('return door label is "Return to Town Square"', () => {
+      expect(scene.doorConfigs[0].label).toBe('Return to Town Square');
+    });
+
+    it('registers return door interactive', () => {
+      const calls = vi.mocked(sceneRouter.setInteractives).mock.calls;
+      const lastCall = calls[calls.length - 1][0];
+      const ids = lastCall.map((i: { id: string }) => i.id);
+      expect(ids).toContain('town-square');
+    });
+
+    it('activating return door emits door enter to town-square', () => {
+      const calls = vi.mocked(sceneRouter.setInteractives).mock.calls;
+      const lastCall = calls[calls.length - 1][0];
+      const doorItem = lastCall.find((i: { id: string }) => i.id === 'town-square');
+      doorItem?.onActivate();
+      expect(sceneRouter.emitDoorEnter).toHaveBeenCalledWith(
+        expect.objectContaining({ sceneKey: 'town-square' }),
+      );
+    });
+
+    it(`sets activeModal to "${modal}" on create`, () => {
+      expect(mockStore.setActiveModal).toHaveBeenCalledWith(modal);
+    });
+
+    it('shutdown clears activeModal', () => {
+      scene.__triggerShutdown();
+      expect(mockStore.setActiveModal).toHaveBeenCalledWith(null);
+    });
+  });
+}
 
 for (const { name, key, module: modulePath } of PLACEHOLDER_SCENES) {
   describe(name, () => {

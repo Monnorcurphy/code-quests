@@ -41,11 +41,22 @@ function seed() {
       title: 'Implement dark mode toggle',
       description: 'Add a dark/light mode toggle to the UI settings panel.',
       acs: ['Toggle switches theme immediately', 'Preference persists across reloads'],
+      edgeCases: ['User has system dark mode already enabled'],
+      context: '',
     },
     {
       title: 'Add pagination to quest board',
       description: 'Show 10 quests per page with next/prev controls.',
       acs: ['Next/prev buttons appear when > 10 quests', 'URL reflects current page'],
+      edgeCases: [],
+      context: '',
+    },
+    {
+      title: 'Improve search result ranking',
+      description: 'Update the ranking algorithm to surface more relevant results.',
+      acs: [],
+      edgeCases: [],
+      context: '',
     },
   ];
 
@@ -63,8 +74,8 @@ function seed() {
         seed.title,
         seed.description,
         JSON.stringify(seed.acs),
-        JSON.stringify([]),
-        '',
+        JSON.stringify(seed.edgeCases),
+        seed.context,
         'idle',
         JSON.stringify({ skillIds: [], toolIds: [], mcpServerIds: [] }),
         now,

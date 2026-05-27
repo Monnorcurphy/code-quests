@@ -1,5 +1,11 @@
 import { z } from 'zod';
 import { EquipmentSchema } from './equipment';
+import { SpecAuditSchema } from './spec-audit';
+
+export const AC_MAX_LENGTH = 500;
+export const AC_MAX_COUNT = 15;
+export const QuestAcItemSchema = z.string().trim().min(1).max(AC_MAX_LENGTH);
+export const QuestAcListSchema = z.array(QuestAcItemSchema).max(AC_MAX_COUNT);
 
 export const QuestStatusSchema = z.enum([
   'idle',
@@ -24,6 +30,7 @@ export const QuestSchema = z.object({
   adventurerId: z.string().min(1).nullable(),
   agentId: z.string().nullable(),
   equipment: EquipmentSchema.default({ skillIds: [], toolIds: [], mcpServerIds: [] }),
+  specAudit: SpecAuditSchema.nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

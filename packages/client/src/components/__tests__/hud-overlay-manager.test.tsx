@@ -18,8 +18,13 @@ vi.mock('../../lib/api', async (importOriginal) => {
     ...original,
     api: {
       adventurers: { list: vi.fn().mockResolvedValue([]) },
-      quests: { list: vi.fn().mockResolvedValue([]), create: vi.fn() },
+      quests: { list: vi.fn().mockResolvedValue([]), get: vi.fn(), create: vi.fn(), patch: vi.fn() },
       epics: { list: vi.fn().mockResolvedValue([]) },
+      equipment: {
+        skills: vi.fn().mockResolvedValue([]),
+        tools: vi.fn().mockResolvedValue([]),
+        mcpServers: vi.fn().mockResolvedValue([]),
+      },
     },
   };
 });
@@ -78,32 +83,32 @@ describe('HUDOverlayManager', () => {
     expect(screen.getByRole('heading', { name: 'Guild Hall', level: 2 })).toBeDefined();
   });
 
-  it('renders ComingSoonPanel for oracle when activeModal is coming-soon', async () => {
+  it('renders Oracle panel when activeModal is oracle', async () => {
     renderAtScene('oracle');
-    await act(() => { useTownStore.setState({ activeModal: 'coming-soon' }); });
+    await act(() => { useTownStore.setState({ activeModal: 'oracle' }); });
     expect(screen.getByRole('dialog')).toBeDefined();
-    expect(screen.getByRole('heading', { name: 'Oracle', level: 2 })).toBeDefined();
-    expect(
-      screen.getByText('Refine Acceptance Criteria — arriving in Phase 3.'),
-    ).toBeDefined();
+    expect(screen.getByRole('heading', { name: /oracle/i, level: 2 })).toBeDefined();
   });
 
-  it('renders ComingSoonPanel for library when activeModal is coming-soon', async () => {
+  it('renders Library panel when activeModal is library', async () => {
     renderAtScene('library');
-    await act(() => { useTownStore.setState({ activeModal: 'coming-soon' }); });
-    expect(screen.getByRole('heading', { name: 'Library', level: 2 })).toBeDefined();
+    await act(() => { useTownStore.setState({ activeModal: 'library' }); });
+    expect(screen.getByRole('dialog')).toBeDefined();
+    expect(screen.getByRole('heading', { name: /library/i, level: 2 })).toBeDefined();
   });
 
-  it('renders ComingSoonPanel for tavern when activeModal is coming-soon', async () => {
+  it('renders Tavern panel when activeModal is tavern', async () => {
     renderAtScene('tavern');
-    await act(() => { useTownStore.setState({ activeModal: 'coming-soon' }); });
-    expect(screen.getByRole('heading', { name: 'Tavern', level: 2 })).toBeDefined();
+    await act(() => { useTownStore.setState({ activeModal: 'tavern' }); });
+    expect(screen.getByRole('dialog')).toBeDefined();
+    expect(screen.getByRole('heading', { name: /tavern/i, level: 2 })).toBeDefined();
   });
 
-  it('renders ComingSoonPanel for armory when activeModal is coming-soon', async () => {
+  it('renders LoadoutPanel when activeModal is armory-loadout', async () => {
     renderAtScene('armory');
-    await act(() => { useTownStore.setState({ activeModal: 'coming-soon' }); });
-    expect(screen.getByRole('heading', { name: 'Armory', level: 2 })).toBeDefined();
+    await act(() => { useTownStore.setState({ activeModal: 'armory-loadout' }); });
+    expect(screen.getByRole('dialog')).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Armory — Equipment Loadout', level: 2 })).toBeDefined();
   });
 
   it('renders ComingSoonPanel for hall-of-returns when activeModal is coming-soon', async () => {

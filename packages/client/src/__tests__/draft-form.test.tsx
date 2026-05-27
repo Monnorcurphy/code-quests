@@ -33,6 +33,7 @@ const mockQuest: Quest = {
   adventurerId: null,
   agentId: null,
   equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
+  specAudit: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
