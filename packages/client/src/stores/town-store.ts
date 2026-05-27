@@ -18,7 +18,7 @@ interface TownState {
   currentScene: SceneKey;
   playerX: number;
   facing: 'left' | 'right';
-  activeModal: 'recruit' | 'draft' | 'quest-board' | 'guild-hall' | 'coming-soon' | 'armory-loadout' | 'oracle' | 'library' | 'tavern' | null;
+  activeModal: 'recruit' | 'draft' | 'quest-board' | 'guild-hall' | 'coming-soon' | 'armory-loadout' | 'oracle' | 'library' | 'tavern' | 'hall-of-returns' | null;
   selectedQuestId: string | null;
   setScene: (scene: SceneKey) => void;
   setPlayerX: (x: number) => void;

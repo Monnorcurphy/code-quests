@@ -185,6 +185,61 @@ export function createQuestsRouter(
     res.status(201).json(rowToApi(row));
   });
 
+  router.get('/returned', (req, res) => {
+    const limit = Math.max(1, Math.min(100, Number(req.query['limit']) || 20));
+    const offset = Math.max(0, Number(req.query['offset']) || 0);
+
+    const countRow = db
+      .prepare("SELECT COUNT(*) AS cnt FROM quests WHERE status IN ('complete', 'failed')")
+      .get() as { cnt: number };
+
+    type ReturnedRow = QuestRow & {
+      adv_id: string | null;
+      adv_name: string | null;
+      adv_class: string | null;
+      ag_id: string | null;
+      ag_started_at: string | null;
+      ag_ended_at: string | null;
+      ag_events_json: string | null;
+    };
+
+    const rows = db
+      .prepare(
+        `SELECT q.*,
+          adv.id AS adv_id, adv.name AS adv_name, adv.class AS adv_class,
+          ag.id AS ag_id, ag.started_at AS ag_started_at,
+          ag.ended_at AS ag_ended_at, ag.events_json AS ag_events_json
+        FROM quests q
+        LEFT JOIN agents ag ON ag.id = (
+          SELECT id FROM agents WHERE quest_id = q.id ORDER BY started_at DESC LIMIT 1
+        )
+        LEFT JOIN adventurers adv ON adv.id = ag.adventurer_id
+        WHERE q.status IN ('complete', 'failed')
+        ORDER BY q.updated_at DESC
+        LIMIT ? OFFSET ?`,
+      )
+      .all(limit, offset) as ReturnedRow[];
+
+    const items = rows.map((row) => ({
+      ...rowToApi(row),
+      adventurer:
+        row.adv_id !== null
+          ? { id: row.adv_id, name: row.adv_name!, class: row.adv_class! }
+          : null,
+      agent:
+        row.ag_id !== null
+          ? {
+              id: row.ag_id,
+              startedAt: row.ag_started_at!,
+              endedAt: row.ag_ended_at ?? null,
+              events: JSON.parse(row.ag_events_json ?? '[]') as unknown[],
+            }
+          : null,
+    }));
+
+    res.json({ items, total: countRow.cnt, limit, offset });
+  });
+
   router.get('/:id', (req, res) => {
     const row = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow | undefined;
     if (!row) {

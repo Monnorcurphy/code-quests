@@ -425,3 +425,82 @@ describe('DELETE /quests/:id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('GET /quests/returned', () => {
+  let db: Database.Database;
+  let app: express.Express;
+
+  beforeEach(() => {
+    ({ app, db } = makeApp());
+    db.prepare("INSERT INTO adventurers (id, name, class, model_id) VALUES ('adv-r', 'Aldric', 'champion', 'claude-opus-4-7')").run();
+    db.prepare("INSERT INTO quests (id, title, status) VALUES ('q-complete', 'Dragon Slain', 'complete')").run();
+    db.prepare("INSERT INTO quests (id, title, status) VALUES ('q-failed', 'Artifact Lost', 'failed')").run();
+    db.prepare("INSERT INTO quests (id, title, status) VALUES ('q-idle', 'Not Started', 'idle')").run();
+    db.prepare("INSERT INTO agents (id, adventurer_id, quest_id, started_at, ended_at) VALUES ('ag-c', 'adv-r', 'q-complete', '2024-01-01T10:00:00Z', '2024-01-01T11:00:00Z')").run();
+    db.prepare("INSERT INTO agents (id, adventurer_id, quest_id, started_at, ended_at) VALUES ('ag-f', 'adv-r', 'q-failed', '2024-01-02T10:00:00Z', '2024-01-02T10:30:00Z')").run();
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('returns only complete and failed quests', async () => {
+    const res = await request(app).get('/quests/returned');
+    expect(res.status).toBe(200);
+    const ids = (res.body.items as { id: string }[]).map((q) => q.id);
+    expect(ids).toContain('q-complete');
+    expect(ids).toContain('q-failed');
+    expect(ids).not.toContain('q-idle');
+  });
+
+  it('includes adventurer name and class', async () => {
+    const res = await request(app).get('/quests/returned');
+    expect(res.status).toBe(200);
+    const completeQuest = (res.body.items as { id: string; adventurer: { name: string; class: string } | null }[]).find((q) => q.id === 'q-complete');
+    expect(completeQuest?.adventurer?.name).toBe('Aldric');
+    expect(completeQuest?.adventurer?.class).toBe('champion');
+  });
+
+  it('includes agent start and end times', async () => {
+    const res = await request(app).get('/quests/returned');
+    const completeQuest = (res.body.items as { id: string; agent: { startedAt: string; endedAt: string } | null }[]).find((q) => q.id === 'q-complete');
+    expect(completeQuest?.agent?.startedAt).toBe('2024-01-01T10:00:00Z');
+    expect(completeQuest?.agent?.endedAt).toBe('2024-01-01T11:00:00Z');
+  });
+
+  it('includes events array on agent (empty by default)', async () => {
+    const res = await request(app).get('/quests/returned');
+    const completeQuest = (res.body.items as { id: string; agent: { events: unknown[] } | null }[]).find((q) => q.id === 'q-complete');
+    expect(Array.isArray(completeQuest?.agent?.events)).toBe(true);
+  });
+
+  it('returns total count in response', async () => {
+    const res = await request(app).get('/quests/returned');
+    expect(res.body.total).toBe(2);
+  });
+
+  it('respects limit and offset for pagination', async () => {
+    const res = await request(app).get('/quests/returned?limit=1&offset=0');
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.limit).toBe(1);
+    expect(res.body.offset).toBe(0);
+  });
+
+  it('returns empty items when no quests have returned', async () => {
+    db.prepare("DELETE FROM agents").run();
+    db.prepare("UPDATE quests SET status = 'idle' WHERE status IN ('complete', 'failed')").run();
+    const res = await request(app).get('/quests/returned');
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(0);
+    expect(res.body.total).toBe(0);
+  });
+
+  it('quest with no agent has null adventurer and null agent', async () => {
+    db.prepare("INSERT INTO quests (id, title, status) VALUES ('q-noagent', 'No Agent', 'failed')").run();
+    const res = await request(app).get('/quests/returned');
+    const quest = (res.body.items as { id: string; adventurer: unknown; agent: unknown }[]).find((q) => q.id === 'q-noagent');
+    expect(quest?.adventurer).toBeNull();
+    expect(quest?.agent).toBeNull();
+  });
+});

@@ -55,8 +55,14 @@ export async function runQuest(
   activeHandles.set(quest.id, handle);
 
   const done = (async () => {
+    const collectedEvents: AgentEvent[] = [];
+    function persistEvents() {
+      db.prepare('UPDATE agents SET events_json = ? WHERE id = ?')
+        .run(JSON.stringify(collectedEvents), agent.id);
+    }
     try {
       for await (const event of handle.events()) {
+        collectedEvents.push(event);
         publishEvent?.(quest.id, event);
         if (event.type === 'completed') {
           try {
@@ -64,6 +70,7 @@ export async function runQuest(
           } catch (err) {
             if (!(err instanceof InvalidTransitionError)) throw err;
           }
+          persistEvents();
           endAgent(db, agent.id, 0);
           return;
         }
@@ -79,6 +86,7 @@ export async function runQuest(
             )
             .run(JSON.stringify(failureSummary), ts, quest.id) as { changes: number };
           if (result.changes > 0) {
+            persistEvents();
             endAgent(db, agent.id, 1);
           }
           return;
@@ -96,6 +104,7 @@ export async function runQuest(
           )
           .run(JSON.stringify(failureSummary), ts, quest.id) as { changes: number };
         if (result.changes > 0) {
+          persistEvents();
           endAgent(db, agent.id, null);
           publishEvent?.(quest.id, { type: 'failed', timestamp: ts, reason: msg });
         }

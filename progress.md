@@ -1,20 +1,24 @@
 # Progress — Phase 4
 
-Previous task progress archived to metrics/progress-before-el-morro.md
+Previous task progress archived to metrics/progress-before-galle.md
 
-## Task el-morro: Active-quest HUD + real-time stream — DONE
+## TASK galle — Hall of Returns view + failure summaries
 
-**Files created:**
-- `packages/client/src/features/quests/use-active-quest.ts` — TanStack Query + WS subscription merged via useReducer; invalidates quest + quests queries on status events
-- `packages/client/src/features/quests/active-quest-panel.tsx` — live event feed with aria-live="polite", auto-scroll with reduced-motion support, completion/failure banners from quest data
-- `packages/client/src/features/quests/cancel-button.tsx` — three-state cancel (idle/loading/success/error) with inline parchment confirmation dialog
-- `packages/client/src/__tests__/active-quest-panel.test.tsx` — 13 tests: feed rendering, accessibility, event types, query invalidation
-- `packages/client/src/__tests__/cancel-button.test.tsx` — 9 tests: happy path, error path, confirmation flow, focus management
+**Status:** Complete
 
-**Files modified:**
-- `packages/client/src/lib/api.ts` — added `quests.active` (GET /quests/active) and `quests.cancel` (POST /quests/:id/cancel)
-- `packages/client/src/stores/town-store.ts` — added `goToHallOfReturns()` action
-- `packages/client/src/features/war-room.tsx` — conditional rendering: active quest shows ActiveQuestPanel + CancelButton; complete/failed shows "Return to Hall of Returns" link; idle shows existing audit panel
-- `packages/client/src/features/town-square.tsx` — replaced ActiveQuestBadge with ActiveQuestsPeek (title, adventurer name, last WS event per quest); uses per-quest WS subscriptions
+**What was done:**
+- Added `004_agent_events.sql` migration — persists events_json on agents table
+- Updated `quest-runner.ts` to accumulate AgentEvents and persist them on quest completion/failure
+- Added `GET /quests/returned` endpoint (before `/:id` to avoid routing conflict) — joins quests with most-recent agent + adventurer, returns paginated `{ items, total, limit, offset }`
+- Added `ReturnedQuest`, `ReturnedAgent`, `ReturnedAdventurer` types + schemas to `api.ts` (manual TS types to work around Zod v3.25 `addQuestionMarks` inference bug); added `api.quests.returned()`
+- Added `'hall-of-returns'` to `activeModal` type union in `town-store.ts`
+- Updated `hall-of-returns-scene.ts`: `setActiveModal('coming-soon')` → `setActiveModal('hall-of-returns')`
+- Added `HallOfReturns` panel to `hud-overlay-manager.tsx`, removed hall-of-returns from COMING_SOON_CONTENT
+- New `features/hall-of-returns.tsx` — two-column view (Victorious / Returned in Defeat), card per quest, click-to-detail, loading/error/empty states, useFocusTrap, role=dialog
+- New `features/quests/returned-quest-detail.tsx` — full combat log, failure summary alert, "Coming in Phase 9" note (no no-op Re-post/Retire buttons)
+- CSS in `features.css` — grid layout, reduced-motion support, outcome badges (text + CSS class, not color alone)
+- New `__tests__/hall-of-returns.test.tsx` — 16 tests covering all states, accessibility, interaction
+- Added `GET /quests/returned` tests to `packages/server/src/__tests__/quests.test.ts` (8 tests)
+- Updated `all-buildings.test.ts`, `hud-overlay-manager.test.tsx`, `town.test.tsx` to reflect new hall-of-returns wiring
 
-**Test results:** 301/301 client tests pass, lint clean, typecheck clean
+**Verify results:** 321/321 client tests pass, 5/5 server tests pass, typecheck clean, lint clean

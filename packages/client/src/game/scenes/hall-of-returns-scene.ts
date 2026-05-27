@@ -38,7 +38,7 @@ export class HallOfReturnsScene extends BaseBuildingScene {
 
     sceneRouter.setInteractives([this.returnDoorInteractive]);
 
-    useTownStore.getState().setActiveModal('coming-soon');
+    useTownStore.getState().setActiveModal('hall-of-returns');
 
     this.events.once('shutdown', () => {
       useTownStore.getState().setActiveModal(null);
