@@ -5,6 +5,9 @@ import { runMigrations } from './db/migrator';
 import { createAdventurersRouter } from './routes/adventurers';
 import { createEpicsRouter } from './routes/epics';
 import { createQuestsRouter } from './routes/quests';
+import { createSkillsRouter } from './routes/skills';
+import { createToolsRouter } from './routes/tools';
+import { createMCPServersRouter } from './routes/mcp-servers';
 import { errorHandler } from './middleware/errors';
 
 export function createApp(db: Database.Database) {
@@ -14,6 +17,9 @@ export function createApp(db: Database.Database) {
   app.use('/adventurers', createAdventurersRouter(db));
   app.use('/epics', createEpicsRouter(db));
   app.use('/quests', createQuestsRouter(db));
+  app.use('/skills', createSkillsRouter(db));
+  app.use('/tools', createToolsRouter(db));
+  app.use('/mcp-servers', createMCPServersRouter(db));
   app.use(errorHandler);
   return app;
 }
