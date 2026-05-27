@@ -1,0 +1,22 @@
+# Large files that waste context
+node_modules/
+target/
+dist/
+build/
+*.lock
+pnpm-lock.yaml
+Cargo.lock
+package-lock.json
+yarn.lock
+
+# Binary files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.icns
+*.woff
+*.woff2
+*.ttf
+*.eot
