@@ -1,0 +1,35 @@
+
+╔══════════════════════════════════════════════╗
+║     DARK FACTORY — VERIFICATION REPORT        ║
+╚══════════════════════════════════════════════╝
+
+  2026-05-26_19-37
+  Branch: feature/balmoral
+  Commit: 837b401 fix: address verify.sh failures (round 1)
+
+── Universal Checks ──────────────────────────
+  Git worktree clean...  ✅ PASS
+  No hardcoded secrets...  ✅ PASS
+
+── Profile Checks ────────────────────────────
+  Install deps...  ⏭️  SKIP (dependencies already present)
+  Build...  ✅ PASS
+  Test...  ✅ PASS
+  Typecheck...  ✅ PASS
+  Lint...  ✅ PASS
+  Smoke test...  ✅ PASS
+
+── Code Quality ──────────────────────────────
+  Binary assets...  ⏭️  SKIP (checks/binary-assets.sh not found)
+  Cross-boundary...  ⏭️  SKIP (not in profile checks list)
+  No debug prints in prod code...  ⚠️  WARN
+  Serde hygiene...  ⏭️  SKIP (not in profile checks list)
+  SQLite FK pragma...  ⏭️  SKIP (not in profile checks list)
+
+── Security ──────────────────────────────────
+  Semgrep SAST...  ⏭️  SKIP (not in profile checks list)
+
+══════════════════════════════════════════════
+  RESULTS: ✅ 7 passed | ❌ 0 hard fail | ⚠️  1 warn | ⏭️  6 skipped
+══════════════════════════════════════════════
+
