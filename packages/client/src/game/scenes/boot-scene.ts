@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { registerScene } from '../scene-registry';
+import type { SceneKey } from '../scene-registry';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -17,6 +18,11 @@ export class BootScene extends Phaser.Scene {
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
+
+    const next = this.game.registry.get('initialScene') as SceneKey | undefined;
+    if (next && next !== 'boot') {
+      this.scene.start(next);
+    }
   }
 }
 

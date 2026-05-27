@@ -20,11 +20,15 @@ vi.mock('phaser', () => ({
 }));
 
 import PhaserMount from '../phaser-mount';
+import * as sceneRegistry from '../scene-registry';
+import { registerScene } from '../scene-registry';
+import type { SceneKey } from '../scene-registry';
 
 describe('PhaserMount', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
+
 
   it('creates a Phaser.Game instance on mount', () => {
     render(<PhaserMount initialScene="boot" />);
@@ -44,5 +48,21 @@ describe('PhaserMount', () => {
     }
     expect(MockGame).toHaveBeenCalledTimes(5);
     expect(mockDestroy).toHaveBeenCalledTimes(5);
+  });
+
+  it('consults scene registry and includes non-boot scene in config', () => {
+    class MockForestScene {}
+    const forestKey = 'forest' as unknown as SceneKey;
+    registerScene(forestKey, MockForestScene as new () => object);
+
+    const getSpy = vi.spyOn(sceneRegistry, 'getScene');
+    render(<PhaserMount initialScene={forestKey} />);
+
+    expect(getSpy).toHaveBeenCalledWith(forestKey);
+    const config = MockGame.mock.calls[MockGame.mock.calls.length - 1][0] as {
+      scene: unknown[];
+    };
+    expect(config.scene).toContain(MockForestScene);
+    getSpy.mockRestore();
   });
 });
