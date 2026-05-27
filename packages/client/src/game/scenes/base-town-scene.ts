@@ -4,6 +4,7 @@ import { Door } from '../entities/door';
 import { KeyboardController } from '../input/keyboard-controller';
 import { preloadCommonAssets } from '../asset-loader';
 import { useTownStore } from '../../stores/town-store';
+import { sceneRouter } from '../scene-router';
 import type { SceneKey } from '../scene-registry';
 
 const SCENE_WIDTH = 2400;
@@ -66,6 +67,16 @@ export abstract class BaseTownScene extends Phaser.Scene {
           label: cfg.label,
         }),
     );
+
+    sceneRouter.setInteractives(
+      this.doorConfigs.map((cfg) => ({
+        id: cfg.targetScene,
+        label: cfg.label,
+        onActivate: () =>
+          sceneRouter.emitDoorEnter({ sceneKey: cfg.targetScene, spawnX: cfg.targetSpawnX }),
+      })),
+    );
+    this.events.once('shutdown', () => sceneRouter.setInteractives([]));
 
     this.controller = new KeyboardController(this);
     this.controller

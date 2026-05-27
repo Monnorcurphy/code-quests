@@ -10,7 +10,7 @@ export type SceneKey =
   | 'guild-hall'
   | 'hall-of-returns';
 
-export const TOWN_SCENE_KEYS: readonly SceneKey[] = [
+export const TOWN_SCENE_KEYS = [
   'town-square',
   'war-room',
   'oracle',
@@ -21,7 +21,9 @@ export const TOWN_SCENE_KEYS: readonly SceneKey[] = [
   'hall-of-returns',
 ] as const;
 
-export function isTownSceneKey(key: string): key is SceneKey {
+export type TownSceneKey = (typeof TOWN_SCENE_KEYS)[number];
+
+export function isTownSceneKey(key: string): key is TownSceneKey {
   return (TOWN_SCENE_KEYS as readonly string[]).includes(key);
 }
 

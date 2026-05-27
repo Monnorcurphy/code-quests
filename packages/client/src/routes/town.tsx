@@ -5,10 +5,10 @@ import TownSquare from '../features/town-square';
 import WarRoom from '../features/war-room';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { SceneKeyboardNav } from '../components/scene-keyboard-nav';
-import type { SceneNavItem } from '../components/scene-keyboard-nav';
 import { sceneRouter } from '../game/scene-router';
+import type { SceneNavItem } from '../game/scene-router';
 import { isTownSceneKey } from '../game/scene-registry';
-import type { SceneKey } from '../game/scene-registry';
+import type { SceneKey, TownSceneKey } from '../game/scene-registry';
 
 const USE_PHASER = import.meta.env.VITE_PHASER_TOWN !== 'false';
 const PhaserMount = lazy(() => import('../game/phaser-mount'));
@@ -121,18 +121,24 @@ function HtmlTown() {
   );
 }
 
-function PhaserTown() {
+export function PhaserTown() {
   const { sceneKey: rawSceneKey } = useParams<{ sceneKey?: string }>();
   const location = useLocation();
   const navigate = useNavigate();
 
   const locationState = location.state as { spawnX?: number } | null;
-  const validSceneKey: SceneKey = isTownSceneKey(rawSceneKey ?? '')
-    ? (rawSceneKey as SceneKey)
+  const sceneKeyParam = rawSceneKey ?? '';
+  const validSceneKey: TownSceneKey | 'boot' = isTownSceneKey(sceneKeyParam)
+    ? sceneKeyParam
     : 'boot';
 
   const mountScene = useRef<SceneKey>(validSceneKey === 'boot' ? 'boot' : validSceneKey);
   const hasMounted = useRef(false);
+  const [navItems, setNavItems] = useState<SceneNavItem[]>([]);
+
+  useEffect(() => {
+    return sceneRouter.onInteractivesChange(setNavItems);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = sceneRouter.onDoorEnter(({ sceneKey, spawnX }) => {
@@ -150,11 +156,6 @@ function PhaserTown() {
   }, [validSceneKey, locationState?.spawnX]);
 
   const currentBuilding = BUILDINGS.find((b) => b.id === validSceneKey);
-  const navItems: SceneNavItem[] = BUILDINGS.map((b) => ({
-    id: b.id,
-    label: `Go to ${b.name}`,
-    onActivate: () => navigate(`/town/${b.id}`),
-  }));
 
   return (
     <main style={{ width: '100vw', height: '100vh', position: 'relative' }}>

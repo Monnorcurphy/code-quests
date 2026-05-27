@@ -1,8 +1,6 @@
-export interface SceneNavItem {
-  id: string;
-  label: string;
-  onActivate: () => void;
-}
+import type { SceneNavItem } from '../game/scene-router';
+
+export type { SceneNavItem } from '../game/scene-router';
 
 interface SceneKeyboardNavProps {
   items: SceneNavItem[];

@@ -152,4 +152,40 @@ describe('SceneRouter', () => {
     u1();
     u2();
   });
+
+  it('notifies interactives change handlers when setInteractives is called', () => {
+    const handler = vi.fn();
+    const unsubscribe = sceneRouter.onInteractivesChange(handler);
+    const items = [{ id: 'war-room', label: 'Enter War Room', onActivate: vi.fn() }];
+
+    sceneRouter.setInteractives(items);
+
+    expect(handler).toHaveBeenCalledWith(items);
+    unsubscribe();
+  });
+
+  it('unsubscribes interactives change handler correctly', () => {
+    const handler = vi.fn();
+    const unsubscribe = sceneRouter.onInteractivesChange(handler);
+    unsubscribe();
+
+    sceneRouter.setInteractives([]);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('notifies multiple interactives handlers', () => {
+    const h1 = vi.fn();
+    const h2 = vi.fn();
+    const u1 = sceneRouter.onInteractivesChange(h1);
+    const u2 = sceneRouter.onInteractivesChange(h2);
+    const items = [{ id: 'oracle', label: 'Enter Oracle', onActivate: vi.fn() }];
+
+    sceneRouter.setInteractives(items);
+
+    expect(h1).toHaveBeenCalledWith(items);
+    expect(h2).toHaveBeenCalledWith(items);
+    u1();
+    u2();
+  });
 });

@@ -6,7 +6,14 @@ export interface DoorEnterEvent {
   spawnX: number;
 }
 
+export interface SceneNavItem {
+  id: string;
+  label: string;
+  onActivate: () => void;
+}
+
 type DoorEnterHandler = (evt: DoorEnterEvent) => void;
+type InteractivesChangeHandler = (items: SceneNavItem[]) => void;
 
 // Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE
 const FADE_OUT_COMPLETE = 'camerafadeoutcomplete';
@@ -15,6 +22,7 @@ const FADE_DURATION_MS = 300;
 class SceneRouter {
   private game: Phaser.Game | null = null;
   private readonly doorEnterHandlers = new Set<DoorEnterHandler>();
+  private readonly interactivesChangeHandlers = new Set<InteractivesChangeHandler>();
 
   init(game: Phaser.Game | null): void {
     this.game = game;
@@ -59,6 +67,19 @@ class SceneRouter {
     this.doorEnterHandlers.add(handler);
     return () => {
       this.doorEnterHandlers.delete(handler);
+    };
+  }
+
+  setInteractives(items: SceneNavItem[]): void {
+    for (const handler of this.interactivesChangeHandlers) {
+      handler(items);
+    }
+  }
+
+  onInteractivesChange(handler: InteractivesChangeHandler): () => void {
+    this.interactivesChangeHandlers.add(handler);
+    return () => {
+      this.interactivesChangeHandlers.delete(handler);
     };
   }
 }
