@@ -1,18 +1,20 @@
 # Progress — Phase 4
 
-Previous task progress archived to metrics/progress-before-edinburgh.md
+Previous task progress archived to metrics/progress-before-el-morro.md
 
-## Task edinburgh — Dispatch wiring + quest lifecycle endpoints
+## Task el-morro: Active-quest HUD + real-time stream — DONE
 
-**Status:** DONE
+**Files created:**
+- `packages/client/src/features/quests/use-active-quest.ts` — TanStack Query + WS subscription merged via useReducer; invalidates quest + quests queries on status events
+- `packages/client/src/features/quests/active-quest-panel.tsx` — live event feed with aria-live="polite", auto-scroll with reduced-motion support, completion/failure banners from quest data
+- `packages/client/src/features/quests/cancel-button.tsx` — three-state cancel (idle/loading/success/error) with inline parchment confirmation dialog
+- `packages/client/src/__tests__/active-quest-panel.test.tsx` — 13 tests: feed rendering, accessibility, event types, query invalidation
+- `packages/client/src/__tests__/cancel-button.test.tsx` — 9 tests: happy path, error path, confirmation flow, focus management
 
-**What was built:**
-- `packages/shared/src/quest.ts` — Added `FailureSummarySchema` with `recommendation` enum (`retry`, `repost_with_clarification`, `retire`) and `failureSummary` field on `QuestSchema`
-- `packages/server/src/services/quest-status.ts` — New. `transitionQuestStatus(db, questId, from, to)` with `InvalidTransitionError` for guarded status changes
-- `packages/server/src/services/quest-runner.ts` — New. `runQuest(quest, adventurer, deps)` spawns agent via `getQuestAdapter().spawn()`, creates agents row, fans events to WS channel, transitions quest on `completed`/`failed` events. Returns `{ agent, done }` — background loop runs detached from request handler
-- `packages/server/src/routes/quests.ts` — Extended dispatch to call `runQuest()` after status transition; added `POST /:id/complete`, `POST /:id/fail`, `POST /:id/cancel`, `GET /active`
-- `packages/server/src/index.ts` — Passes channel getter to `createQuestsRouter` (lazy binding)
-- `packages/server/src/__tests__/quest-runner.test.ts` — End-to-end tests with offline adapter
-- `packages/server/src/__tests__/quest-lifecycle.test.ts` — Tests for complete/fail/cancel/active endpoints and re-dispatch guard
+**Files modified:**
+- `packages/client/src/lib/api.ts` — added `quests.active` (GET /quests/active) and `quests.cancel` (POST /quests/:id/cancel)
+- `packages/client/src/stores/town-store.ts` — added `goToHallOfReturns()` action
+- `packages/client/src/features/war-room.tsx` — conditional rendering: active quest shows ActiveQuestPanel + CancelButton; complete/failed shows "Return to Hall of Returns" link; idle shows existing audit panel
+- `packages/client/src/features/town-square.tsx` — replaced ActiveQuestBadge with ActiveQuestsPeek (title, adventurer name, last WS event per quest); uses per-quest WS subscriptions
 
-**Verify results:** 193 tests pass (17 test files), typecheck clean, lint clean.
+**Test results:** 301/301 client tests pass, lint clean, typecheck clean
