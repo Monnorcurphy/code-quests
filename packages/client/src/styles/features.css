@@ -1,0 +1,493 @@
+/* Visually hidden but accessible to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Guild Hall + Town Square expanded panels */
+.guild-hall-panel,
+.town-square-panel {
+  max-width: 640px;
+}
+
+/* Shared button styles */
+.btn-primary {
+  background: var(--color-banner-red);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.6rem 1.25rem;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btn-primary:hover {
+  background: var(--color-banner-red-dark);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--color-text);
+  border: 2px solid var(--color-stone-border);
+  border-radius: 4px;
+  padding: 0.6rem 1.25rem;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-stone-dark);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary,
+  .btn-secondary {
+    transition: none;
+  }
+}
+
+/* Guild Hall actions */
+.guild-hall-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+/* Roster list */
+.roster-status {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  margin: 0.75rem 0;
+}
+
+.roster-error {
+  color: #8b1a1a;
+}
+
+.roster-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--color-stone-border);
+  border-radius: 4px;
+}
+
+.roster-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--color-parchment-dark);
+  font-size: 0.95rem;
+}
+
+.roster-item:last-child {
+  border-bottom: none;
+}
+
+.roster-name {
+  font-weight: bold;
+  color: var(--color-text);
+}
+
+.roster-class {
+  color: var(--color-text-secondary);
+  text-transform: capitalize;
+  font-size: 0.85rem;
+}
+
+.roster-record {
+  color: var(--color-stone);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Recruit form */
+.recruit-form-container {
+  margin-top: 0.5rem;
+}
+
+.recruit-success {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  color: #2e7d32;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.recruit-error {
+  background: #fce4ec;
+  border: 1px solid #f48fb1;
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  color: #c62828;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.form-field {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.form-field label {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--color-text);
+}
+
+.form-field input,
+.form-field select {
+  padding: 0.5rem 0.6rem;
+  border: 2px solid var(--color-stone-border);
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--color-parchment);
+  color: var(--color-text);
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--color-banner-red);
+}
+
+.form-field input[aria-invalid='true'],
+.form-field select[aria-invalid='true'] {
+  border-color: #c62828;
+}
+
+.field-error {
+  font-size: 0.85rem;
+  color: #c62828;
+  margin: 0;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+/* Quest Board */
+.quest-board-status {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  margin: 0.5rem 0;
+}
+
+.quest-board-error {
+  color: #8b1a1a;
+}
+
+.quest-board-empty {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  margin: 0.5rem 0;
+  font-style: italic;
+}
+
+.quest-board-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--color-stone-border);
+  border-radius: 4px;
+}
+
+.quest-board-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--color-parchment-dark);
+  font-size: 0.95rem;
+}
+
+.quest-board-item:last-child {
+  border-bottom: none;
+}
+
+.quest-board-title {
+  flex: 1;
+  font-weight: bold;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quest-board-ac-count {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* Status badges */
+.quest-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.quest-badge--drafted {
+  background: #e8e0cc;
+  color: #5a4e3a;
+  border: 1px solid #8a8a78;
+}
+
+.quest-badge--active {
+  background: #e3f2fd;
+  color: #0d47a1;
+  border: 1px solid #1565c0;
+}
+
+.quest-badge--complete {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #2e7d32;
+}
+
+.quest-badge--failed {
+  background: #ffebee;
+  color: #8b1a1a;
+  border: 1px solid #c62828;
+}
+
+.quest-badge--waiting {
+  background: #fff8e1;
+  color: #6d4c00;
+  border: 1px solid #f9a825;
+}
+
+.quest-badge--blocked {
+  background: #fce4ec;
+  color: #880e4f;
+  border: 1px solid #ad1457;
+}
+
+/* Town Square board section */
+.town-square-board-section {
+  margin-bottom: 1.25rem;
+}
+
+.town-square-section-heading {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 0.5rem;
+}
+
+.town-square-divider {
+  border: none;
+  border-top: 1px solid var(--color-parchment-dark);
+  margin: 1.25rem 0;
+}
+
+/* War Room panel */
+.war-room-panel {
+  max-width: 600px;
+}
+
+.war-room-success-actions {
+  margin-top: 0.5rem;
+}
+
+.war-room-success-hint {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 1rem;
+  font-style: italic;
+}
+
+/* Draft form */
+.draft-form-container {
+  margin-top: 0.5rem;
+}
+
+.form-textarea {
+  padding: 0.5rem 0.6rem;
+  border: 2px solid var(--color-stone-border);
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--color-parchment);
+  color: var(--color-text);
+  resize: vertical;
+  width: 100%;
+}
+
+.form-textarea:focus {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--color-banner-red);
+}
+
+.form-fieldset {
+  border: 1px solid var(--color-stone-border);
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.form-fieldset:disabled {
+  opacity: 0.6;
+}
+
+.form-legend {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--color-text);
+  padding: 0 0.3rem;
+}
+
+/* AC list */
+.ac-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ac-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ac-input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 2px solid var(--color-stone-border);
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--color-parchment);
+  color: var(--color-text);
+}
+
+.ac-input:focus {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--color-banner-red);
+}
+
+.ac-input[aria-invalid='true'] {
+  border-color: #c62828;
+}
+
+.ac-remove-btn {
+  background: transparent;
+  color: var(--color-stone);
+  border: 1px solid var(--color-stone-border);
+  border-radius: 4px;
+  padding: 0.35rem 0.65rem;
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ac-remove-btn:hover {
+  background: #ffebee;
+  color: #8b1a1a;
+  border-color: #c62828;
+}
+
+.ac-remove-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ac-error {
+  width: 100%;
+  margin-top: 0;
+}
+
+.ac-add-btn {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.75rem;
+}
+
+/* Town Square layout */
+.town-square-tagline {
+  margin-bottom: 1.25rem;
+}
+
+.town-square-layout {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 540px) {
+  .town-square-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.town-square-roster-heading {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 0.5rem;
+}
+
+.town-square-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 160px;
+}
+
+.town-square-banner {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  font-style: italic;
+}
+
+.town-square-recruit-btn {
+  width: 100%;
+}
