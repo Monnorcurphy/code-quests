@@ -57,6 +57,15 @@ export default function LoadoutPanel({ onClose }: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    const first = panel.querySelector<HTMLElement>(
+      'button:not([disabled]), input:not([disabled])',
+    );
+    first?.focus();
+  }, [panelRef]);
+
   const mutation = useEquipmentMutation();
   const catalogLoading = skillsLoading || toolsLoading || mcpLoading;
   const isSaving = saveStatus === 'saving';

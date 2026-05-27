@@ -244,6 +244,12 @@ describe('LoadoutPanel', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('moves focus inside the panel on mount', () => {
+    renderPanel();
+    const inner = document.querySelector('.modal-panel') as HTMLElement;
+    expect(inner.contains(document.activeElement)).toBe(true);
+  });
+
   it('disables Save button while saving', async () => {
     vi.mocked(api.quests.patch).mockImplementation(() => new Promise(() => {}));
     const user = userEvent.setup();
