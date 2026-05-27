@@ -21,7 +21,7 @@ export function subscribe(
   let closed = false;
 
   function send(msg: unknown): void {
-    if (s !== null && s.readyState === 1) {
+    if (s !== null && s.readyState === WebSocket.OPEN) {
       s.send(JSON.stringify(msg));
     }
   }
