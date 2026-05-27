@@ -14,35 +14,75 @@ pnpm dev
 
 The client runs at `http://localhost:5173` and the server at `http://localhost:4001`. The Vite dev server proxies API calls, so you only need to visit the client URL.
 
-## What you'll see
+The browser opens to `/town/town-square` — the pixel-art Phaser town.
 
-### Town Square
+## What you'll see (Phase 2)
 
-The entry point. When you open the app you land on **The Town** — a grid of 8 buildings, each with a distinct purpose:
+### Pixel-art Town
 
-| Building | Purpose |
+The app launches into a 2D side-scroller **Town Square** built with Phaser 3. Your adventurer can walk left and right through the scene. Seven building doors lead to distinct rooms.
+
+```
+Town Square (3200px wide)
+├── [Door] War Room      — Quest drafting & planning table
+├── [Door] Oracle        — Acceptance Criteria (Phase 3)
+├── [Door] Library       — Context & Bestiary (Phase 10)
+├── [Door] Tavern        — Edge Cases (Phase 3)
+│   [Quest Board]        — View drafted quests
+│   [Recruit Banner]     — Recruit adventurers
+├── [Door] Armory        — Equipment loadout (Phase 3)
+├── [Door] Guild Hall    — Adventurer roster
+└── [Door] Hall of Returns — Post-quest retrospective (Phase 9)
+```
+
+### Keyboard navigation
+
+| Key | Action |
 |---|---|
-| Town Square | Entry & Recruiting — assemble your guild |
-| War Room | Draft quests (title, description, acceptance criteria) |
-| Oracle | Acceptance Criteria (Phase 2+) |
-| Library | Context management (Phase 2+) |
-| Tavern | Edge cases (Phase 2+) |
-| Armory | Equipment / loadout (Phase 2+) |
-| Guild Hall | Adventurer management |
-| Hall of Returns | Post-quest retrospective (Phase 2+) |
+| `←` / `→` or `A` / `D` | Walk left / right |
+| `Enter` / `Z` | Interact with highlighted object or door |
+| `Tab` | Cycle through screen-reader nav items (hidden but accessible) |
+| `Escape` | Close open HUD overlay |
+
+### Scene transitions
+
+Walking into a door fades the current scene and loads the building interior. The URL stays synced (`/town/war-room`, `/town/guild-hall`, etc.) — browser back/forward works.
+
+### HUD overlays
+
+Interacting with in-scene objects opens React modals layered over the canvas:
+
+- **Quest Board** → view all drafted quests
+- **Recruit Banner** → recruit a new adventurer
+- **Planning Table** (War Room) → draft a new quest
+- **Guild Roster** (Guild Hall) → view/recruit adventurers
+
+### Settings
+
+The ⚙ button in the top-right opens the settings panel:
+
+- **Reduce motion** — disables scene fade transitions. Preference persists across reloads (localStorage).
+
+To toggle reduce motion from the command line (for testing):
+```bash
+# In browser console:
+localStorage.setItem('code-quests:reduced-motion', 'true')
+location.reload()
+```
+
+## Phase 1 features (still available)
 
 ### Recruit flow
 
-1. Click **Town Square** → a panel opens showing the Quest Board and your roster
-2. Click **Recruit an Adventurer** → fill in name and class → submit
-3. The new adventurer appears in the roster immediately
+1. Walk to the **Recruit Banner** in Town Square → press Enter (or click "Recruit Banner" in the hidden nav)
+2. Fill in name and class → submit
+3. Adventurer appears in the Guild Hall roster
 
 ### Quest draft flow
 
-1. Click **War Room** → the draft form opens
-2. Enter a title (required), description (optional), and acceptance criteria
-3. Optionally choose an epic from the dropdown
-4. Click **Draft Quest** → the quest appears on the Quest Board with a "Drafted" badge
+1. Walk into the **War Room** → walk to the Planning Table → press Enter
+2. Enter a title, description, and acceptance criteria
+3. Click **Draft Quest** → quest appears on the Quest Board
 
 ### Persistence
 
@@ -50,27 +90,42 @@ Reload the browser — adventurers and quests persist (SQLite at `~/.code-quests
 
 ## Seed data (optional)
 
-To pre-populate the DB with demo data:
-
 ```bash
 pnpm --filter=@code-quests/server tsx src/scripts/seed-dev.ts
 ```
 
-This creates 1 epic, 1 adventurer, and 2 quests.
+Creates 1 epic, 1 adventurer, and 2 quests.
 
 ## Development
 
 ```bash
 pnpm build        # build all packages
-pnpm test         # run all unit tests
+pnpm test         # run all unit tests (Vitest)
+pnpm test:e2e     # run E2E tests (Playwright)
 pnpm lint         # run ESLint
 pnpm typecheck    # run TypeScript type checks
+pnpm check:assets # verify all asset licenses are recorded
 ```
 
 ## Tech stack
 
 - **Frontend:** TypeScript + React + Vite
+- **Game engine:** Phaser 3 (pixel-art side-scroller)
+- **State:** Zustand + TanStack Query
 - **Backend:** Node + Express
 - **Database:** SQLite via better-sqlite3
-- **State:** TanStack Query
 - **Package manager:** pnpm workspaces
+
+## Accessibility
+
+The Phaser canvas is opaque to screen readers. A visually-hidden `<nav aria-label="Scene interactions">` mirrors every in-scene interactive as a button — keyboard and screen-reader users can reach all functionality without touching the canvas.
+
+## Phase roadmap
+
+| Phase | Status | Content |
+|---|---|---|
+| 1 | Done | Recruit + draft + Quest Board (HTML) |
+| 2 | Done | Pixel-art Phaser town, 8 scenes, HUD overlays, settings |
+| 3 | Next | Oracle, Tavern, Armory real functionality |
+| 9 | Future | Hall of Returns (post-quest retrospective) |
+| 10 | Future | Library (learning loop + bestiary) |

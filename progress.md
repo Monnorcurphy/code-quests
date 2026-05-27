@@ -1,24 +1,24 @@
-# Progress — Phase 1
+# Progress — Phase 2
 
-Previous task progress archived to metrics/progress-before-caernarfon.md
+Previous task progress archived to metrics/progress-before-giraffe.md
 
-## caernarfon — Quest draft flow + Quest Board (CAPSTONE) ✅
+## Task giraffe — CAPSTONE: HUD integration + end-to-end walkthrough
 
-**Completed:** 2026-05-26
+**Status:** Complete
 
-**What was built:**
-- `packages/client/src/features/quests/draft-form.tsx` — Quest draft form (title, description, AC list with add/remove, optional epic dropdown). Full 3-state UX.
-- `packages/client/src/features/quests/quest-board.tsx` — Quest Board listing quests with Drafted/Active/etc. status badges, empty state, keyboard-accessible scrollable list.
-- `packages/client/src/features/war-room.tsx` — War Room building modal embedding the draft form.
-- `packages/client/src/features/town-square.tsx` — Extended to show Quest Board front-and-center above the roster.
-- `packages/client/src/lib/api.ts` — Added `quests.create` POST method.
-- `packages/client/src/routes/town.tsx` — War Room now opens the real draft form.
-- `packages/server/src/scripts/seed-dev.ts` — Dev seed script (1 epic, 1 adventurer, 2 quests).
-- `README.md` — Install/run instructions.
-- `assets/CREDITS.md` — Initialized.
-- `packages/client/tests/e2e/phase-1-capstone.spec.ts` — 7 Playwright tests covering full walkthrough + axe-core a11y scans.
-- `playwright.config.ts` — Root Playwright config.
+**What was done:**
+- Created `HUDOverlayManager` component — central manager that reads `town-store.activeModal`, renders correct overlay (TownSquare, WarRoom, GuildHall, ComingSoonPanel), handles focus restoration on close
+- Created `SettingsButton` component — gear button (⚙) in top-right; opens settings panel with Reduce Motion toggle; writes to localStorage AND sets `data-reduced-motion` attribute; `applyReducedMotionPreference()` called on startup to restore preference
+- Updated `scene-router.ts` — `reducedMotion` getter now checks `data-reduced-motion` attribute first (user setting), then falls back to OS media query
+- Updated `town.tsx` — removed `HtmlTown` and `USE_PHASER` flag; Phaser is now the only town; exports `PhaserTown` (named) and default; uses `HUDOverlayManager` + `SettingsButton`
+- Updated `app.tsx` — `/town` and `*` both redirect to `/town/town-square`
+- Updated `main.tsx` — calls `applyReducedMotionPreference()` before render
+- Updated `playwright.config.ts` — removed `VITE_PHASER_TOWN: 'false'` env var
+- Updated `phase-1-capstone.spec.ts` — selectors updated for Phaser town (SceneKeyboardNav buttons, `force: true` for visually-hidden elements)
+- Updated `all-buildings.spec.ts` — rewritten for Phaser town (URL navigation + SceneKeyboardNav)
+- Created `phase-2-capstone.spec.ts` — comprehensive Phase 2 E2E walkthrough test suite
+- Created unit tests: `hud-overlay-manager.test.tsx`, `settings-button.test.tsx`
+- Rewrote `town.test.tsx` and `app.test.tsx` for Phaser-only mode
+- Updated `README.md` — Phase 2 experience, town ASCII map, keyboard nav, settings docs
 
-**Test results:** 115 unit tests + 7 E2E tests all pass. ESLint + tsc clean.
-
-**Accessibility:** All four key surfaces (Town, Town Square, War Room, draft form) pass axe-core zero-violations scan. Fixed `scrollable-region-focusable` on roster list and quest board list by adding `tabIndex={0}`.
+**Verification:** All 206 unit tests pass, lint clean, typecheck clean, build clean, check:assets passes.

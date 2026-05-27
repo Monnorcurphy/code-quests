@@ -4,8 +4,9 @@ import Town from './routes/town';
 export default function App() {
   return (
     <Routes>
-      <Route path="/town" element={<Town />} />
-      <Route path="*" element={<Navigate to="/town" replace />} />
+      <Route path="/town" element={<Navigate to="/town/town-square" replace />} />
+      <Route path="/town/:sceneKey" element={<Town />} />
+      <Route path="*" element={<Navigate to="/town/town-square" replace />} />
     </Routes>
   );
 }

@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '../lib/use-focus-trap';
+import { useTownStore } from '../stores/town-store';
 import DraftForm from './quests/draft-form';
 
-interface WarRoomProps {
-  onClose: () => void;
-}
-
-export default function WarRoom({ onClose }: WarRoomProps) {
+export default function WarRoom() {
+  const setActiveModal = useTownStore((s) => s.setActiveModal);
   const [showForm, setShowForm] = useState(true);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useFocusTrap(onClose);
+  const panelRef = useFocusTrap(() => setActiveModal(null));
 
   useEffect(() => {
     if (!showForm) closeRef.current?.focus();
@@ -35,7 +33,7 @@ export default function WarRoom({ onClose }: WarRoomProps) {
             onSuccess={() => {
               setShowForm(false);
             }}
-            onCancel={onClose}
+            onCancel={() => setActiveModal(null)}
           />
         ) : (
           <div className="war-room-success-actions">
@@ -47,7 +45,7 @@ export default function WarRoom({ onClose }: WarRoomProps) {
               >
                 Draft Another
               </button>
-              <button ref={closeRef} className="btn-secondary" onClick={onClose}>
+              <button ref={closeRef} className="btn-secondary" onClick={() => setActiveModal(null)}>
                 Close
               </button>
             </div>

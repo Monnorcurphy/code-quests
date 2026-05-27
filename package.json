@@ -13,7 +13,8 @@
     "test:e2e": "playwright test",
     "lint": "eslint \"packages/*/src/**/*.{ts,tsx}\"",
     "typecheck": "pnpm -r typecheck",
-    "dev": "pnpm --parallel --filter=./packages/* dev"
+    "dev": "pnpm --parallel --filter=./packages/* dev",
+    "check:assets": "./scripts/check-asset-licenses.sh"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
