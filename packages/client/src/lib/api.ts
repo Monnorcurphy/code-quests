@@ -92,6 +92,9 @@ export type CreateQuestInput = z.infer<typeof CreateQuestInputSchema>;
 
 export type PatchQuestInput = {
   equipment?: Equipment;
+  acceptanceCriteria?: string[];
+  edgeCases?: string[];
+  context?: string;
 };
 
 export const api = {

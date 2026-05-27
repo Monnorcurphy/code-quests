@@ -3,6 +3,9 @@ import { useParams } from 'react-router-dom';
 import { useTownStore } from '../stores/town-store';
 import TownSquare from '../features/town-square';
 import WarRoom from '../features/war-room';
+import Oracle from '../features/oracle';
+import Tavern from '../features/tavern';
+import Library from '../features/library';
 import GuildHall from '../features/guild/guild-hall';
 import LoadoutPanel from '../features/armory/loadout-panel';
 import ComingSoonPanel from './coming-soon-panel';
@@ -11,18 +14,6 @@ import { isTownSceneKey } from '../game/scene-registry';
 import type { TownSceneKey } from '../game/scene-registry';
 
 const COMING_SOON_CONTENT: Partial<Record<TownSceneKey, { title: string; description: string }>> = {
-  oracle: {
-    title: 'Oracle',
-    description: 'Refine Acceptance Criteria — arriving in Phase 3.',
-  },
-  library: {
-    title: 'Library',
-    description: 'Skills + Bestiary — arriving in Phase 10.',
-  },
-  tavern: {
-    title: 'Tavern',
-    description: 'Edge Cases — arriving in Phase 3.',
-  },
   'hall-of-returns': {
     title: 'Hall of Returns',
     description: 'Completed/Failed Quests — arriving in Phase 9.',
@@ -69,6 +60,15 @@ export function HUDOverlayManager() {
   }
   if (activeModal === 'armory-loadout') {
     return <LoadoutPanel onClose={() => setActiveModal(null)} />;
+  }
+  if (activeModal === 'oracle') {
+    return <Oracle />;
+  }
+  if (activeModal === 'tavern') {
+    return <Tavern />;
+  }
+  if (activeModal === 'library') {
+    return <Library />;
   }
   if (activeModal === 'coming-soon' && comingSoonContent) {
     return (

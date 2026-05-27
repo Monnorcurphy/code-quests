@@ -35,7 +35,7 @@ export class OracleScene extends BaseBuildingScene {
 
     sceneRouter.setInteractives([this.returnDoorInteractive]);
 
-    useTownStore.getState().setActiveModal('coming-soon');
+    useTownStore.getState().setActiveModal('oracle');
 
     this.events.once('shutdown', () => {
       useTownStore.getState().setActiveModal(null);

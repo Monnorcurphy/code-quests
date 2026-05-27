@@ -1009,3 +1009,161 @@
   color: var(--color-text-secondary);
   margin: 0.5rem 0;
 }
+
+/* Shared building panel styles (Oracle, Tavern, Library) */
+.oracle-panel,
+.tavern-panel,
+.library-panel {
+  max-width: 560px;
+}
+
+.building-quest-name {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--color-text);
+  margin: 0 0 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.building-loading {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  margin: 0.5rem 0;
+}
+
+.building-load-error {
+  font-size: 0.95rem;
+  color: #8b1a1a;
+  margin: 0.5rem 0;
+}
+
+.building-locked {
+  background: #fff8e1;
+  border: 1px solid #ffd54f;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  color: #5a4500;
+  margin-bottom: 0.75rem;
+}
+
+.ac-list--locked {
+  opacity: 0.7;
+  margin-bottom: 0.75rem;
+}
+
+.ac-row-locked {
+  display: flex;
+  align-items: center;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--color-parchment-dark);
+}
+
+.ac-locked-text {
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.building-status {
+  min-height: 1.5rem;
+  margin: 0.25rem 0;
+}
+
+.building-save-success {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  color: #2e7d32;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.building-save-error {
+  background: #fce4ec;
+  border: 1px solid #f48fb1;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  color: #c62828;
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
+}
+
+/* Library textarea */
+.library-textarea {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 2px solid var(--color-stone-border);
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--color-parchment);
+  color: var(--color-text);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.library-textarea:focus {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--color-banner-red);
+}
+
+.library-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Town Square active quest badge */
+.town-square-active-quest {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.town-square-active-label {
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0d47a1;
+  white-space: nowrap;
+}
+
+.town-square-active-title {
+  font-size: 0.9rem;
+  color: #1565c0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.town-square-active-link {
+  font-size: 0.8rem;
+  color: #1565c0;
+  background: transparent;
+  border: 1px solid #90caf9;
+  border-radius: 3px;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.town-square-active-link:hover {
+  background: #bbdefb;
+}
+
+.town-square-active-link:focus {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
