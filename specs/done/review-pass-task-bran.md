@@ -1,96 +1,41 @@
-# Review Pass — Task bran
+# Review Pass — Task bran (Adventurer recruit flow + roster)
 
-**Task:** Adventurer recruit flow + roster  
-**Branch:** feature/bran  
-**Reviewer:** Adversarial reviewer agent  
-**Date:** 2026-05-26
+**Branch:** `feature/bran`
+**Reviewed against:** factory rules (constitution, security, accessibility, input-validation, ux-feedback, common-findings, review-contract) + task spec in `metrics/task-bran-context.md`.
 
-## Summary
+## Checks performed
 
-3 bugs filed (1 HIGH, 2 LOW). No CRITICAL bugs. No data loss risk, no security issues, no failing tests.
+- Read every new/modified source file once (recruit-modal, roster, guild-hall, town-square, town route, api lib, use-focus-trap, features.css, plus test files).
+- Verified `pnpm -r test` (94 tests pass: 27 client + 67 server), `pnpm typecheck` (clean), `pnpm lint` (clean).
+- Grepped for secrets (`sk-`, `AKIA`, `api_key`, `password=`, `secret`) — none found.
+- Grepped for `console.*` in production source — none found (no-console: error in `.eslintrc.cjs`).
+- **Cross-boundary validation:**
+  - DB CHECK in `001_init.sql`: `class IN ('champion','ranger','scout','rogue','apprentice')`.
+  - Shared `AdventurerClassSchema` (`packages/shared/src/adventurer.ts`): same 5 values.
+  - Server `CreateAdventurerSchema` (`packages/server/src/routes/adventurers.ts`) imports `AdventurerClassSchema` → matches DB.
+  - Frontend `CLASSES` array in `recruit-modal.tsx` lists the same 5 values; `<select>` enforces the constraint at the UI.
+  - Verdict: enum values match end-to-end.
+- **Input validation** (rules/input-validation.md): class is a `<select>` (constrained), name has onBlur + onSubmit Zod validation with field-named errors, `maxLength=80`, `.trim()` applied. ✓
+- **UX feedback states** (rules/ux-feedback.md): loading (button disabled, label "Recruiting…", `aria-busy`), success (`role="status"`, auto-dismiss after 3 s via `setTimeout`), error (persists, `role="alert"`, `aria-live="assertive"`). ✓
+- **Accessibility:** form has `<label htmlFor>` for both fields, `aria-describedby`/`aria-invalid` on the name input, Escape closes the modal, focus trap via `useFocusTrap`, focus returns to recruit button after dismiss (`useEffect(() => { if (!showRecruit) recruitBtnRef.current?.focus(); }, [showRecruit])`).
+- **Optimistic insert + rollback:** `onMutate` adds optimistic row, `onSuccess` swaps in real row, `onError` restores `prev` snapshot. ✓
+- **Modal navigation:** `routes/town.tsx` correctly branches Guild Hall and Town Square to their bespoke views and falls through to the generic `BuildingModal` for the other six buildings.
+- **CSS contrast:** new colors (`#2e7d32` on `#e8f5e9`, `#c62828` on `#fce4ec`, `--color-text-secondary #5a4e3a` on parchment, `--color-stone #6b6b5e` on parchment) all clear WCAG 4.5:1 for normal text by inspection.
 
-## Bugs Filed
+## Bugs filed
 
-| # | Severity | Title |
-|---|----------|-------|
-| review-1 | HIGH | Missing aria-live loading state announcement in RecruitModal |
-| review-2 | LOW | `onClick={onCancelRef.current}` — unnecessary ref indirection for click handler |
-| review-3 | LOW | `BuildingModal` still uses inline focus trap instead of `useFocusTrap` hook |
+| # | Severity | File | Title |
+|---|----------|------|-------|
+| 1 | HIGH | review-1.md | Recruit/roster API calls fail in browser — no CORS on server, no Vite proxy |
 
-## What Was Checked
+## INFORMATIONAL notes (not blocking)
 
-### Cross-boundary validation (mandatory)
+- **Optimistic rollback is not directly asserted in tests.** `recruit-modal.test.tsx` covers the server-error and field-named-error paths (which exercise the `onError` handler), but no test snapshots `queryClient.getQueryData(['adventurers'])` before/after to confirm the optimistic row is reverted. Spec only requires "tests cover the success state, validation error, and server error" — covered — so this is a follow-up, not a bug.
+- **`useEffect(() => { onSuccessRef.current = onSuccess; });` (recruit-modal.tsx:29) and `callbackRef.current = onEscape;` (use-focus-trap.ts:11) omit a deps array.** Intentional ref-sync pattern; runs on every render but functionally correct. Adding `[onSuccess]` / `[onEscape]` would make the intent more obvious.
+- **`(rawData as Adventurer[] | undefined)` casts in `guild-hall.tsx:22` and `town-square.tsx:22` are redundant** — TanStack Query already types `data` correctly from the `queryFn` return type. Remove the cast on a future cleanup pass.
+- **`optimistic-${Date.now()}` ID generation** in `recruit-modal.tsx:40` is fine for human-paced clicks but would collide if two submissions fired within 1 ms. Not a real-world risk; noted for completeness.
+- **`autoFocus` on the name input** in `recruit-modal.tsx:140` is appropriate for a modal context but is generally something to avoid sprinkling across the app — keep it confined to modal-style flows.
 
-- DB migration `001_init.sql` CHECK: `class IN ('champion', 'ranger', 'scout', 'rogue', 'apprentice')`
-- Shared `AdventurerClassSchema`: `z.enum(['champion', 'ranger', 'scout', 'rogue', 'apprentice'])`
-- UI `CLASSES` array in `recruit-modal.tsx`: same 5 values in same order
-- **Result: ✓ all three match — no boundary mismatch**
+## Verdict
 
-### Contrast (WCAG AA 4.5:1)
-
-- `--color-stone` (#6b6b5e) on `--color-parchment` (#f5f0e8): ≈ 4.76:1 ✓ (`.roster-record` at 0.85rem)
-- `--color-text-secondary` (#5a4e3a) on parchment: ≈ 6.43:1 ✓ (roster-class, roster-status, headings)
-- `#c62828` on parchment: > 7:1 ✓ (field-error, recruit-error text)
-- `#2e7d32` on `#e8f5e9`: passes ✓ (recruit-success text)
-- **Result: ✓ all measured colors pass 4.5:1**
-
-### Accessibility
-
-- All building modals have `role="dialog"`, `aria-modal="true"`, unique `aria-labelledby` ✓
-- Focus snaps to first interactive element on modal open ✓
-- Escape closes modal (via `useFocusTrap` in GuildHall/TownSquare; inline in BuildingModal) ✓
-- Focus returns to trigger button on close ✓
-- Form inputs have visible `<label>` elements ✓
-- Error states use `role="alert"` or `aria-live="assertive"` ✓
-- Success state uses `role="status"` + `aria-live="polite"` ✓
-- **Loading state announcement is missing → review-1 (HIGH)**
-- `aria-invalid="true"` on invalid inputs ✓
-- `aria-describedby` linking input to error message ✓
-- `prefers-reduced-motion` respected for all button/card transitions ✓
-
-### UX feedback rules
-
-- 3-state submit button: idle → loading (disabled + text change) → success ✓
-- Success auto-dismisses after 3s via `setTimeout` ✓
-- Error persists until user action ✓
-- `aria-live` loading announcement missing → review-1
-
-### Code quality
-
-- All new files within line limits (roster: 51, recruit-modal: 174, guild-hall: 80, town-square: 87, use-focus-trap: 40, features.css: 231) ✓
-- No `console.log` in production code ✓
-- No unused imports or variables ✓
-- No `any` types ✓
-- `useFocusTrap` extracted at Rule-of-Three trigger point ✓
-- `BuildingModal` not migrated to hook → review-3 (LOW)
-
-### Testing
-
-- 94 tests passing (27 client + 67 server) ✓
-- RecruitModal: 12 tests covering success, auto-dismiss, loading, validation, server error, field-named error, cancel, error persistence ✓
-- Fake timers cleaned up in `afterEach` ✓
-- Town tests updated with `QueryClientProvider` and API mocks ✓
-- All 5 valid classes tested in select constraint test ✓
-
-### Security
-
-- No secrets in code ✓
-- `modelId: 'default'` hardcoded for Phase 1 (correct — no model selection in this phase) ✓
-- API keys: none present ✓
-
-### Capstone coverage (mandatory — last task of Phase 1)
-
-All Phase 1 features reachable from app entry point (`/town`):
-- Town grid with 8 buildings ✓ (bodiam)
-- Guild Hall: roster + recruit form with 3-state UX ✓ (bran)
-- Town Square: roster side panel + recruit button ✓ (bran)
-- 6 generic buildings: placeholder modal ✓ (bodiam)
-- Server CRUD API: adventurers, quests, epics via REST ✓ (balmoral)
-
-No dead-end screens found. A human can start the server, open `/town`, recruit an adventurer via Guild Hall or Town Square, and see them appear in the roster. Phase 1 is interactable.
-
-## Informational Notes
-
-- `useFocusTrap` is safe to use in both GuildHall and TownSquare concurrently (only one modal renders at a time, so no double `document.addEventListener` conflict in practice)
-- On mount, both the panelRef snap-focus and the showRecruit effect try to focus the Recruit button — they agree on the target so there's no visible conflict
-- Pressing Escape when the RecruitModal form is visible closes the entire modal (not just the form). The spec does not specify this behavior either way; it is consistent with standard dialog behavior
+**FAIL** — 1 HIGH bug filed (review-1.md). The recruit flow's UI, validation, accessibility, optimistic state, and tests are all solid; the blocking issue is infrastructure (CORS/proxy missing) that prevents the feature from working in a real browser despite passing every offline check.
