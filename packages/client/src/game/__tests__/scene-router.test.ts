@@ -188,4 +188,46 @@ describe('SceneRouter', () => {
     u1();
     u2();
   });
+
+  it('emits scene advance event to registered handler', () => {
+    const handler = vi.fn();
+    const unsubscribe = sceneRouter.onSceneAdvance(handler);
+
+    const evt = { fromScene: 'quest-forest' as const, toScene: 'quest-cave' as const };
+    sceneRouter.requestSceneAdvance(evt);
+
+    expect(handler).toHaveBeenCalledWith(evt);
+    unsubscribe();
+  });
+
+  it('unsubscribes scene advance handler correctly', () => {
+    const handler = vi.fn();
+    const unsubscribe = sceneRouter.onSceneAdvance(handler);
+    unsubscribe();
+
+    sceneRouter.requestSceneAdvance({ fromScene: 'quest-cave' as const, toScene: 'quest-dungeon' as const });
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('emits scene advance to multiple handlers', () => {
+    const h1 = vi.fn();
+    const h2 = vi.fn();
+    const u1 = sceneRouter.onSceneAdvance(h1);
+    const u2 = sceneRouter.onSceneAdvance(h2);
+
+    const evt = { fromScene: 'quest-dungeon' as const, toScene: 'quest-boss-room' as const };
+    sceneRouter.requestSceneAdvance(evt);
+
+    expect(h1).toHaveBeenCalledWith(evt);
+    expect(h2).toHaveBeenCalledWith(evt);
+    u1();
+    u2();
+  });
+
+  it('requestSceneAdvance is a no-op when no handlers are registered', () => {
+    expect(() =>
+      sceneRouter.requestSceneAdvance({ fromScene: 'quest-forest' as const, toScene: 'quest-cave' as const }),
+    ).not.toThrow();
+  });
 });
