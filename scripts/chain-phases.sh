@@ -22,6 +22,24 @@ for PHASE in $(seq "$START" "$END"); do
     PADDED=$(printf '%02d' "$PHASE")
     log "=== PHASE $PHASE ==="
 
+    # Step 0: phase.sh uses `feature/<prev-phase-last-task>` as the parent for
+    # the first task of this phase. If that branch lags behind main, the new
+    # phase's tasks won't inherit anything committed to main after the
+    # previous phase ended (factory fixes, restored files, etc.). Fast-forward
+    # the prev-phase's last-task branch up to current main before phase.sh
+    # runs.
+    if [ "$PHASE" -gt 1 ]; then
+        PREV_PHASE=$((PHASE - 1))
+        PREV_LAST=$(last_task "$PREV_PHASE" 2>/dev/null || true)
+        if [ -n "${PREV_LAST}" ]; then
+            PREV_LAST_BRANCH="$(task_branch "$PREV_LAST")"
+            if git rev-parse --verify "$PREV_LAST_BRANCH" >/dev/null 2>&1; then
+                log "Fast-forwarding $PREV_LAST_BRANCH -> main so Phase $PHASE inherits fixes"
+                git update-ref "refs/heads/$PREV_LAST_BRANCH" main
+            fi
+        fi
+    fi
+
     # Step 1: generate spec if missing
     if [ ! -f "specs/phase-${PADDED}/sequence.md" ]; then
         log "Generating spec for phase $PHASE via slice-spec.sh..."
