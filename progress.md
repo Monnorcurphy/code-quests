@@ -21,6 +21,26 @@ Previous task progress archived to metrics/progress-before-bodiam.md
 
 ---
 
+## Task bran — Adventurer recruit flow + roster
+
+**Status:** Complete
+
+**What was built:**
+- `packages/client/src/lib/use-focus-trap.ts` — reusable `useFocusTrap` hook (Tab trap + Escape key); extracted at 3rd occurrence
+- `packages/client/src/lib/api.ts` — added `adventurers.create` POST, `ApiError` class with `field` property for inline server error display
+- `packages/client/src/features/guild/roster.tsx` — roster list component with loading/error/empty states; shows name, class, W/L record
+- `packages/client/src/features/guild/recruit-modal.tsx` — recruit form with 3-state UX (idle → loading → success), optimistic insert via TanStack Query `useMutation`, field-named server error display, 3s auto-dismiss on success
+- `packages/client/src/features/guild/guild-hall.tsx` — standalone modal (uses `useFocusTrap`), shows roster + toggles to recruit form
+- `packages/client/src/features/town-square.tsx` — standalone modal with side-panel layout; roster + recruit banner button
+- `packages/client/src/routes/town.tsx` — updated to route guild-hall and town-square to their specific views; BuildingModal still handles other 6 buildings
+- `packages/client/src/styles/features.css` — guild/form/roster styles split from global.css to stay under 400-line limit
+- `packages/client/src/__tests__/recruit-modal.test.tsx` — 12 tests: success state, auto-dismiss timer, loading state, validation errors, server errors, field-named errors, onCancel, error persistence
+- `packages/client/src/__tests__/town.test.tsx` — updated to add QueryClientProvider + API mock; added guild-hall and town-square integration tests
+
+**Verification:** 94 tests passing (27 client + 67 server), typecheck clean, lint clean. No client files exceed size limits.
+
+---
+
 Previous balmoral entry below:
 
 ## balmoral — Express API CRUD endpoints
