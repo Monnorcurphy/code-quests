@@ -1,16 +1,15 @@
 # Progress — Phase 4
 
-Previous task progress archived to metrics/progress-before-cartagena.md
+Previous task progress archived to metrics/progress-before-castillo-de-san-marcos.md
 
-## Task cartagena — Claude Code subprocess adapter
+## castillo-de-san-marcos — Auto-match service
 
-**Status:** Complete
+**Status:** Done
 
 **What was built:**
-- `packages/server/src/agents/cc-adapter.ts` — implements `AgentAdapter.spawn()` against the Claude Code binary. Includes `MissingBinaryError`, `findBinPath()`, async stream-json parser, `AsyncQueue<T>` iterable, FAILURE_PATTERNS (goblin_linter / imp_typecheck / ogre_failing_test), temp `.mcp.json` wiring, SIGTERM/SIGKILL cancel with 5s grace, cleanup on all exit paths.
-- `packages/server/src/agents/adapter.ts` — added `adventurerClass?` and `mcpServers?` to `AgentSpawnInput`.
-- `packages/server/src/agents/select-adapter.ts` — wired `createCcAdapter()` and `findBinPath()` from cc-adapter; removed old placeholder.
-- `packages/server/src/agents/__tests__/cc-adapter.test.ts` — 3 tests: success path + cleanup, non-zero exit → failed, cancel() closes stream + cleanup.
-- `packages/server/src/agents/__tests__/cc-adapter-missing-binary.test.ts` — 2 tests: MissingBinaryError thrown when binary not found.
+- `packages/server/src/services/auto-match.ts` — `autoMatch(quest, guild, activeAgents)` function implementing the 4-rule selection algorithm: exclude busy, class fit, specialization match, tiebreak by net wins then createdAt
+- `packages/server/src/services/__tests__/auto-match.test.ts` — 20 table-driven tests covering all rule paths and the null-return case
+- `packages/server/src/routes/quests.ts` — Extended `POST /quests/:id/dispatch` to resolve adventurer before audit: body `adventurerId` (with 400 validation), pre-assigned quest adventurerId, then autoMatch(), then 409 NO_ADVENTURER if none available
+- `packages/server/src/__tests__/dispatch.test.ts` — Added 5 new cases: auto-match, body adventurerId override, bad adventurerId 400, NO_ADVENTURER 409, pre-assigned adventurerId
 
-**Verify:** 145 server tests pass, 0 typecheck errors, 0 lint errors. All packages green (480 total tests passing).
+**Verification:** 175 tests pass, 0 lint errors, 0 typecheck errors

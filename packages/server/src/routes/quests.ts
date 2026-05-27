@@ -1,10 +1,11 @@
 import { Router, Response } from 'express';
 import Database from 'better-sqlite3';
 import { z } from 'zod';
-import { QuestStatusSchema, EquipmentSchema, SpecAuditSchema, QuestSchema, QuestAcListSchema } from '@code-quests/shared';
+import { QuestStatusSchema, EquipmentSchema, SpecAuditSchema, QuestSchema, QuestAcListSchema, AdventurerSchema, AgentSchema } from '@code-quests/shared';
 import { validate } from '../middleware/validate';
 import { auditQuest } from '../audit/audit-quest';
 import { getAuditAdapter } from '../agents/select-adapter';
+import { autoMatch } from '../services/auto-match';
 
 const CreateQuestSchema = z.object({
   title: z.string().min(1),
@@ -200,10 +201,77 @@ export function createQuestsRouter(db: Database.Database): Router {
       res.status(409).json({ error: 'Quest already dispatched' });
       return;
     }
-    const bypass = req.query['bypass'] === 'true';
+
+    const DispatchBodySchema = z.object({
+      adventurerId: z.string().min(1).optional(),
+      bypass: z.boolean().optional(),
+    });
+    const bodyResult = DispatchBodySchema.safeParse(req.body ?? {});
+    if (!bodyResult.success) {
+      res.status(400).json({ error: 'Invalid request body', details: bodyResult.error.issues });
+      return;
+    }
+    const body = bodyResult.data;
+    const bypass = req.query['bypass'] === 'true' || body.bypass === true;
+
     void (async () => {
       try {
-        const quest = QuestSchema.parse(rowToApi(row));
+        let chosenAdventurerId: string | null = row.adventurer_id;
+
+        if (body.adventurerId !== undefined) {
+          const exists = db.prepare('SELECT id FROM adventurers WHERE id = ?').get(body.adventurerId);
+          if (!exists) {
+            res.status(400).json({ error: 'adventurerId does not reference an existing adventurer', field: 'adventurerId' });
+            return;
+          }
+          chosenAdventurerId = body.adventurerId;
+        } else if (chosenAdventurerId === null) {
+          const guildRows = db.prepare('SELECT * FROM adventurers ORDER BY created_at').all();
+          const guild = (guildRows as Record<string, unknown>[]).map((r) =>
+            AdventurerSchema.parse({
+              id: r['id'],
+              name: r['name'],
+              class: r['class'],
+              modelId: r['model_id'],
+              createdAt: r['created_at'],
+              stats: JSON.parse(r['stats_json'] as string),
+              specializations: JSON.parse(r['specializations_json'] as string),
+              scars: JSON.parse(r['scars_json'] as string),
+            }),
+          );
+          const activeAgentRows = db.prepare('SELECT * FROM agents WHERE ended_at IS NULL').all();
+          const activeAgents = (activeAgentRows as Record<string, unknown>[]).map((r) =>
+            AgentSchema.parse({
+              id: r['id'],
+              adventurerId: r['adventurer_id'],
+              questId: r['quest_id'],
+              startedAt: r['started_at'],
+              endedAt: r['ended_at'] ?? null,
+              pid: r['pid'] ?? null,
+              exitCode: r['exit_code'] ?? null,
+            }),
+          );
+
+          const quest = QuestSchema.parse(rowToApi(row));
+          const matched = autoMatch(quest, guild, activeAgents);
+          if (matched === null) {
+            res.status(409).json({
+              error: 'No available adventurer — recruit one in the Town Square',
+              code: 'NO_ADVENTURER',
+            });
+            return;
+          }
+          chosenAdventurerId = matched.id;
+        }
+
+        if (chosenAdventurerId !== row.adventurer_id) {
+          const now = new Date().toISOString();
+          db.prepare('UPDATE quests SET adventurer_id = ?, updated_at = ? WHERE id = ?')
+            .run(chosenAdventurerId, now, req.params.id);
+        }
+
+        const updatedRow = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
+        const quest = QuestSchema.parse(rowToApi(updatedRow));
         const adapter = getAuditAdapter();
         const audit = await auditQuest(quest, adapter);
         const blockGaps = audit.gaps.filter((g) => g.severity === 'block');
