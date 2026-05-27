@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import GuildHall from '../features/guild/guild-hall';
 import TownSquare from '../features/town-square';
 import WarRoom from '../features/war-room';
 import { useFocusTrap } from '../lib/use-focus-trap';
+
+const USE_PHASER = import.meta.env.VITE_PHASER_TOWN !== 'false';
+// Lazy-loaded so Phaser is only imported when USE_PHASER is true (not in jsdom tests)
+const PhaserMount = lazy(() => import('../game/phaser-mount'));
 
 const BUILDINGS = [
   { id: 'town-square', name: 'Town Square', role: 'Entry & Recruiting' },
@@ -50,7 +54,7 @@ function BuildingModal({ building, onClose }: BuildingModalProps) {
   );
 }
 
-export default function Town() {
+function HtmlTown() {
   const [openBuilding, setOpenBuilding] = useState<BuildingId | null>(null);
   const triggerRefs = useRef<Map<BuildingId, HTMLButtonElement>>(new Map());
 
@@ -110,4 +114,18 @@ export default function Town() {
         )}
     </main>
   );
+}
+
+export default function Town() {
+  if (USE_PHASER) {
+    return (
+      <main style={{ width: '100vw', height: '100vh' }}>
+        <Suspense fallback={null}>
+          <PhaserMount initialScene="boot" />
+        </Suspense>
+      </main>
+    );
+  }
+
+  return <HtmlTown />;
 }
