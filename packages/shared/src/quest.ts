@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EquipmentSchema } from './equipment';
 
 export const QuestStatusSchema = z.enum([
   'idle',
@@ -22,7 +23,7 @@ export const QuestSchema = z.object({
   status: QuestStatusSchema.default('idle'),
   adventurerId: z.string().min(1).nullable(),
   agentId: z.string().nullable(),
-  equipment: z.record(z.unknown()).default({}),
+  equipment: EquipmentSchema.default({ skillIds: [], toolIds: [], mcpServerIds: [] }),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

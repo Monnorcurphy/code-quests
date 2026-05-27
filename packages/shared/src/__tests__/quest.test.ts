@@ -72,6 +72,19 @@ describe('QuestSchema', () => {
   it('rejects empty id string', () => {
     expect(() => QuestSchema.parse({ ...valid, id: '' })).toThrow();
   });
+
+  it('rejects malformed equipment (skillIds not an array)', () => {
+    expect(() =>
+      QuestSchema.parse({ ...valid, equipment: { skillIds: 'not-an-array' } }),
+    ).toThrow();
+  });
+
+  it('defaults equipment fields when equipment is empty object', () => {
+    const result = QuestSchema.parse({ ...valid, equipment: {} });
+    expect(result.equipment.skillIds).toEqual([]);
+    expect(result.equipment.toolIds).toEqual([]);
+    expect(result.equipment.mcpServerIds).toEqual([]);
+  });
 });
 
 describe('EpicSchema', () => {

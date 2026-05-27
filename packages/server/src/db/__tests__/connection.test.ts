@@ -96,7 +96,7 @@ describe('adventurers CRUD', () => {
   it('updates an adventurer', () => {
     db.prepare(
       `INSERT INTO adventurers (id, name, class, model_id) VALUES (?, ?, ?, ?)`,
-    ).run('adv-2', 'Bram', 'wizard', 'claude-sonnet-4-6');
+    ).run('adv-2', 'Bram', 'apprentice', 'claude-sonnet-4-6');
 
     db.prepare(`UPDATE adventurers SET name = ? WHERE id = ?`).run('Bramwell', 'adv-2');
 
@@ -115,6 +115,14 @@ describe('adventurers CRUD', () => {
 
     const row = db.prepare(`SELECT * FROM adventurers WHERE id = ?`).get('adv-3');
     expect(row).toBeUndefined();
+  });
+
+  it('rejects invalid adventurer class', () => {
+    expect(() => {
+      db.prepare(
+        `INSERT INTO adventurers (id, name, class, model_id) VALUES (?, ?, ?, ?)`,
+      ).run('adv-bad', 'BadHero', 'wizard', 'claude-haiku-4-5');
+    }).toThrow();
   });
 });
 
@@ -179,7 +187,7 @@ describe('quests CRUD', () => {
     db = makeDb();
     db.prepare(
       `INSERT INTO adventurers (id, name, class, model_id) VALUES (?, ?, ?, ?)`,
-    ).run('adv-q', 'Hero', 'paladin', 'claude-opus-4-7');
+    ).run('adv-q', 'Hero', 'champion', 'claude-opus-4-7');
     db.prepare(`INSERT INTO epics (id, title, goal) VALUES (?, ?, ?)`).run(
       'epic-q',
       'Epic',

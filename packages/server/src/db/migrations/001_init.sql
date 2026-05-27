@@ -3,7 +3,8 @@
 CREATE TABLE IF NOT EXISTS adventurers (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  class TEXT NOT NULL,
+  class TEXT NOT NULL
+    CHECK(class IN ('champion', 'ranger', 'scout', 'rogue', 'apprentice')),
   model_id TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   stats_json TEXT NOT NULL DEFAULT '{}',
