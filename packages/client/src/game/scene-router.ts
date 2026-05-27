@@ -29,6 +29,7 @@ class SceneRouter {
   }
 
   private get reducedMotion(): boolean {
+    if (document.documentElement.dataset.reducedMotion === 'true') return true;
     return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   }
 

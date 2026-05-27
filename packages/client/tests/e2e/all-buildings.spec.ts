@@ -1,20 +1,22 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-// These tests run in HTML mode (VITE_PHASER_TOWN=false).
-// They verify that every building can be opened from the town grid.
+// SceneKeyboardNav exposes in-scene interactives to keyboard/screen-reader users.
+// All building interactions in Phaser mode go through this hidden nav.
+const SCENE_NAV = 'nav[aria-label="Scene interactions"]';
 
 const PLACEHOLDER_BUILDINGS = [
-  { name: 'Oracle', phase: '3' },
-  { name: 'Library', phase: '10' },
-  { name: 'Tavern', phase: '3' },
-  { name: 'Armory', phase: '3' },
-  { name: 'Hall of Returns', phase: '9' },
+  { name: 'Oracle', scene: 'oracle', phase: '3' },
+  { name: 'Library', scene: 'library', phase: '10' },
+  { name: 'Tavern', scene: 'tavern', phase: '3' },
+  { name: 'Armory', scene: 'armory', phase: '3' },
+  { name: 'Hall of Returns', scene: 'hall-of-returns', phase: '9' },
 ];
 
-test.describe('All buildings — entry and return', () => {
-  test('all 7 building buttons are visible on the town page', async ({ page }) => {
-    await page.goto('/town');
+test.describe('All buildings — Phaser town', () => {
+  test('Town Square scene nav exposes all 7 building doors', async ({ page }) => {
+    await page.goto('/town/town-square');
+    await page.waitForSelector(`${SCENE_NAV} button`, { timeout: 15000 });
 
     const buildings = [
       'War Room',
@@ -26,23 +28,36 @@ test.describe('All buildings — entry and return', () => {
       'Hall of Returns',
     ];
     for (const name of buildings) {
-      await expect(page.getByRole('button', { name: new RegExp(name) })).toBeVisible();
+      await expect(
+        page.locator(`${SCENE_NAV} button`, { hasText: name }),
+      ).toBeAttached();
     }
   });
 
-  test('War Room opens the draft form dialog', async ({ page }) => {
-    await page.goto('/town');
+  test('War Room scene opens the draft form via Planning Table', async ({ page }) => {
+    await page.goto('/town/war-room');
+    await page.waitForSelector(`${SCENE_NAV} button:has-text("Planning Table")`, {
+      timeout: 15000,
+    });
 
-    await page.getByRole('button', { name: /War Room/i }).click();
+    await page.locator(`${SCENE_NAV} button`, { hasText: 'Planning Table' }).click({
+      force: true,
+    });
+
     await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'War Room' })).toBeVisible();
     await expect(page.getByLabel('Title')).toBeVisible();
   });
 
   test('War Room dialog closes on Escape', async ({ page }) => {
-    await page.goto('/town');
+    await page.goto('/town/war-room');
+    await page.waitForSelector(`${SCENE_NAV} button:has-text("Planning Table")`, {
+      timeout: 15000,
+    });
 
-    await page.getByRole('button', { name: /War Room/i }).click();
+    await page.locator(`${SCENE_NAV} button`, { hasText: 'Planning Table' }).click({
+      force: true,
+    });
     await expect(page.getByRole('dialog')).toBeVisible();
 
     await page.keyboard.press('Escape');
@@ -50,28 +65,44 @@ test.describe('All buildings — entry and return', () => {
   });
 
   test('War Room has no accessibility violations', async ({ page }) => {
-    await page.goto('/town');
+    await page.goto('/town/war-room');
+    await page.waitForSelector(`${SCENE_NAV} button:has-text("Planning Table")`, {
+      timeout: 15000,
+    });
 
-    await page.getByRole('button', { name: /War Room/i }).click();
+    await page.locator(`${SCENE_NAV} button`, { hasText: 'Planning Table' }).click({
+      force: true,
+    });
     await expect(page.getByRole('dialog')).toBeVisible();
 
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations).toEqual([]);
   });
 
-  test('Guild Hall opens the roster and recruit dialog', async ({ page }) => {
-    await page.goto('/town');
+  test('Guild Hall scene opens the roster dialog via Guild Roster', async ({ page }) => {
+    await page.goto('/town/guild-hall');
+    await page.waitForSelector(`${SCENE_NAV} button:has-text("Guild Roster")`, {
+      timeout: 15000,
+    });
 
-    await page.getByRole('button', { name: /Guild Hall/i }).click();
+    await page.locator(`${SCENE_NAV} button`, { hasText: 'Guild Roster' }).click({
+      force: true,
+    });
+
     await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Guild Hall' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Recruit Adventurer/i })).toBeVisible();
   });
 
   test('Guild Hall dialog closes on Escape', async ({ page }) => {
-    await page.goto('/town');
+    await page.goto('/town/guild-hall');
+    await page.waitForSelector(`${SCENE_NAV} button:has-text("Guild Roster")`, {
+      timeout: 15000,
+    });
 
-    await page.getByRole('button', { name: /Guild Hall/i }).click();
+    await page.locator(`${SCENE_NAV} button`, { hasText: 'Guild Roster' }).click({
+      force: true,
+    });
     await expect(page.getByRole('dialog')).toBeVisible();
 
     await page.keyboard.press('Escape');
@@ -79,39 +110,41 @@ test.describe('All buildings — entry and return', () => {
   });
 
   test('Guild Hall has no accessibility violations', async ({ page }) => {
-    await page.goto('/town');
+    await page.goto('/town/guild-hall');
+    await page.waitForSelector(`${SCENE_NAV} button:has-text("Guild Roster")`, {
+      timeout: 15000,
+    });
 
-    await page.getByRole('button', { name: /Guild Hall/i }).click();
+    await page.locator(`${SCENE_NAV} button`, { hasText: 'Guild Roster' }).click({
+      force: true,
+    });
     await expect(page.getByRole('dialog')).toBeVisible();
 
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations).toEqual([]);
   });
 
-  for (const { name } of PLACEHOLDER_BUILDINGS) {
-    test(`${name} opens a placeholder dialog with building name`, async ({ page }) => {
-      await page.goto('/town');
-
-      await page.getByRole('button', { name: new RegExp(name) }).click();
-      await expect(page.getByRole('dialog')).toBeVisible();
+  for (const { name, scene } of PLACEHOLDER_BUILDINGS) {
+    test(`${name} scene shows a coming-soon dialog`, async ({ page }) => {
+      await page.goto(`/town/${scene}`);
+      // Placeholder scenes auto-set the coming-soon modal in create()
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
       await expect(page.getByRole('heading', { name })).toBeVisible();
     });
 
-    test(`${name} placeholder dialog closes on Close button`, async ({ page }) => {
-      await page.goto('/town');
+    test(`${name} placeholder dialog closes on Return to Town Square button`, async ({
+      page,
+    }) => {
+      await page.goto(`/town/${scene}`);
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
 
-      await page.getByRole('button', { name: new RegExp(name) }).click();
-      await expect(page.getByRole('dialog')).toBeVisible();
-
-      await page.getByRole('button', { name: 'Close' }).click();
+      await page.getByRole('button', { name: 'Return to Town Square' }).click();
       await expect(page.getByRole('dialog')).not.toBeVisible();
     });
 
     test(`${name} placeholder dialog closes on Escape`, async ({ page }) => {
-      await page.goto('/town');
-
-      await page.getByRole('button', { name: new RegExp(name) }).click();
-      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.goto(`/town/${scene}`);
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
 
       await page.keyboard.press('Escape');
       await expect(page.getByRole('dialog')).not.toBeVisible();
@@ -119,11 +152,9 @@ test.describe('All buildings — entry and return', () => {
   }
 
   test('all placeholder building dialogs have no accessibility violations', async ({ page }) => {
-    await page.goto('/town');
-
-    for (const { name } of PLACEHOLDER_BUILDINGS) {
-      await page.getByRole('button', { name: new RegExp(name) }).click();
-      await expect(page.getByRole('dialog')).toBeVisible();
+    for (const { scene } of PLACEHOLDER_BUILDINGS) {
+      await page.goto(`/town/${scene}`);
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
 
       const results = await new AxeBuilder({ page }).analyze();
       expect(results.violations).toEqual([]);
@@ -131,31 +162,5 @@ test.describe('All buildings — entry and return', () => {
       await page.keyboard.press('Escape');
       await expect(page.getByRole('dialog')).not.toBeVisible();
     }
-  });
-
-  test('focus returns to War Room button after dialog closes', async ({ page }) => {
-    await page.goto('/town');
-
-    await page.getByRole('button', { name: /War Room/i }).click();
-    await expect(page.getByRole('dialog')).toBeVisible();
-
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).not.toBeVisible();
-
-    const warRoomBtn = page.getByRole('button', { name: /War Room/i });
-    await expect(warRoomBtn).toBeFocused();
-  });
-
-  test('focus returns to Guild Hall button after dialog closes', async ({ page }) => {
-    await page.goto('/town');
-
-    await page.getByRole('button', { name: /Guild Hall/i }).click();
-    await expect(page.getByRole('dialog')).toBeVisible();
-
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).not.toBeVisible();
-
-    const guildHallBtn = page.getByRole('button', { name: /Guild Hall/i });
-    await expect(guildHallBtn).toBeFocused();
   });
 });

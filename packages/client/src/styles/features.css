@@ -510,3 +510,91 @@
 .town-square-recruit-btn {
   width: 100%;
 }
+
+/* Settings HUD button */
+.settings-hud-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 100;
+  background: rgba(44, 36, 22, 0.75);
+  color: #f0e6d2;
+  border: 1px solid rgba(240, 230, 210, 0.4);
+  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background-color 0.15s ease;
+}
+
+.settings-hud-btn:hover {
+  background: rgba(44, 36, 22, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-hud-btn {
+    transition: none;
+  }
+}
+
+[data-reduced-motion='true'] .settings-hud-btn {
+  transition: none;
+}
+
+/* Settings panel */
+.settings-panel {
+  max-width: 380px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-parchment-dark);
+  margin-bottom: 1rem;
+}
+
+.settings-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.settings-row-label {
+  font-weight: bold;
+  color: var(--color-text);
+  font-size: 1rem;
+}
+
+.settings-row-hint {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.settings-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.settings-toggle-input {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+  accent-color: var(--color-banner-red);
+}
+
+.settings-toggle-track {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  min-width: 2rem;
+}
