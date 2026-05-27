@@ -104,6 +104,24 @@ describe('POST /quests', () => {
     expect(res.status).toBe(400);
     expect(res.body.field).toBe('status');
   });
+
+  it('rejects POST /quests with an unknown epicId', async () => {
+    const res = await request(app).post('/quests').send({
+      title: 'Phantom Epic Quest',
+      epicId: 'nonexistent-epic',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.field).toBe('epicId');
+  });
+
+  it('rejects POST /quests with an unknown adventurerId', async () => {
+    const res = await request(app).post('/quests').send({
+      title: 'Phantom Adventurer Quest',
+      adventurerId: 'nonexistent-adv',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.field).toBe('adventurerId');
+  });
 });
 
 describe('GET /quests/:id', () => {
@@ -188,6 +206,18 @@ describe('PATCH /quests/:id', () => {
   it('returns 404 for unknown id', async () => {
     const res = await request(app).patch('/quests/ghost').send({ title: 'Phantom' });
     expect(res.status).toBe(404);
+  });
+
+  it('rejects PATCH /quests/:id with an unknown epicId', async () => {
+    const res = await request(app).patch('/quests/quest-patch').send({ epicId: 'ghost-epic' });
+    expect(res.status).toBe(400);
+    expect(res.body.field).toBe('epicId');
+  });
+
+  it('rejects PATCH /quests/:id with an unknown adventurerId', async () => {
+    const res = await request(app).patch('/quests/quest-patch').send({ adventurerId: 'ghost-adv' });
+    expect(res.status).toBe(400);
+    expect(res.body.field).toBe('adventurerId');
   });
 
   it('rejects invalid status in patch', async () => {

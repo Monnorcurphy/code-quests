@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import Database from 'better-sqlite3';
 import { z } from 'zod';
 import { QuestStatusSchema, EquipmentSchema } from '@code-quests/shared';
@@ -58,6 +58,22 @@ function rowToApi(row: QuestRow) {
   };
 }
 
+function assertReferenceExists(
+  db: Database.Database,
+  table: 'epics' | 'adventurers',
+  id: string | null | undefined,
+  field: string,
+  res: Response,
+): boolean {
+  if (id == null) return true;
+  const row = db.prepare(`SELECT id FROM ${table} WHERE id = ?`).get(id);
+  if (!row) {
+    res.status(400).json({ error: `${field} does not reference an existing ${table.slice(0, -1)}`, field });
+    return false;
+  }
+  return true;
+}
+
 export function createQuestsRouter(db: Database.Database): Router {
   const router = Router();
 
@@ -68,6 +84,8 @@ export function createQuestsRouter(db: Database.Database): Router {
 
   router.post('/', validate(CreateQuestSchema), (req, res) => {
     const body = req.body as CreateQuest;
+    if (!assertReferenceExists(db, 'epics', body.epicId, 'epicId', res)) return;
+    if (!assertReferenceExists(db, 'adventurers', body.adventurerId, 'adventurerId', res)) return;
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     db.prepare(
@@ -110,6 +128,8 @@ export function createQuestsRouter(db: Database.Database): Router {
       return;
     }
     const body = req.body as PatchQuest;
+    if (!assertReferenceExists(db, 'epics', body.epicId, 'epicId', res)) return;
+    if (!assertReferenceExists(db, 'adventurers', body.adventurerId, 'adventurerId', res)) return;
     if (body.acceptanceCriteria !== undefined && existing.ac_locked_at !== null) {
       res.status(400).json({
         error: 'Acceptance criteria are locked and cannot be modified once a quest has been claimed',

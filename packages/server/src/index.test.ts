@@ -1,16 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { app } from './index';
+import request from 'supertest';
+import { openDb } from './db/connection';
+import { runMigrations } from './db/migrator';
+import { createApp } from './index';
 
 describe('app', () => {
-  it('exports an express application', () => {
+  function makeApp() {
+    const db = openDb(':memory:');
+    runMigrations(db);
+    return { app: createApp(db), db };
+  }
+
+  it('creates an express application', () => {
+    const { app } = makeApp();
     expect(app).toBeDefined();
     expect(typeof app.listen).toBe('function');
   });
 
-  it('has a /health route registered', () => {
-    const routes = app._router?.stack
-      .filter((layer: { route?: { path: string } }) => layer.route)
-      .map((layer: { route: { path: string } }) => layer.route.path);
-    expect(routes).toContain('/health');
+  it('GET /health returns { status: "ok" }', async () => {
+    const { app } = makeApp();
+    const res = await request(app).get('/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
   });
 });
