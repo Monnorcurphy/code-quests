@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { ReturnedQuest } from '../../lib/api';
 import type { AgentEvent } from '@code-quests/shared';
 
@@ -39,16 +40,22 @@ interface ReturnedQuestDetailProps {
 }
 
 export default function ReturnedQuestDetail({ quest, onBack }: ReturnedQuestDetailProps) {
+  const backButtonRef = useRef<HTMLButtonElement>(null);
   const events = quest.agent?.events ?? [];
   const duration =
     quest.agent?.startedAt
       ? formatDuration(quest.agent.startedAt, quest.agent.endedAt)
       : null;
 
+  useEffect(() => {
+    backButtonRef.current?.focus();
+  }, []);
+
   return (
     <div className="return-detail">
       <div className="return-detail-header">
         <button
+          ref={backButtonRef}
           className="btn-secondary return-detail-back"
           onClick={onBack}
           aria-label="Back to Hall of Returns"
@@ -81,7 +88,7 @@ export default function ReturnedQuestDetail({ quest, onBack }: ReturnedQuestDeta
       )}
 
       {quest.status === 'failed' && quest.failureSummary && (
-        <div className="return-detail-failure" role="alert">
+        <div className="return-detail-failure">
           <p className="return-detail-failure-reason">
             <strong>Why it failed:</strong> {quest.failureSummary.reason}
           </p>

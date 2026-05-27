@@ -189,6 +189,16 @@ describe('HallOfReturns', () => {
     expect(screen.getByRole('button', { name: /back to hall of returns/i })).toBeDefined();
   });
 
+  it('clicking a card moves focus to the Back button', async () => {
+    const user = userEvent.setup();
+    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
+    renderPanel();
+    const card = await screen.findByRole('button', { name: /view details for slay the dragon/i });
+    await user.click(card);
+    const backBtn = screen.getByRole('button', { name: /back to hall of returns/i });
+    expect(document.activeElement).toBe(backBtn);
+  });
+
   it('back button in detail view returns to list', async () => {
     const user = userEvent.setup();
     mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
@@ -198,6 +208,18 @@ describe('HallOfReturns', () => {
     const backBtn = screen.getByRole('button', { name: /back to hall of returns/i });
     await user.click(backBtn);
     await screen.findByText('Victorious');
+  });
+
+  it('back button returns focus to the originating card', async () => {
+    const user = userEvent.setup();
+    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
+    renderPanel();
+    const card = await screen.findByRole('button', { name: /view details for slay the dragon/i });
+    await user.click(card);
+    const backBtn = screen.getByRole('button', { name: /back to hall of returns/i });
+    await user.click(backBtn);
+    const cardAgain = await screen.findByRole('button', { name: /view details for slay the dragon/i });
+    expect(document.activeElement).toBe(cardAgain);
   });
 
   it('detail view shows failure summary for failed quests', async () => {
@@ -280,6 +302,13 @@ describe('HallOfReturns', () => {
     const defeatBadge = screen.getByText('Defeat');
     expect(victoryBadge.className).toContain('quest-badge--complete');
     expect(defeatBadge.className).toContain('quest-badge--failed');
+  });
+
+  it('card accessible name includes the quest outcome', async () => {
+    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest(), makeFailedQuest()]));
+    renderPanel();
+    await screen.findByRole('button', { name: /slay the dragon — victorious/i });
+    expect(screen.getByRole('button', { name: /retrieve the artifact — defeated/i })).toBeDefined();
   });
 
   it('reduced-motion: card uses data attribute class for transition suppression', async () => {

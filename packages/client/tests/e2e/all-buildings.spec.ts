@@ -10,7 +10,6 @@ const PLACEHOLDER_BUILDINGS = [
   { name: 'Library', scene: 'library', phase: '10' },
   { name: 'Tavern', scene: 'tavern', phase: '3' },
   { name: 'Armory', scene: 'armory', phase: '3' },
-  { name: 'Hall of Returns', scene: 'hall-of-returns', phase: '9' },
 ];
 
 test.describe('All buildings — Phaser town', () => {

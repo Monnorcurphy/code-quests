@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { ReturnedQuest } from '../lib/api';
@@ -46,22 +46,26 @@ function QuestCard({
   return (
     <li className="return-card-item">
       <button
+        data-quest-id={quest.id}
         className={`return-card return-card--${isComplete ? 'complete' : 'failed'}`}
         onClick={() => onSelect(quest)}
-        aria-label={`View details for ${quest.title}`}
+        aria-label={
+          isComplete
+            ? `View details for ${quest.title} — Victorious`
+            : `View details for ${quest.title} — Defeated`
+        }
       >
-        <div className="return-card-header">
+        <span className="return-card-header">
           <span className="return-card-title">{quest.title}</span>
           <span
             className={`quest-badge quest-badge--${isComplete ? 'complete' : 'failed'}`}
-            aria-hidden="true"
           >
             {isComplete ? 'Victory' : 'Defeat'}
           </span>
-        </div>
+        </span>
 
         {quest.adventurer && (
-          <p className="return-card-adventurer">
+          <span className="return-card-adventurer">
             <span className="return-card-adventurer-name">{quest.adventurer.name}</span>
             {' · '}
             <span className="return-card-adventurer-class">{quest.adventurer.class}</span>
@@ -71,21 +75,21 @@ function QuestCard({
                 <span className="return-card-duration">{duration}</span>
               </>
             )}
-          </p>
+          </span>
         )}
 
         {lastLines.length > 0 && (
-          <ul className="return-card-log" aria-label="Last log entries">
+          <span className="return-card-log">
             {lastLines.map((line, i) => (
-              <li key={i} className="return-card-log-line">{line}</li>
+              <span key={i} className="return-card-log-line">{line}</span>
             ))}
-          </ul>
+          </span>
         )}
 
         {!isComplete && quest.failureSummary && (
-          <p className="return-card-failure-rec">
+          <span className="return-card-failure-rec">
             {quest.failureSummary.recommendation.replace(/_/g, ' ')}
-          </p>
+          </span>
         )}
       </button>
     </li>
@@ -132,6 +136,7 @@ export default function HallOfReturns() {
   const [selectedQuest, setSelectedQuest] = useState<ReturnedQuest | null>(null);
   const panelRef = useFocusTrap(() => setActiveModal(null));
   const firstFocusableRef = useRef<HTMLButtonElement>(null);
+  const lastSelectedIdRef = useRef<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['quests', 'returned'],
@@ -141,6 +146,11 @@ export default function HallOfReturns() {
   const complete = data?.items.filter((q) => q.status === 'complete') ?? [];
   const failed = data?.items.filter((q) => q.status === 'failed') ?? [];
   const total = data?.total ?? 0;
+
+  const handleSelect = useCallback((q: ReturnedQuest) => {
+    lastSelectedIdRef.current = q.id;
+    setSelectedQuest(q);
+  }, []);
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -152,8 +162,19 @@ export default function HallOfReturns() {
   }, [panelRef]);
 
   useEffect(() => {
-    if (!selectedQuest) firstFocusableRef.current?.focus();
-  }, [selectedQuest]);
+    if (selectedQuest) return;
+    if (lastSelectedIdRef.current) {
+      const card = panelRef.current?.querySelector<HTMLElement>(
+        `[data-quest-id="${lastSelectedIdRef.current}"]`,
+      );
+      lastSelectedIdRef.current = null;
+      if (card) {
+        card.focus();
+        return;
+      }
+    }
+    firstFocusableRef.current?.focus();
+  }, [selectedQuest, panelRef]);
 
   return (
     <div
@@ -207,13 +228,13 @@ export default function HallOfReturns() {
                 <QuestColumn
                   heading="Victorious"
                   quests={complete}
-                  onSelect={setSelectedQuest}
+                  onSelect={handleSelect}
                   modifier="complete"
                 />
                 <QuestColumn
                   heading="Returned in Defeat"
                   quests={failed}
-                  onSelect={setSelectedQuest}
+                  onSelect={handleSelect}
                   modifier="failed"
                 />
               </div>
