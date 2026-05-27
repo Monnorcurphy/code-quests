@@ -5,7 +5,7 @@ interface TownState {
   currentScene: SceneKey;
   playerX: number;
   facing: 'left' | 'right';
-  activeModal: 'recruit' | 'draft' | 'quest-board' | null;
+  activeModal: 'recruit' | 'draft' | 'quest-board' | 'guild-hall' | 'coming-soon' | null;
   setScene: (scene: SceneKey) => void;
   setPlayerX: (x: number) => void;
   setFacing: (facing: 'left' | 'right') => void;

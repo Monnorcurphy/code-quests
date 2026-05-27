@@ -3,17 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 import type { Adventurer } from '@code-quests/shared';
 import { api } from '../../lib/api';
 import { useFocusTrap } from '../../lib/use-focus-trap';
+import { useTownStore } from '../../stores/town-store';
 import Roster from './roster';
 import RecruitModal from './recruit-modal';
 
-interface GuildHallProps {
-  onClose: () => void;
-}
-
-export default function GuildHall({ onClose }: GuildHallProps) {
+export default function GuildHall() {
+  const setActiveModal = useTownStore((s) => s.setActiveModal);
   const [showRecruit, setShowRecruit] = useState(false);
   const recruitBtnRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useFocusTrap(onClose);
+  const panelRef = useFocusTrap(() => setActiveModal(null));
 
   const { data: rawData, isLoading, error } = useQuery({
     queryKey: ['adventurers'],
@@ -21,7 +19,6 @@ export default function GuildHall({ onClose }: GuildHallProps) {
   });
   const data: Adventurer[] = (rawData as Adventurer[] | undefined) ?? [];
 
-  // Snap focus to first button on mount
   useEffect(() => {
     const panel = panelRef.current;
     if (!panel) return;
@@ -31,7 +28,6 @@ export default function GuildHall({ onClose }: GuildHallProps) {
     first?.focus();
   }, [panelRef]);
 
-  // Re-focus the Recruit button after returning from recruit form
   useEffect(() => {
     if (!showRecruit) recruitBtnRef.current?.focus();
   }, [showRecruit]);
@@ -68,7 +64,7 @@ export default function GuildHall({ onClose }: GuildHallProps) {
               >
                 Recruit Adventurer
               </button>
-              <button className="btn-secondary" onClick={onClose}>
+              <button className="btn-secondary" onClick={() => setActiveModal(null)}>
                 Close
               </button>
             </div>

@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import GuildHall from '../features/guild/guild-hall';
 import TownSquare from '../features/town-square';
 import WarRoom from '../features/war-room';
+import ComingSoonPanel from '../components/coming-soon-panel';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { SceneKeyboardNav } from '../components/scene-keyboard-nav';
 import { sceneRouter } from '../game/scene-router';
@@ -26,6 +27,30 @@ const BUILDINGS = [
 ] as const;
 
 type BuildingId = (typeof BUILDINGS)[number]['id'];
+type PlaceholderBuildingId = Exclude<BuildingId, 'town-square' | 'war-room' | 'guild-hall'>;
+
+const COMING_SOON_CONTENT: Partial<Record<TownSceneKey, { title: string; description: string }>> = {
+  oracle: {
+    title: 'Oracle',
+    description: 'Refine Acceptance Criteria — arriving in Phase 3.',
+  },
+  library: {
+    title: 'Library',
+    description: 'Skills + Bestiary — arriving in Phase 10.',
+  },
+  tavern: {
+    title: 'Tavern',
+    description: 'Edge Cases — arriving in Phase 3.',
+  },
+  armory: {
+    title: 'Armory',
+    description: 'Equipment Loadout — arriving in Phase 3.',
+  },
+  'hall-of-returns': {
+    title: 'Hall of Returns',
+    description: 'Completed/Failed Quests — arriving in Phase 9.',
+  },
+};
 
 interface BuildingModalProps {
   building: (typeof BUILDINGS)[number];
@@ -40,6 +65,8 @@ function BuildingModal({ building, onClose }: BuildingModalProps) {
     closeRef.current?.focus();
   }, []);
 
+  const content = COMING_SOON_CONTENT[building.id as PlaceholderBuildingId];
+
   return (
     <div
       className="modal-backdrop"
@@ -51,7 +78,7 @@ function BuildingModal({ building, onClose }: BuildingModalProps) {
         <h2 id="modal-title" className="modal-title">
           {building.name}
         </h2>
-        <p className="modal-body">Coming in Phase 2 — Phaser scene</p>
+        <p className="modal-body">{content?.description ?? 'Coming soon.'}</p>
         <button ref={closeRef} className="modal-close" onClick={onClose}>
           Close
         </button>
@@ -61,24 +88,31 @@ function BuildingModal({ building, onClose }: BuildingModalProps) {
 }
 
 function HtmlTown() {
-  const [openBuilding, setOpenBuilding] = useState<Exclude<BuildingId, 'town-square'> | null>(null);
+  const [openBuilding, setOpenBuilding] = useState<PlaceholderBuildingId | null>(null);
   const triggerRefs = useRef<Map<BuildingId, HTMLButtonElement>>(new Map());
   const setActiveModal = useTownStore((s) => s.setActiveModal);
   const activeModal = useTownStore((s) => s.activeModal);
 
-  // Reset store modal state on unmount so tests and navigations start clean
   useEffect(() => {
     return () => setActiveModal(null);
   }, [setActiveModal]);
 
   const activeBuilding = BUILDINGS.find((b) => b.id === openBuilding) ?? null;
-  const isTownSquareOpen = activeModal === 'quest-board' || activeModal === 'recruit';
+  const isAnyModalOpen = activeModal !== null || activeBuilding !== null;
 
-  // Return focus to Town Square trigger when overlay closes
   const prevActiveModal = useRef(activeModal);
   useEffect(() => {
-    if (prevActiveModal.current !== null && activeModal === null) {
-      triggerRefs.current.get('town-square')?.focus();
+    const prev = prevActiveModal.current;
+    if (prev !== null && activeModal === null) {
+      const focusTarget: BuildingId | null =
+        prev === 'quest-board' || prev === 'recruit'
+          ? 'town-square'
+          : prev === 'draft'
+            ? 'war-room'
+            : prev === 'guild-hall'
+              ? 'guild-hall'
+              : null;
+      if (focusTarget) triggerRefs.current.get(focusTarget)?.focus();
     }
     prevActiveModal.current = activeModal;
   }, [activeModal]);
@@ -88,7 +122,15 @@ function HtmlTown() {
       setActiveModal('quest-board');
       return;
     }
-    setOpenBuilding(id as Exclude<BuildingId, 'town-square'>);
+    if (id === 'war-room') {
+      setActiveModal('draft');
+      return;
+    }
+    if (id === 'guild-hall') {
+      setActiveModal('guild-hall');
+      return;
+    }
+    setOpenBuilding(id as PlaceholderBuildingId);
   }
 
   function handleClose() {
@@ -111,7 +153,7 @@ function HtmlTown() {
       <ul
         className="building-grid"
         role="list"
-        aria-hidden={activeBuilding !== null || isTownSquareOpen ? 'true' : undefined}
+        aria-hidden={isAnyModalOpen ? 'true' : undefined}
       >
         {BUILDINGS.map((building) => (
           <li key={building.id}>
@@ -131,14 +173,9 @@ function HtmlTown() {
       </ul>
 
       <TownSquare />
-
-      {openBuilding === 'guild-hall' && <GuildHall onClose={handleClose} />}
-      {openBuilding === 'war-room' && <WarRoom onClose={handleClose} />}
-      {activeBuilding &&
-        activeBuilding.id !== 'guild-hall' &&
-        activeBuilding.id !== 'war-room' && (
-          <BuildingModal building={activeBuilding} onClose={handleClose} />
-        )}
+      {activeModal === 'draft' && <WarRoom />}
+      {activeModal === 'guild-hall' && <GuildHall />}
+      {activeBuilding && <BuildingModal building={activeBuilding} onClose={handleClose} />}
     </main>
   );
 }
@@ -157,6 +194,9 @@ export function PhaserTown() {
   const mountScene = useRef<SceneKey>(validSceneKey === 'boot' ? 'boot' : validSceneKey);
   const hasMounted = useRef(false);
   const [navItems, setNavItems] = useState<SceneNavItem[]>([]);
+
+  const activeModal = useTownStore((s) => s.activeModal);
+  const setActiveModal = useTownStore((s) => s.setActiveModal);
 
   useEffect(() => {
     return sceneRouter.onInteractivesChange(setNavItems);
@@ -178,6 +218,12 @@ export function PhaserTown() {
   }, [validSceneKey, locationState?.spawnX]);
 
   const currentBuilding = BUILDINGS.find((b) => b.id === validSceneKey);
+  const comingSoonContent = COMING_SOON_CONTENT[validSceneKey as TownSceneKey];
+
+  function handleComingSoonClose() {
+    setActiveModal(null);
+    sceneRouter.emitDoorEnter({ sceneKey: 'town-square', spawnX: 1600 });
+  }
 
   return (
     <main style={{ width: '100vw', height: '100vh', position: 'relative' }}>
@@ -191,6 +237,15 @@ export function PhaserTown() {
       )}
       <SceneKeyboardNav items={navItems} />
       <TownSquare />
+      {activeModal === 'draft' && <WarRoom />}
+      {activeModal === 'guild-hall' && <GuildHall />}
+      {activeModal === 'coming-soon' && comingSoonContent && (
+        <ComingSoonPanel
+          title={comingSoonContent.title}
+          description={comingSoonContent.description}
+          onClose={handleComingSoonClose}
+        />
+      )}
       <Suspense fallback={null}>
         <PhaserMount initialScene={mountScene.current} />
       </Suspense>

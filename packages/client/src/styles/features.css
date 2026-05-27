@@ -17,6 +17,25 @@
   max-width: 640px;
 }
 
+/* Coming Soon parchment panel */
+.coming-soon-panel {
+  background: #f4e8c8;
+  border: 2px solid #c8a87a;
+  box-shadow: 0 2px 8px rgba(92, 60, 20, 0.18), inset 0 0 0 1px #e8d4a0;
+}
+
+.coming-soon-description {
+  font-style: italic;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: var(--color-text);
+}
+
+.coming-soon-note {
+  font-size: 0.875rem;
+  color: #5c4828;
+  margin: 0.25rem 0 0;
+}
+
 /* Shared button styles */
 .btn-primary {
   background: var(--color-banner-red);
