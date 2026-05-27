@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { AC_MAX_COUNT, AC_MAX_LENGTH } from '@code-quests/shared';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
 import { api } from '../lib/api';
 
-const MAX_ACS = 15;
+const MAX_ACS = AC_MAX_COUNT;
 const AcItemSchema = z
   .string()
   .trim()
   .min(1, 'Criterion cannot be empty')
-  .max(500, 'Criterion must be 500 characters or fewer');
+  .max(AC_MAX_LENGTH, 'Criterion must be 500 characters or fewer');
 
 type SaveStatus = 'idle' | 'saving' | 'success' | 'error';
 
@@ -111,14 +112,19 @@ export default function Oracle() {
     };
   }, []);
 
+  const focusedRef = useRef(false);
   useEffect(() => {
+    if (focusedRef.current) return;
     const panel = panelRef.current;
     if (!panel) return;
     const first = panel.querySelector<HTMLElement>(
-      'button:not([disabled]), input:not([disabled])',
+      'button:not([disabled]), input:not([disabled]), textarea:not([disabled])',
     );
-    first?.focus();
-  }, [panelRef]);
+    if (first) {
+      first.focus();
+      focusedRef.current = true;
+    }
+  }, [panelRef, quest]);
 
   function handleChange(idx: number, value: string) {
     setAcs((prev) => {

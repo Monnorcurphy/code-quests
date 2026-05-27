@@ -48,14 +48,19 @@ export default function Library() {
     };
   }, []);
 
+  const focusedRef = useRef(false);
   useEffect(() => {
+    if (focusedRef.current) return;
     const panel = panelRef.current;
     if (!panel) return;
     const first = panel.querySelector<HTMLElement>(
-      'button:not([disabled]), textarea:not([disabled])',
+      'button:not([disabled]), input:not([disabled]), textarea:not([disabled])',
     );
-    first?.focus();
-  }, [panelRef]);
+    if (first) {
+      first.focus();
+      focusedRef.current = true;
+    }
+  }, [panelRef, quest]);
 
   async function handleSave() {
     setSaveStatus('saving');

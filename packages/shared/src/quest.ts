@@ -2,6 +2,11 @@ import { z } from 'zod';
 import { EquipmentSchema } from './equipment';
 import { SpecAuditSchema } from './spec-audit';
 
+export const AC_MAX_LENGTH = 500;
+export const AC_MAX_COUNT = 15;
+export const QuestAcItemSchema = z.string().trim().min(1).max(AC_MAX_LENGTH);
+export const QuestAcListSchema = z.array(QuestAcItemSchema).max(AC_MAX_COUNT);
+
 export const QuestStatusSchema = z.enum([
   'idle',
   'active',

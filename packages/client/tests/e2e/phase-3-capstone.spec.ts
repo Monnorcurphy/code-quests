@@ -251,47 +251,62 @@ test.describe('Phase 3 capstone — town routing flow', () => {
     await page.getByRole('button', { name: `View quest: ${questTitle}` }).click();
     await expect(page.getByText(questTitle)).toBeVisible({ timeout: 5000 });
 
-    // Run audit
+    // Run audit — a fully-specified quest passes with no blocking gaps
     await page.getByRole('button', { name: /run audit/i }).click();
     await expect(page.getByText(/all checks pass|go to armory/i)).toBeVisible({ timeout: 10000 });
 
-    // Dispatch (may need to handle armory/warn — bypass if needed)
+    // Dispatch button must be present — assert unconditionally
     const dispatchBtn = page.getByRole('button', { name: /^dispatch quest$/i });
-    if (await dispatchBtn.isVisible()) {
-      await dispatchBtn.click();
-    }
-
-    // Might get a 409 with gaps — if so, try dispatch anyway
-    const dispatchAnyway = page.getByRole('button', { name: /dispatch anyway/i });
-    if (await dispatchAnyway.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await dispatchAnyway.click();
-      // Wait for confirmation countdown and confirm
-      await page.waitForTimeout(2500);
-      await page.getByRole('button', { name: /confirm dispatch$/i }).click();
-    }
+    await expect(dispatchBtn).toBeVisible({ timeout: 5000 });
+    await dispatchBtn.click();
 
     // Success banner should appear
     await expect(page.getByText(/quest dispatched/i)).toBeVisible({ timeout: 10000 });
   });
 
   test('active quest badge appears in Town Square after dispatch', async ({ page }) => {
-    // First dispatch a quest (reuse the fixture gapped quest if it happens to be active,
-    // or check for any active quest badge in town square)
+    const suffix = Date.now();
+    const questTitle = `P3-Badge-${suffix}`;
+
+    // Draft and dispatch a quest so the badge is guaranteed to appear
+    await page.goto('/town/war-room');
+    await waitForScene(page, 'Planning Table');
+    await page.locator(`${SCENE_NAV} button`, { hasText: 'Planning Table' }).click({ force: true });
+    await expect(page.getByRole('dialog')).toBeVisible();
+
+    await page.getByLabel('Title').fill(questTitle);
+    await page.getByRole('textbox', { name: 'Description' }).fill('A sufficiently long description for the badge test quest with more than eighty characters here.');
+    await page.getByRole('textbox', { name: 'Criterion 1' }).fill('Badge is visible after dispatch');
+    await page.getByRole('button', { name: /\+ Add Criterion/i }).click();
+    await page.getByRole('textbox', { name: 'Criterion 2' }).fill('Town Square reflects active status');
+    await page.getByRole('button', { name: /^Draft Quest$/ }).click();
+    await expect(page.getByText(/quest drafted/i)).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // Open quest, run audit, dispatch
+    await page.goto('/town/town-square');
+    await waitForScene(page, 'Quest Board');
+    await page.locator(`${SCENE_NAV} button`, { hasText: 'Quest Board' }).click({ force: true });
+    await page.getByRole('button', { name: `View quest: ${questTitle}` }).click();
+    await expect(page.getByText(questTitle)).toBeVisible({ timeout: 5000 });
+
+    await page.getByRole('button', { name: /run audit/i }).click();
+    await expect(page.getByText(/all checks pass|go to armory/i)).toBeVisible({ timeout: 10000 });
+
+    const dispatchBtn = page.getByRole('button', { name: /^dispatch quest$/i });
+    await expect(dispatchBtn).toBeVisible({ timeout: 5000 });
+    await dispatchBtn.click();
+    await expect(page.getByText(/quest dispatched/i)).toBeVisible({ timeout: 10000 });
+
+    // Close the quest board dialog and check Town Square for the active badge
+    await page.keyboard.press('Escape');
     await page.goto('/town/town-square');
     await waitForScene(page, 'Quest Board');
     await page.locator(`${SCENE_NAV} button`, { hasText: 'Quest Board' }).click({ force: true });
     await expect(page.getByRole('dialog')).toBeVisible();
 
-    // If there are any active quests, the badge should appear
-    // (depends on test run order — this test may pass if previous dispatch test ran)
-    const activeBadge = page.getByText('Active Quest');
-    const hasBadge = await activeBadge.isVisible({ timeout: 3000 }).catch(() => false);
-
-    // This is a soft assertion — if previous tests dispatched a quest, badge is visible
-    if (hasBadge) {
-      await expect(activeBadge).toBeVisible();
-      await expect(page.getByRole('button', { name: /view in war room/i })).toBeVisible();
-    }
+    await expect(page.getByText('Active Quest')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: /view in war room/i })).toBeVisible();
   });
 
   test('War Room has no accessibility violations', async ({ page }) => {
@@ -328,21 +343,11 @@ test.describe('Phase 3 capstone — town routing flow', () => {
     await page.getByRole('button', { name: `View quest: ${questTitle}` }).click();
     await expect(page.getByText(questTitle)).toBeVisible({ timeout: 5000 });
 
-    // Run audit and dispatch (with potential bypass)
+    // Run audit — a fully-specified quest passes with no blocking gaps
     await page.getByRole('button', { name: /run audit/i }).click();
-    await page.waitForTimeout(3000);
-
-    const dispatchBtn = page.getByRole('button', { name: /^dispatch quest$/i });
-    if (await dispatchBtn.isVisible()) {
-      await dispatchBtn.click();
-    }
-
-    const dispatchAnyway = page.getByRole('button', { name: /dispatch anyway/i });
-    if (await dispatchAnyway.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await dispatchAnyway.click();
-      await page.waitForTimeout(2500);
-      await page.getByRole('button', { name: /confirm dispatch$/i }).click();
-    }
+    const persistDispatchBtn = page.getByRole('button', { name: /^dispatch quest$/i });
+    await expect(persistDispatchBtn).toBeVisible({ timeout: 10000 });
+    await persistDispatchBtn.click();
 
     await expect(page.getByText(/quest dispatched/i)).toBeVisible({ timeout: 10000 });
 
