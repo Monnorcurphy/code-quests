@@ -73,6 +73,12 @@ for PHASE in $(seq "$START" "$END"); do
     # Step 5: merge into main, then restore main-only files the merge deletes
     log "Merging $LAST_BRANCH into main..."
     PRE_MERGE=$(git rev-parse main)
+    # Phase.sh's self-improvement pipeline can leave progress.md modified or
+    # transient review artifacts deleted; that blocks `git checkout main`.
+    # The work we care about is already committed on $LAST_BRANCH, so it's
+    # safe to discard the dirty working tree before switching branches.
+    git reset --hard HEAD 2>/dev/null || true
+    git clean -fd specs/phase-* test-results packages/client/test-results 2>/dev/null || true
     git checkout main || exit 1
     if ! git merge --no-ff "$LAST_BRANCH" -m "Merge Phase ${PHASE}"; then
         log "FAIL: merge $LAST_BRANCH into main"
