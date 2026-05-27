@@ -147,7 +147,7 @@ codename2       task-codename2-desc.md       codename1      frontend
 Write the README to: ${OUTPUT}
 Write the sequence file to: ${OUTPUT_DIR}/sequence.md"
 
-claude "${SLICE_PROMPT}"
+claude --dangerously-skip-permissions -p "${SLICE_PROMPT}"
 
 # ── Validate: reject numeric task IDs (should be codenames now) ──
 if grep -qE "TASK ${PHASE}\.[0-9]+" "${OUTPUT}" 2>/dev/null; then
