@@ -182,7 +182,9 @@ export function createQuestsRouter(db: Database.Database): Router {
         db.prepare('UPDATE quests SET spec_audit_json = ?, updated_at = ? WHERE id = ?')
           .run(JSON.stringify(audit), now, req.params.id);
         res.json(audit);
-      } catch {
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        process.stderr.write(`[quests] POST /quests/:id/audit failed: ${msg}\n`);
         res.status(500).json({ error: 'Failed to run audit' });
       }
     })();
