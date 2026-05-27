@@ -19,6 +19,12 @@ function makeApp() {
   return { app, db };
 }
 
+function insertAdventurer(db: Database.Database, id: string, cls = 'ranger') {
+  db.prepare(
+    `INSERT INTO adventurers (id, name, class, model_id) VALUES (?, ?, ?, ?)`,
+  ).run(id, `Adventurer ${id}`, cls, 'haiku');
+}
+
 const GOOD_QUEST_PROPS = {
   title: 'Slay the Dragon',
   description: 'A sufficiently long description that passes the deterministic length checks in audit',
@@ -39,6 +45,7 @@ describe('POST /quests/:id/dispatch', () => {
 
   beforeEach(() => {
     ({ app, db } = makeApp());
+    insertAdventurer(db, 'adv-default');
   });
 
   afterEach(() => {
@@ -143,5 +150,86 @@ describe('POST /quests/:id/dispatch', () => {
     const patch = await request(app).patch('/quests/q-lock2').send({ title: 'Updated Title' });
     expect(patch.status).toBe(200);
     expect(patch.body.title).toBe('Updated Title');
+  });
+
+  it('auto-matches an available adventurer when no adventurerId is set', async () => {
+    db.prepare(
+      `INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json,
+        equipment_json)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(
+      'q-auto',
+      ...Object.values(GOOD_QUEST_PROPS),
+      JSON.stringify({ skillIds: ['linters_bane'], toolIds: ['pnpm'], mcpServerIds: [] }),
+    );
+    const res = await request(app).post('/quests/q-auto/dispatch?bypass=true');
+    expect(res.status).toBe(200);
+    expect(res.body.adventurerId).toBe('adv-default');
+    expect(res.body.status).toBe('active');
+  });
+
+  it('uses body adventurerId when provided, skipping auto-match', async () => {
+    insertAdventurer(db, 'adv-explicit');
+    insertAdventurer(db, 'adv-other');
+    db.prepare(
+      `INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json,
+        equipment_json)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(
+      'q-explicit',
+      ...Object.values(GOOD_QUEST_PROPS),
+      JSON.stringify({ skillIds: ['linters_bane'], toolIds: ['pnpm'], mcpServerIds: [] }),
+    );
+    const res = await request(app)
+      .post('/quests/q-explicit/dispatch?bypass=true')
+      .send({ adventurerId: 'adv-explicit' });
+    expect(res.status).toBe(200);
+    expect(res.body.adventurerId).toBe('adv-explicit');
+  });
+
+  it('returns 400 when body adventurerId does not exist', async () => {
+    db.prepare(
+      `INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).run('q-badid', ...Object.values(GOOD_QUEST_PROPS));
+    const res = await request(app)
+      .post('/quests/q-badid/dispatch')
+      .send({ adventurerId: 'nonexistent-adv' });
+    expect(res.status).toBe(400);
+    expect(res.body.field).toBe('adventurerId');
+  });
+
+  it('returns 409 NO_ADVENTURER when all adventurers are busy', async () => {
+    db.prepare(
+      `INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).run('q-other', ...Object.values(GOOD_QUEST_PROPS));
+    db.prepare(
+      `INSERT INTO agents (id, adventurer_id, quest_id) VALUES (?, ?, ?)`,
+    ).run('agent-busy', 'adv-default', 'q-other');
+    db.prepare(
+      `INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).run('q-empty-guild', ...Object.values(GOOD_QUEST_PROPS));
+    const res = await request(app).post('/quests/q-empty-guild/dispatch');
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('NO_ADVENTURER');
+  });
+
+  it('uses pre-assigned adventurerId when no body adventurerId is provided', async () => {
+    insertAdventurer(db, 'adv-preassigned');
+    db.prepare(
+      `INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json,
+        equipment_json, adventurer_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      'q-preassigned',
+      ...Object.values(GOOD_QUEST_PROPS),
+      JSON.stringify({ skillIds: ['linters_bane'], toolIds: ['pnpm'], mcpServerIds: [] }),
+      'adv-preassigned',
+    );
+    const res = await request(app).post('/quests/q-preassigned/dispatch?bypass=true');
+    expect(res.status).toBe(200);
+    expect(res.body.adventurerId).toBe('adv-preassigned');
   });
 });
