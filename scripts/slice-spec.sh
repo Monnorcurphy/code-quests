@@ -13,6 +13,8 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # FACTORY_DIR is only set when called from new-project.sh; fall back to empty
 # so the `${FACTORY_DIR}/themes` candidate is just a missing path (handled).
 FACTORY_DIR="${FACTORY_DIR:-}"
@@ -29,10 +31,12 @@ PHASE_NAME=""
 CODENAME_THEME=""
 
 if [ -f "factory/profile.yaml" ]; then
-    # Try to extract phase info from profile
-    PHASE_NAME=$(sed -n "/^phases:/,/^[a-z]/{/^[[:space:]]*${PHASE}:/,/^[[:space:]]*[0-9]*:/{/name:/s/.*name:[[:space:]]*//p}}" factory/profile.yaml 2>/dev/null | head -1)
-    SECTIONS=$(sed -n "/^phases:/,/^[a-z]/{/^[[:space:]]*${PHASE}:/,/^[[:space:]]*[0-9]*:/{/sections:/s/.*sections:[[:space:]]*//p}}" factory/profile.yaml 2>/dev/null | head -1)
-    CODENAME_THEME=$(sed -n "/^phases:/,/^[a-z]/{/^[[:space:]]*${PHASE}:/,/^[[:space:]]*[0-9]*:/{/theme:/s/.*theme:[[:space:]]*//p}}" factory/profile.yaml 2>/dev/null | head -1)
+    # Try to extract phase info from profile. The sed uses GNU-only multi-cmd
+    # block syntax that BSD/macOS sed rejects; `|| true` keeps the script
+    # alive under `set -e -o pipefail` when sed errors out.
+    PHASE_NAME=$( { sed -n "/^phases:/,/^[a-z]/{/^[[:space:]]*${PHASE}:/,/^[[:space:]]*[0-9]*:/{/name:/s/.*name:[[:space:]]*//p}}" factory/profile.yaml 2>/dev/null | head -1; } || true)
+    SECTIONS=$( { sed -n "/^phases:/,/^[a-z]/{/^[[:space:]]*${PHASE}:/,/^[[:space:]]*[0-9]*:/{/sections:/s/.*sections:[[:space:]]*//p}}" factory/profile.yaml 2>/dev/null | head -1; } || true)
+    CODENAME_THEME=$( { sed -n "/^phases:/,/^[a-z]/{/^[[:space:]]*${PHASE}:/,/^[[:space:]]*[0-9]*:/{/theme:/s/.*theme:[[:space:]]*//p}}" factory/profile.yaml 2>/dev/null | head -1; } || true)
 fi
 
 # Fallbacks
