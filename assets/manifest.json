@@ -1,0 +1,133 @@
+{
+  "version": "1.0",
+  "assets": [
+    {
+      "file": "town/ground-grass.png",
+      "pack": "Kenney Tiny Town",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-town",
+      "packVersion": "1.2",
+      "attribution": null
+    },
+    {
+      "file": "town/ground-dirt.png",
+      "pack": "Kenney Tiny Town",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-town",
+      "packVersion": "1.2",
+      "attribution": null
+    },
+    {
+      "file": "town/ground-stone.png",
+      "pack": "Kenney Tiny Town",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-town",
+      "packVersion": "1.2",
+      "attribution": null
+    },
+    {
+      "file": "town/building-house.png",
+      "pack": "Kenney Tiny Town",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-town",
+      "packVersion": "1.2",
+      "attribution": null
+    },
+    {
+      "file": "town/building-shop.png",
+      "pack": "Kenney Tiny Town",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-town",
+      "packVersion": "1.2",
+      "attribution": null
+    },
+    {
+      "file": "town/building-tavern.png",
+      "pack": "Kenney Tiny Town",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-town",
+      "packVersion": "1.2",
+      "attribution": null
+    },
+    {
+      "file": "town/building-church.png",
+      "pack": "Kenney Tiny Town",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-town",
+      "packVersion": "1.2",
+      "attribution": null
+    },
+    {
+      "file": "town/tree-large.png",
+      "pack": "Kenney Tiny Town",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-town",
+      "packVersion": "1.2",
+      "attribution": null
+    },
+    {
+      "file": "town/tree-small.png",
+      "pack": "Kenney Tiny Town",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-town",
+      "packVersion": "1.2",
+      "attribution": null
+    },
+    {
+      "file": "town/fence.png",
+      "pack": "Kenney Tiny Town",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-town",
+      "packVersion": "1.2",
+      "attribution": null
+    },
+    {
+      "file": "town/path.png",
+      "pack": "Kenney Tiny Town",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-town",
+      "packVersion": "1.2",
+      "attribution": null
+    },
+    {
+      "file": "character/adventurer-idle.png",
+      "pack": "Kenney 1-Bit Pack",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/1-bit-pack",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "character/adventurer-walk.png",
+      "pack": "Kenney 1-Bit Pack",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/1-bit-pack",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "character/adventurer-attack.png",
+      "pack": "Kenney 1-Bit Pack",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/1-bit-pack",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "character/npc-villager.png",
+      "pack": "Kenney 1-Bit Pack",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/1-bit-pack",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "dungeon/tileset.png",
+      "pack": "0x72 Dungeon Tileset II",
+      "license": "CC-BY",
+      "source": "https://0x72.itch.io/dungeontileset-ii",
+      "packVersion": "1.6.4",
+      "attribution": "Dungeon Tileset II by 0x72 — https://0x72.itch.io/dungeontileset-ii — CC-BY 4.0"
+    }
+  ]
+}
