@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SpecAuditSchema } from '@code-quests/shared';
 import { api, ApiError } from '../../lib/api';
 import { useTownStore } from '../../stores/town-store';
+import { useFocusTrap } from '../../lib/use-focus-trap';
 import GapChip from './gap-chip';
 import type { Quest, SpecAudit } from '@code-quests/shared';
 
@@ -19,9 +20,12 @@ export default function DispatchButton({ quest }: DispatchButtonProps) {
 
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cancelBtnRef = useRef<HTMLButtonElement>(null);
+  const dispatchAnywayBtnRef = useRef<HTMLButtonElement>(null);
 
   const queryClient = useQueryClient();
   const setActiveModal = useTownStore((s) => s.setActiveModal);
+  const panelRef = useFocusTrap(handleCancelBypass);
 
   const { mutate, isPending } = useMutation({
     mutationFn: (bypass: boolean) => api.quests.dispatch(quest.id, bypass),
@@ -59,6 +63,12 @@ export default function DispatchButton({ quest }: DispatchButtonProps) {
     };
   }, []);
 
+  useEffect(() => {
+    if (showBypassConfirm) {
+      cancelBtnRef.current?.focus();
+    }
+  }, [showBypassConfirm]);
+
   function handleDispatch() {
     setError(null);
     setBlockAudit(null);
@@ -90,9 +100,13 @@ export default function DispatchButton({ quest }: DispatchButtonProps) {
     if (countdownRef.current) clearInterval(countdownRef.current);
     setShowBypassConfirm(false);
     setBypassCountdown(2);
+    setTimeout(() => {
+      dispatchAnywayBtnRef.current?.focus();
+    }, 0);
   }
 
-  if (quest.status !== 'idle') return null;
+  // Keep rendering while success banner is showing, even if quest refetches as active.
+  if (quest.status !== 'idle' && !success) return null;
 
   const blockGaps = blockAudit?.gaps.filter((g) => g.severity === 'block') ?? [];
 
@@ -125,6 +139,7 @@ export default function DispatchButton({ quest }: DispatchButtonProps) {
             ))}
           </ul>
           <button
+            ref={dispatchAnywayBtnRef}
             type="button"
             className="btn-secondary dispatch-bypass-btn"
             onClick={handleDispatchAnyway}
@@ -137,9 +152,10 @@ export default function DispatchButton({ quest }: DispatchButtonProps) {
 
       {showBypassConfirm && (
         <div
+          ref={panelRef}
           className="dispatch-confirm-panel"
           role="alertdialog"
-          aria-modal="false"
+          aria-modal="true"
           aria-labelledby="bypass-confirm-title"
         >
           <h4 id="bypass-confirm-title" className="dispatch-confirm-title">
@@ -164,6 +180,7 @@ export default function DispatchButton({ quest }: DispatchButtonProps) {
                   : 'Confirm dispatch'}
             </button>
             <button
+              ref={cancelBtnRef}
               type="button"
               className="btn-secondary"
               onClick={handleCancelBypass}
@@ -175,7 +192,7 @@ export default function DispatchButton({ quest }: DispatchButtonProps) {
         </div>
       )}
 
-      {!showBypassConfirm && !success && (
+      {!showBypassConfirm && !success && !blockAudit && (
         <button
           type="button"
           className="btn-primary dispatch-btn"

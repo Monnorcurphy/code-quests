@@ -232,6 +232,73 @@ describe('DispatchButton', () => {
     });
   });
 
+  it('success banner remains visible when parent re-renders with active status', async () => {
+    mockDispatch.mockResolvedValue(makeQuest({ status: 'active' }));
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <DispatchButton quest={makeQuest()} />
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: /dispatch quest/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/quest dispatched/i)).toBeDefined();
+    });
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <DispatchButton quest={makeQuest({ status: 'active' })} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText(/quest dispatched/i)).toBeDefined();
+
+    act(() => { vi.advanceTimersByTime(3000); });
+    expect(screen.queryByText(/quest dispatched/i)).toBeNull();
+  });
+
+  it('moves focus to Cancel button when bypass confirm panel opens', async () => {
+    mockDispatch.mockRejectedValue(
+      new ApiError('Blocking gaps', {
+        status: 409,
+        data: { error: 'Blocking gaps', audit: BLOCK_AUDIT },
+      }),
+    );
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    renderButton(makeQuest());
+
+    await user.click(screen.getByRole('button', { name: /dispatch quest/i }));
+    await waitFor(() => screen.getByRole('button', { name: /dispatch anyway/i }));
+
+    await user.click(screen.getByRole('button', { name: /dispatch anyway/i }));
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: /cancel/i }));
+    });
+  });
+
+  it('hides primary dispatch button when block audit is present', async () => {
+    mockDispatch.mockRejectedValue(
+      new ApiError('Blocking gaps', {
+        status: 409,
+        data: { error: 'Blocking gaps', audit: BLOCK_AUDIT },
+      }),
+    );
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    renderButton(makeQuest());
+
+    await user.click(screen.getByRole('button', { name: /dispatch quest/i }));
+    await waitFor(() => {
+      expect(screen.getByText('Acceptance criteria missing')).toBeDefined();
+    });
+
+    expect(screen.queryByRole('button', { name: /^dispatch quest$/i })).toBeNull();
+  });
+
   it('shows persistent error message (not auto-dismissed) on server error', async () => {
     mockDispatch.mockRejectedValue(new ApiError('Internal server error', { status: 500 }));
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
