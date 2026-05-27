@@ -18,7 +18,7 @@ export function createApp(db: Database.Database) {
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
   app.use('/adventurers', createAdventurersRouter(db));
   app.use('/epics', createEpicsRouter(db));
-  app.use('/quests', createQuestsRouter(db));
+  app.use('/quests', createQuestsRouter(db, () => _questChannel));
   app.use('/skills', createSkillsRouter(db));
   app.use('/tools', createToolsRouter(db));
   app.use('/mcp-servers', createMCPServersRouter(db));
