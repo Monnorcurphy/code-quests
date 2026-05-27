@@ -227,6 +227,97 @@ describe('PATCH /quests/:id', () => {
   });
 });
 
+describe('specAudit round-trip', () => {
+  let db: Database.Database;
+  let app: express.Express;
+
+  beforeEach(() => {
+    ({ app, db } = makeApp());
+    db.prepare('INSERT INTO quests (id, title) VALUES (?, ?)').run('quest-audit', 'Audit Quest');
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  const validAudit = {
+    runAt: '2026-05-27T10:00:00.000Z',
+    gaps: [
+      { building: 'oracle', reason: 'Acceptance criteria missing', severity: 'block' },
+    ],
+    bypassed: false,
+  };
+
+  it('new quest defaults specAudit to null', async () => {
+    const res = await request(app).post('/quests').send({ title: 'No Audit Quest' });
+    expect(res.status).toBe(201);
+    expect(res.body.specAudit).toBeNull();
+  });
+
+  it('GET /quests/:id returns specAudit as null when not set', async () => {
+    const res = await request(app).get('/quests/quest-audit');
+    expect(res.status).toBe(200);
+    expect(res.body.specAudit).toBeNull();
+  });
+
+  it('PATCH sets specAudit and GET returns it', async () => {
+    const patchRes = await request(app)
+      .patch('/quests/quest-audit')
+      .send({ specAudit: validAudit });
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.specAudit).toBeDefined();
+    expect(patchRes.body.specAudit.runAt).toBe(validAudit.runAt);
+    expect(patchRes.body.specAudit.gaps).toHaveLength(1);
+    expect(patchRes.body.specAudit.gaps[0].building).toBe('oracle');
+    expect(patchRes.body.specAudit.bypassed).toBe(false);
+
+    const getRes = await request(app).get('/quests/quest-audit');
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.specAudit.runAt).toBe(validAudit.runAt);
+    expect(getRes.body.specAudit.gaps[0].severity).toBe('block');
+  });
+
+  it('PATCH with null specAudit clears the field', async () => {
+    db.prepare(
+      "UPDATE quests SET spec_audit_json = ? WHERE id = ?",
+    ).run(JSON.stringify(validAudit), 'quest-audit');
+
+    const patchRes = await request(app)
+      .patch('/quests/quest-audit')
+      .send({ specAudit: null });
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.specAudit).toBeNull();
+  });
+
+  it('rejects PATCH with invalid specAudit (unknown building)', async () => {
+    const res = await request(app)
+      .patch('/quests/quest-audit')
+      .send({
+        specAudit: { runAt: '2026-01-01T00:00:00.000Z', gaps: [{ building: 'dungeon', reason: 'bad', severity: 'warn' }], bypassed: false },
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeTruthy();
+  });
+
+  it('rejects PATCH with specAudit missing runAt', async () => {
+    const res = await request(app)
+      .patch('/quests/quest-audit')
+      .send({ specAudit: { gaps: [], bypassed: false } });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeTruthy();
+  });
+
+  it('POST with specAudit persists it', async () => {
+    const res = await request(app).post('/quests').send({
+      title: 'Audited Quest',
+      specAudit: validAudit,
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.specAudit.runAt).toBe(validAudit.runAt);
+    expect(res.body.specAudit.gaps).toHaveLength(1);
+  });
+});
+
 describe('DELETE /quests/:id', () => {
   let db: Database.Database;
   let app: express.Express;

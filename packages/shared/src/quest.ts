@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { EquipmentSchema } from './equipment';
+import { SpecAuditSchema } from './spec-audit';
 
 export const QuestStatusSchema = z.enum([
   'idle',
@@ -24,6 +25,7 @@ export const QuestSchema = z.object({
   adventurerId: z.string().min(1).nullable(),
   agentId: z.string().nullable(),
   equipment: EquipmentSchema.default({ skillIds: [], toolIds: [], mcpServerIds: [] }),
+  specAudit: SpecAuditSchema.nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

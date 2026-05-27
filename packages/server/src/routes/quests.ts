@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import Database from 'better-sqlite3';
 import { z } from 'zod';
-import { QuestStatusSchema, EquipmentSchema } from '@code-quests/shared';
+import { QuestStatusSchema, EquipmentSchema, SpecAuditSchema } from '@code-quests/shared';
 import { validate } from '../middleware/validate';
 
 const CreateQuestSchema = z.object({
@@ -15,6 +15,7 @@ const CreateQuestSchema = z.object({
   adventurerId: z.string().min(1).nullable().default(null),
   agentId: z.string().nullable().default(null),
   equipment: EquipmentSchema.default({ skillIds: [], toolIds: [], mcpServerIds: [] }),
+  specAudit: SpecAuditSchema.nullable().default(null),
 });
 
 const PatchQuestSchema = CreateQuestSchema.partial();
@@ -34,6 +35,7 @@ type QuestRow = {
   adventurer_id: string | null;
   agent_id: string | null;
   equipment_json: string;
+  spec_audit_json: string | null;
   created_at: string;
   updated_at: string;
   ac_locked_at: string | null;
@@ -52,6 +54,7 @@ function rowToApi(row: QuestRow) {
     adventurerId: row.adventurer_id,
     agentId: row.agent_id,
     equipment: JSON.parse(row.equipment_json) as Record<string, unknown>,
+    specAudit: row.spec_audit_json ? JSON.parse(row.spec_audit_json) : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     acLockedAt: row.ac_locked_at,
@@ -91,8 +94,9 @@ export function createQuestsRouter(db: Database.Database): Router {
     db.prepare(
       `INSERT INTO quests
         (id, epic_id, title, description, acceptance_criteria_json, edge_cases_json,
-         context, status, adventurer_id, agent_id, equipment_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         context, status, adventurer_id, agent_id, equipment_json, spec_audit_json,
+         created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
       body.epicId,
@@ -105,6 +109,7 @@ export function createQuestsRouter(db: Database.Database): Router {
       body.adventurerId,
       body.agentId,
       JSON.stringify(body.equipment),
+      body.specAudit ? JSON.stringify(body.specAudit) : null,
       now,
       now,
     );
@@ -149,6 +154,7 @@ export function createQuestsRouter(db: Database.Database): Router {
     if (body.adventurerId !== undefined) { cols.push('adventurer_id = ?'); vals.push(body.adventurerId); }
     if (body.agentId !== undefined) { cols.push('agent_id = ?'); vals.push(body.agentId); }
     if (body.equipment !== undefined) { cols.push('equipment_json = ?'); vals.push(JSON.stringify(body.equipment)); }
+    if (body.specAudit !== undefined) { cols.push('spec_audit_json = ?'); vals.push(body.specAudit ? JSON.stringify(body.specAudit) : null); }
     if (cols.length > 0) {
       cols.push('updated_at = ?');
       vals.push(new Date().toISOString());
