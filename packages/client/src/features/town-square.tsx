@@ -72,7 +72,7 @@ function ActiveQuestPeekItem({
         type="button"
         className="active-quest-peek-link"
         onClick={handleClick}
-        aria-label={`View quest: ${quest.title}`}
+        aria-label={`View active quest: ${quest.title}`}
       >
         View
       </button>

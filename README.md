@@ -132,7 +132,7 @@ The default configuration uses the **offline adapter** — a deterministic event
 # Start both servers
 pnpm dev
 
-# (Optional) seed demo data — idempotent
+# Seed demo data (idempotent — required for the walkthrough below)
 pnpm --filter=@code-quests/server tsx src/scripts/seed-dev.ts
 ```
 
