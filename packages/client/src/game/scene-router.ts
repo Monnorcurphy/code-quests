@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { SceneKey } from './scene-registry';
+import type { SceneKey, QuestSceneKey } from './scene-registry';
 
 export interface DoorEnterEvent {
   sceneKey: SceneKey;
@@ -12,8 +12,14 @@ export interface SceneNavItem {
   onActivate: () => void;
 }
 
+export interface SceneAdvanceEvent {
+  fromScene: QuestSceneKey;
+  toScene: QuestSceneKey;
+}
+
 type DoorEnterHandler = (evt: DoorEnterEvent) => void;
 type InteractivesChangeHandler = (items: SceneNavItem[]) => void;
+type SceneAdvanceHandler = (evt: SceneAdvanceEvent) => void;
 
 // Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE
 const FADE_OUT_COMPLETE = 'camerafadeoutcomplete';
@@ -23,6 +29,7 @@ class SceneRouter {
   private game: Phaser.Game | null = null;
   private readonly doorEnterHandlers = new Set<DoorEnterHandler>();
   private readonly interactivesChangeHandlers = new Set<InteractivesChangeHandler>();
+  private readonly sceneAdvanceHandlers = new Set<SceneAdvanceHandler>();
 
   init(game: Phaser.Game | null): void {
     this.game = game;
@@ -81,6 +88,19 @@ class SceneRouter {
     this.interactivesChangeHandlers.add(handler);
     return () => {
       this.interactivesChangeHandlers.delete(handler);
+    };
+  }
+
+  requestSceneAdvance(evt: SceneAdvanceEvent): void {
+    for (const handler of this.sceneAdvanceHandlers) {
+      handler(evt);
+    }
+  }
+
+  onSceneAdvance(handler: SceneAdvanceHandler): () => void {
+    this.sceneAdvanceHandlers.add(handler);
+    return () => {
+      this.sceneAdvanceHandlers.delete(handler);
     };
   }
 }

@@ -1,16 +1,16 @@
 # Progress — Phase 5
 
-Previous task progress archived to metrics/progress-before-arbalest.md
+Previous task progress archived to metrics/progress-before-arquebus.md
 
-## arbalest — Quest scene art assets + asset-loader keys
+## Task arquebus — BaseQuestScene + 4 quest scene classes
 
-**Status:** DONE
+**Status:** Complete
 
 **What was done:**
-- Added 14 PNG stub assets in `assets/quest/` (all ≥ 1 KB, ≤ 500 KB): 4 backgrounds, 4 props, 4 ground tiles, 2 RGBA monster silhouettes with real transparency (color type 6).
-- Extended `scripts/gen-asset-stubs.mjs` with RGBA support (`makePNGRGBA`), 5 new biome palettes, and humanoid silhouette shape functions.
-- Added `QUEST_ASSET_KEYS` const and `preloadQuestAssets(scene)` export to `asset-loader.ts`. `preloadCommonAssets` unchanged; quest scenes call `preloadQuestAssets` separately.
-- `AssetKey` type now covers both `ASSET_KEYS` and `QUEST_ASSET_KEYS` values so `assetPath()` works for all keys.
-- Updated `assets/CREDITS.md` with a `## Phase 5 — Quest scenes` section listing all 14 files with source, author, license, and required attribution text.
-- Added 7 new tests covering: file existence, 1 KB minimum, 500 KB maximum, `assetPath()` for quest keys, `preloadQuestAssets` registration completeness, non-pollution of town/dungeon keys, and RGBA color type verification for silhouettes.
-- All 331 tests pass; typecheck and lint clean.
+- Extended `SceneKey` union in `scene-registry.ts` with 4 quest keys; added `QUEST_SCENE_KEYS`, `QuestSceneKey` type, `isQuestSceneKey()` predicate
+- Added `SceneAdvanceEvent`, `requestSceneAdvance()`, `onSceneAdvance()` to `scene-router.ts` (mirrors door-enter pattern)
+- Created `base-quest-scene.ts`: abstract Phaser.Scene subclass with tileSprite background + ground, Player, KeyboardController, right-edge debounced advance trigger, prefers-reduced-motion fade
+- Created 4 concrete scenes: `quest-forest-scene.ts`, `quest-cave-scene.ts`, `quest-dungeon-scene.ts`, `quest-boss-room-scene.ts` — each ≤ 30 lines; boss-room has nextSceneKey=null
+- Registered all 4 scenes in `game-config.ts` via side-effect imports
+- Tests: `quest-scenes.test.ts` (key assertions, nextSceneKey chain, edge trigger, debounce, boss-room terminal); scene-registry tests for new predicates; scene-router tests for new advance methods
+- All 360 tests pass, typecheck clean, lint clean, build succeeds
