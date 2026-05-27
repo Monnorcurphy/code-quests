@@ -9,6 +9,30 @@ import Roster from './guild/roster';
 import RecruitModal from './guild/recruit-modal';
 import QuestBoard from './quests/quest-board';
 
+function ReturnedQuestsBadge() {
+  const { data } = useQuery({
+    queryKey: ['quests', 'returned', 'count'],
+    queryFn: () => api.quests.returned({ limit: 1 }),
+  });
+  const goToHallOfReturns = useTownStore((s) => s.goToHallOfReturns);
+  const total = data?.total ?? 0;
+
+  if (total === 0) return null;
+
+  return (
+    <div className="returned-quests-badge">
+      <button
+        type="button"
+        className="returned-quests-badge-btn"
+        onClick={goToHallOfReturns}
+        aria-label={`${total} quest${total === 1 ? '' : 's'} returned — open Hall of Returns`}
+      >
+        📜 {total} quest{total === 1 ? '' : 's'} returned
+      </button>
+    </div>
+  );
+}
+
 function ActiveQuestPeekItem({
   quest,
   adventurers,
@@ -48,7 +72,7 @@ function ActiveQuestPeekItem({
         type="button"
         className="active-quest-peek-link"
         onClick={handleClick}
-        aria-label={`View quest: ${quest.title}`}
+        aria-label={`View active quest: ${quest.title}`}
       >
         View
       </button>
@@ -113,6 +137,7 @@ function QuestBoardPanel({ onClose, onRecruit }: { onClose: () => void; onRecrui
         </p>
 
         <ActiveQuestsPeek adventurers={adventurers} />
+        <ReturnedQuestsBadge />
 
         <section className="town-square-board-section" aria-labelledby="quest-board-heading">
           <h3 id="quest-board-heading" className="town-square-section-heading">
