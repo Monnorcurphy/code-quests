@@ -20,17 +20,50 @@ interface BuildingModalProps {
 
 function BuildingModal({ building, onClose }: BuildingModalProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
 
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  // Mount-only: snap focus once + install keydown (Escape to close, Tab to trap)
   useEffect(() => {
     closeRef.current?.focus();
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onCloseRef.current();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const panel = panelRef.current;
+        if (!panel) return;
+        const focusable = Array.from(
+          panel.querySelectorAll<HTMLElement>(
+            'button, [href], input, [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((el) => !(el as HTMLButtonElement).disabled);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
     }
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, []);
 
   return (
     <div
@@ -39,7 +72,7 @@ function BuildingModal({ building, onClose }: BuildingModalProps) {
       aria-modal="true"
       aria-labelledby="modal-title"
     >
-      <div className="modal-panel">
+      <div ref={panelRef} className="modal-panel">
         <h2 id="modal-title" className="modal-title">
           {building.name}
         </h2>
@@ -79,7 +112,11 @@ export default function Town() {
         </p>
       </header>
 
-      <ul className="building-grid" role="list">
+      <ul
+        className="building-grid"
+        role="list"
+        aria-hidden={activeBuilding !== null ? 'true' : undefined}
+      >
         {BUILDINGS.map((building) => (
           <li key={building.id}>
             <button

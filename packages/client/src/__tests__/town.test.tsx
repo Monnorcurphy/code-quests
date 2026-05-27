@@ -105,4 +105,14 @@ describe('Town', () => {
     expect(dialog.getAttribute('aria-modal')).toBe('true');
     expect(dialog.getAttribute('aria-labelledby')).toBe('modal-title');
   });
+
+  it('traps focus inside the modal — Tab cycles to Close', async () => {
+    const user = userEvent.setup();
+    renderTown();
+    await user.click(screen.getByRole('button', { name: /Oracle/i }));
+    const close = screen.getByRole('button', { name: 'Close' });
+    expect(close).toHaveFocus();
+    await user.tab();
+    expect(close).toHaveFocus();
+  });
 });
