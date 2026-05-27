@@ -70,7 +70,7 @@ describe('Town', () => {
     await user.click(oracleBtn);
 
     expect(screen.getByRole('dialog')).toBeDefined();
-    expect(screen.getByText('Coming in Phase 2 — Phaser scene')).toBeDefined();
+    expect(screen.getByText('Refine Acceptance Criteria — arriving in Phase 3.')).toBeDefined();
   });
 
   it('shows the building name in the modal title', async () => {

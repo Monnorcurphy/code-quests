@@ -29,6 +29,29 @@ const BUILDINGS = [
 type BuildingId = (typeof BUILDINGS)[number]['id'];
 type PlaceholderBuildingId = Exclude<BuildingId, 'town-square' | 'war-room' | 'guild-hall'>;
 
+const COMING_SOON_CONTENT: Partial<Record<TownSceneKey, { title: string; description: string }>> = {
+  oracle: {
+    title: 'Oracle',
+    description: 'Refine Acceptance Criteria — arriving in Phase 3.',
+  },
+  library: {
+    title: 'Library',
+    description: 'Skills + Bestiary — arriving in Phase 10.',
+  },
+  tavern: {
+    title: 'Tavern',
+    description: 'Edge Cases — arriving in Phase 3.',
+  },
+  armory: {
+    title: 'Armory',
+    description: 'Equipment Loadout — arriving in Phase 3.',
+  },
+  'hall-of-returns': {
+    title: 'Hall of Returns',
+    description: 'Completed/Failed Quests — arriving in Phase 9.',
+  },
+};
+
 interface BuildingModalProps {
   building: (typeof BUILDINGS)[number];
   onClose: () => void;
@@ -42,6 +65,8 @@ function BuildingModal({ building, onClose }: BuildingModalProps) {
     closeRef.current?.focus();
   }, []);
 
+  const content = COMING_SOON_CONTENT[building.id as PlaceholderBuildingId];
+
   return (
     <div
       className="modal-backdrop"
@@ -53,7 +78,7 @@ function BuildingModal({ building, onClose }: BuildingModalProps) {
         <h2 id="modal-title" className="modal-title">
           {building.name}
         </h2>
-        <p className="modal-body">Coming in Phase 2 — Phaser scene</p>
+        <p className="modal-body">{content?.description ?? 'Coming soon.'}</p>
         <button ref={closeRef} className="modal-close" onClick={onClose}>
           Close
         </button>
@@ -154,29 +179,6 @@ function HtmlTown() {
     </main>
   );
 }
-
-const COMING_SOON_CONTENT: Partial<Record<TownSceneKey, { title: string; description: string }>> = {
-  oracle: {
-    title: 'Oracle',
-    description: 'Refine Acceptance Criteria — arriving in Phase 3.',
-  },
-  library: {
-    title: 'Library',
-    description: 'Skills + Bestiary — arriving in Phase 10.',
-  },
-  tavern: {
-    title: 'Tavern',
-    description: 'Edge Cases — arriving in Phase 3.',
-  },
-  armory: {
-    title: 'Armory',
-    description: 'Equipment Loadout — arriving in Phase 3.',
-  },
-  'hall-of-returns': {
-    title: 'Hall of Returns',
-    description: 'Completed/Failed Quests — arriving in Phase 9.',
-  },
-};
 
 export function PhaserTown() {
   const { sceneKey: rawSceneKey } = useParams<{ sceneKey?: string }>();
