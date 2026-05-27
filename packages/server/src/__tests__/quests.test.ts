@@ -1,4 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+vi.mock('@anthropic-ai/sdk', () => ({ default: vi.fn() }));
 import request from 'supertest';
 import express from 'express';
 import Database from 'better-sqlite3';
@@ -315,6 +317,65 @@ describe('specAudit round-trip', () => {
     expect(res.status).toBe(201);
     expect(res.body.specAudit.runAt).toBe(validAudit.runAt);
     expect(res.body.specAudit.gaps).toHaveLength(1);
+  });
+});
+
+describe('POST /quests/:id/audit', () => {
+  let db: Database.Database;
+  let app: express.Express;
+
+  beforeEach(() => {
+    ({ app, db } = makeApp());
+    db.prepare(
+      "INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json) VALUES (?, ?, ?, ?, ?)",
+    ).run(
+      'quest-for-audit',
+      'Audit Me',
+      'A sufficiently long description to pass deterministic rules minimum length',
+      JSON.stringify(['Users can log in', 'Invalid credentials rejected']),
+      JSON.stringify(['Expired token', 'Network outage']),
+    );
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('returns 404 for unknown quest id', async () => {
+    const res = await request(app).post('/quests/ghost/audit');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBeTruthy();
+  });
+
+  it('runs audit and returns a valid SpecAudit object', async () => {
+    const res = await request(app).post('/quests/quest-for-audit/audit');
+    expect(res.status).toBe(200);
+    expect(res.body.runAt).toBeTruthy();
+    expect(Array.isArray(res.body.gaps)).toBe(true);
+    expect(typeof res.body.bypassed).toBe('boolean');
+  });
+
+  it('persists audit result — subsequent GET returns it', async () => {
+    await request(app).post('/quests/quest-for-audit/audit');
+    const getRes = await request(app).get('/quests/quest-for-audit');
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.specAudit).not.toBeNull();
+    expect(getRes.body.specAudit.runAt).toBeTruthy();
+  });
+
+  it('quest with no ACs gets an oracle/block gap', async () => {
+    db.prepare('INSERT INTO quests (id, title, description) VALUES (?, ?, ?)').run(
+      'bare-quest',
+      'Bare Quest',
+      'A sufficiently long description for testing the audit oracle gap detection',
+    );
+    const res = await request(app).post('/quests/bare-quest/audit');
+    expect(res.status).toBe(200);
+    const oracleGap = (res.body.gaps as Array<{ building: string; severity: string }>).find(
+      (g) => g.building === 'oracle',
+    );
+    expect(oracleGap).toBeDefined();
+    expect(oracleGap?.severity).toBe('block');
   });
 });
 
