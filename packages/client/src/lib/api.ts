@@ -3,6 +3,7 @@ import {
   AdventurerSchema,
   AdventurerClassSchema,
   QuestSchema,
+  QuestSceneKeySchema,
   QuestStatusSchema,
   EpicSchema,
   SkillSchema,
@@ -11,7 +12,7 @@ import {
   SpecAuditSchema,
   AgentEventSchema,
 } from '@code-quests/shared';
-import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummaryRecommendation } from '@code-quests/shared';
+import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummaryRecommendation, QuestSceneKey } from '@code-quests/shared';
 
 const ReturnedAgentSchema = z.object({
   id: z.string(),
@@ -100,14 +101,14 @@ export class ApiError extends Error {
   }
 }
 
-async function fetchJson<T>(schema: z.ZodType<T>, path: string): Promise<T> {
+async function fetchJson<S extends z.ZodTypeAny>(schema: S, path: string): Promise<z.output<S>> {
   const res = await fetch(`${BASE_URL}${path}`);
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
   const data: unknown = await res.json();
-  return schema.parse(data);
+  return schema.parse(data) as z.output<S>;
 }
 
-async function postJson<T>(schema: z.ZodType<T>, path: string, body: unknown): Promise<T> {
+async function postJson<S extends z.ZodTypeAny>(schema: S, path: string, body: unknown): Promise<z.output<S>> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -121,10 +122,10 @@ async function postJson<T>(schema: z.ZodType<T>, path: string, body: unknown): P
     throw new ApiError(msg, { field, status: res.status, data: raw });
   }
   const data: unknown = await res.json();
-  return schema.parse(data);
+  return schema.parse(data) as z.output<S>;
 }
 
-async function patchJson<T>(schema: z.ZodType<T>, path: string, body: unknown): Promise<T> {
+async function patchJson<S extends z.ZodTypeAny>(schema: S, path: string, body: unknown): Promise<z.output<S>> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -138,7 +139,7 @@ async function patchJson<T>(schema: z.ZodType<T>, path: string, body: unknown): 
     throw new ApiError(msg, { field, status: res.status });
   }
   const data: unknown = await res.json();
-  return schema.parse(data);
+  return schema.parse(data) as z.output<S>;
 }
 
 const CreateAdventurerInputSchema = z.object({
@@ -165,9 +166,17 @@ export type PatchQuestInput = {
   context?: string;
 };
 
+const AdvanceSceneResponseSchema = z.object({
+  currentScene: QuestSceneKeySchema,
+  advanced: z.boolean(),
+});
+
+export type AdvanceSceneResponse = z.infer<typeof AdvanceSceneResponseSchema>;
+
 export const api = {
   adventurers: {
     list: () => fetchJson(z.array(AdventurerSchema), '/adventurers'),
+    get: (id: string) => fetchJson(AdventurerSchema, `/adventurers/${id}`),
     create: (input: CreateAdventurerInput) =>
       postJson(AdventurerSchema, '/adventurers', input),
   },
@@ -185,6 +194,8 @@ export const api = {
       postJson(QuestSchema, `/quests/${id}/dispatch${bypass ? '?bypass=true' : ''}`, {}),
     cancel: (id: string) =>
       postJson(QuestSchema, `/quests/${id}/cancel`, {}),
+    advanceScene: (id: string, expectedFrom: QuestSceneKey) =>
+      postJson(AdvanceSceneResponseSchema, `/quests/${id}/advance-scene`, { expectedFrom }),
     returned: (opts?: { limit?: number; offset?: number }) =>
       fetchJson(
         ReturnedQuestsPageSchema,

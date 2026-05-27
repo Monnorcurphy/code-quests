@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import { z } from 'zod';
 import {
   QuestStatusSchema,
+  QuestSceneKeySchema,
   EquipmentSchema,
   SpecAuditSchema,
   QuestSchema,
@@ -20,6 +21,7 @@ import { autoMatch } from '../services/auto-match';
 import { runQuest, getActiveHandle } from '../services/quest-runner';
 import { transitionQuestStatus, InvalidTransitionError } from '../services/quest-status';
 import { findAgentByQuest, endAgent } from '../services/agents-service';
+import { advanceQuestScene } from '../services/quest-scene-progression';
 
 const CreateQuestSchema = z.object({
   title: z.string().min(1),
@@ -556,6 +558,55 @@ export function createQuestsRouter(
       process.stderr.write(`[quests] POST /quests/:id/cancel failed: ${msg}\n`);
       res.status(500).json({ error: 'Failed to cancel quest' });
     }
+  });
+
+  router.post('/:id/advance-scene', (req, res) => {
+    const row = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow | undefined;
+    if (!row) {
+      res.status(404).json({ error: 'Quest not found' });
+      return;
+    }
+
+    const activeAgent = db
+      .prepare('SELECT id FROM agents WHERE quest_id = ? AND ended_at IS NULL')
+      .get(req.params.id);
+    if (!activeAgent) {
+      res.status(401).json({ error: 'No active agent for this quest' });
+      return;
+    }
+
+    const BodySchema = z.object({ expectedFrom: QuestSceneKeySchema });
+    const bodyResult = BodySchema.safeParse(req.body ?? {});
+    if (!bodyResult.success) {
+      res.status(400).json({ error: 'Invalid request body', details: bodyResult.error.issues });
+      return;
+    }
+
+    if (row.current_scene !== bodyResult.data.expectedFrom) {
+      res.status(409).json({
+        error: 'scene_state_mismatch',
+        currentScene: row.current_scene,
+      });
+      return;
+    }
+
+    const transition = advanceQuestScene(db, req.params.id);
+    if (!transition) {
+      res.json({ currentScene: 'quest-boss-room', advanced: false });
+      return;
+    }
+
+    const channel = getChannel();
+    if (channel) {
+      channel.publishQuestEvent(req.params.id, {
+        type: 'scene_change',
+        timestamp: new Date().toISOString(),
+        from: transition.from,
+        to: transition.to,
+      });
+    }
+
+    res.json({ currentScene: transition.to, advanced: true });
   });
 
   router.delete('/:id', (req, res) => {
