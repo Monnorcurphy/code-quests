@@ -18,7 +18,8 @@ set -euo pipefail
 FACTORY_DIR="${FACTORY_DIR:-}"
 
 PHASE="${1:?Usage: ./core/scripts/slice-spec.sh <phase-number>}"
-OUTPUT_DIR="specs/phase-${PHASE}"
+# Use zero-padded dir (e.g. specs/phase-01) to match phase.sh / lib.sh convention
+OUTPUT_DIR="$(printf 'specs/phase-%02d' "${PHASE}")"
 mkdir -p "${OUTPUT_DIR}"
 OUTPUT="${OUTPUT_DIR}/README.md"
 

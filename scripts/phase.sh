@@ -78,7 +78,8 @@ if [ -z "$PHASE" ]; then
 fi
 
 # ── Discover tasks ──
-SPEC_DIR="specs/phase-${PHASE}"
+# Use phase_dir_name (zero-padded, e.g. specs/phase-01) — consistent with has_sequence
+SPEC_DIR="$(phase_dir_name "${PHASE}")"
 SPEC_FILE=""
 TASKS=""
 
@@ -103,7 +104,7 @@ fi
 
 if [ -z "${SPEC_FILE}" ] || [ ! -f "${SPEC_FILE}" ]; then
     echo "  No spec found for phase ${PHASE}."
-    echo "  Looked in: specs/phase-${PHASE}/ and specs/features/phase-${PHASE}-*.md"
+    echo "  Looked in: ${SPEC_DIR}/ and specs/features/phase-${PHASE}-*.md"
     echo ""
     echo "  To generate: ./scripts/slice-spec.sh ${PHASE}"
     exit 1
@@ -206,7 +207,7 @@ if [ "${PHASE}" -gt 1 ] 2>/dev/null; then
                     fi
                 fi
             else
-                PREV_SPEC_DIR="specs/phase-${PREV_PHASE}"
+                PREV_SPEC_DIR="$(phase_dir_name "${PREV_PHASE}")"
                 LAST_PREV_TASK=""
                 if [ -d "${PREV_SPEC_DIR}" ]; then
                     LAST_PREV_TASK=$(ls "${PREV_SPEC_DIR}"/task-${PREV_PHASE}.*.md 2>/dev/null \
