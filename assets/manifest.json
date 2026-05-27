@@ -122,6 +122,38 @@
       "attribution": null
     },
     {
+      "file": "dungeon/kenney-wall.png",
+      "pack": "Kenney Tiny Dungeon",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-dungeon",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "dungeon/kenney-floor.png",
+      "pack": "Kenney Tiny Dungeon",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-dungeon",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "dungeon/kenney-door.png",
+      "pack": "Kenney Tiny Dungeon",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-dungeon",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "dungeon/kenney-prop.png",
+      "pack": "Kenney Tiny Dungeon",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-dungeon",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
       "file": "dungeon/tileset.png",
       "pack": "0x72 Dungeon Tileset II",
       "license": "CC-BY",

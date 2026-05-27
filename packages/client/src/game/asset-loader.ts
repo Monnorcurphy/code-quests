@@ -18,6 +18,11 @@ export const ASSET_KEYS = {
   CHARACTER_ADVENTURER_WALK: 'character/adventurer-walk',
   CHARACTER_ADVENTURER_ATTACK: 'character/adventurer-attack',
   CHARACTER_NPC_VILLAGER: 'character/npc-villager',
+  // Kenney Tiny Dungeon — CC0
+  DUNGEON_KENNEY_WALL: 'dungeon/kenney-wall',
+  DUNGEON_KENNEY_FLOOR: 'dungeon/kenney-floor',
+  DUNGEON_KENNEY_DOOR: 'dungeon/kenney-door',
+  DUNGEON_KENNEY_PROP: 'dungeon/kenney-prop',
   // 0x72 Dungeon Tileset II — CC-BY (credit: "Dungeon Tileset II" by 0x72)
   DUNGEON_TILESET: 'dungeon/tileset',
 } as const;

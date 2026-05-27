@@ -6,7 +6,7 @@
  * Exit 1 → one or more violations (details printed to stderr).
  */
 
-import { readdirSync, statSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, statSync, readFileSync } from 'fs';
 import { join, relative } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -19,10 +19,6 @@ const MANIFEST_PATH = join(ASSETS_DIR, 'manifest.json');
 if (!existsSync(MANIFEST_PATH)) {
   console.error(`ERROR: assets/manifest.json not found at ${MANIFEST_PATH}`);
   process.exit(1);
-}
-
-function existsSync(p) {
-  try { statSync(p); return true; } catch { return false; }
 }
 
 const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));

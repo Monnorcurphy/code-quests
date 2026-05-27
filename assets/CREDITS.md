@@ -50,6 +50,25 @@ Only CC0 and CC-BY assets are permitted (no CC-NC or commercial-license art).
 
 ---
 
+## Kenney Tiny Dungeon
+
+| Field | Value |
+|-------|-------|
+| **Pack** | Tiny Dungeon |
+| **Creator** | Kenney (kenney.nl) |
+| **Version** | 1.0 |
+| **License** | CC0 1.0 Universal (public domain) |
+| **Source** | https://kenney.nl/assets/tiny-dungeon |
+| **Attribution required** | No |
+
+**Files:**
+- `dungeon/kenney-wall.png`
+- `dungeon/kenney-floor.png`
+- `dungeon/kenney-door.png`
+- `dungeon/kenney-prop.png`
+
+---
+
 ## 0x72 Dungeon Tileset II
 
 | Field | Value |

@@ -132,6 +132,11 @@ const ASSETS = [
   { path: 'character/adventurer-walk.png',   w: 96, h: 48, palette: CHARACTER, seed: 202 },
   { path: 'character/adventurer-attack.png', w: 96, h: 48, palette: CHARACTER, seed: 203 },
   { path: 'character/npc-villager.png',      w: 48, h: 48, palette: CHARACTER, seed: 204 },
+  // Kenney Tiny Dungeon (CC0)
+  { path: 'dungeon/kenney-wall.png',     w: 64,  h: 64,  palette: DUNGEON,   seed: 302 },
+  { path: 'dungeon/kenney-floor.png',    w: 64,  h: 64,  palette: DUNGEON,   seed: 303 },
+  { path: 'dungeon/kenney-door.png',     w: 64,  h: 128, palette: DUNGEON,   seed: 304 },
+  { path: 'dungeon/kenney-prop.png',     w: 64,  h: 64,  palette: DUNGEON,   seed: 305 },
   // 0x72 Dungeon Tileset II (CC-BY)
   { path: 'dungeon/tileset.png',         w: 256, h: 256, palette: DUNGEON,   seed: 301 },
 ];
