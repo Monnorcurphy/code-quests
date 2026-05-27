@@ -22,15 +22,7 @@ debug_patterns: 'console\.log'
 deps_dir: node_modules
 
 # Dev server for smoke test
-smoke_test: |
-  pnpm dev &
-  DEV_PID=$!
-  sleep 5
-  if curl -sf http://localhost:5173 > /dev/null 2>&1 || curl -sf http://localhost:3000 > /dev/null 2>&1; then
-    kill $DEV_PID 2>/dev/null; wait $DEV_PID 2>/dev/null; exit 0
-  else
-    kill $DEV_PID 2>/dev/null; wait $DEV_PID 2>/dev/null; exit 1
-  fi
+smoke_test: bash checks/smoke-test.sh
 
 # Dev server cleanup
 dev_processes: [node, vite]
