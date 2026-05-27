@@ -1,9 +1,11 @@
-function App() {
+import { Navigate, Route, Routes } from 'react-router-dom';
+import Town from './routes/town';
+
+export default function App() {
   return (
-    <main>
-      <h1>Code Quests</h1>
-    </main>
+    <Routes>
+      <Route path="/town" element={<Town />} />
+      <Route path="*" element={<Navigate to="/town" replace />} />
+    </Routes>
   );
 }
-
-export default App;

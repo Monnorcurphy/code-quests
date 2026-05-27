@@ -1,0 +1,174 @@
+/* Medieval Code Quests — parchment, stone, and banner-red palette */
+
+:root {
+  --color-parchment: #f5f0e8;
+  --color-parchment-dark: #e8e0cc;
+  --color-stone: #6b6b5e;
+  --color-stone-dark: #3d3d33;
+  --color-stone-border: #8a8a78;
+  --color-banner-red: #8b1a1a;
+  --color-banner-red-dark: #6b1010;
+  --color-text: #2c2416;
+  --color-text-secondary: #5a4e3a;
+  --color-focus-ring: #8b1a1a;
+
+  font-family: Georgia, 'Times New Roman', serif;
+  background-color: var(--color-parchment);
+  color: var(--color-text);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--color-parchment);
+}
+
+/* Focus visible — never suppress without replacement */
+:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Town layout */
+.town-page {
+  min-height: 100vh;
+  padding: 2rem 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.town-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  border-bottom: 2px solid var(--color-stone-border);
+  padding-bottom: 1.5rem;
+}
+
+.town-title {
+  font-size: 2.5rem;
+  color: var(--color-banner-red);
+  margin: 0 0 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.town-subtitle {
+  font-size: 1.1rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* Building grid */
+.building-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.25rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Building card — keyboard-interactive button */
+.building-btn {
+  display: block;
+  width: 100%;
+  padding: 1.5rem 1.25rem;
+  background: var(--color-parchment-dark);
+  border: 2px solid var(--color-stone-border);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
+}
+
+.building-btn:hover {
+  background-color: var(--color-parchment);
+  border-color: var(--color-stone-dark);
+}
+
+.building-btn:active {
+  background-color: var(--color-parchment-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .building-btn {
+    transition: none;
+  }
+}
+
+.building-name {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--color-banner-red);
+  margin-bottom: 0.4rem;
+}
+
+.building-role {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+/* Modal overlay */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 36, 22, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.modal-panel {
+  background: var(--color-parchment);
+  border: 2px solid var(--color-stone-border);
+  border-radius: 6px;
+  max-width: 480px;
+  width: 100%;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  color: var(--color-banner-red);
+  margin: 0 0 1rem;
+}
+
+.modal-body {
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
+}
+
+.modal-close {
+  background: var(--color-banner-red);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.6rem 1.25rem;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.modal-close:hover {
+  background: var(--color-banner-red-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-close {
+    transition: none;
+  }
+}

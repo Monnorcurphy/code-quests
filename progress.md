@@ -1,6 +1,27 @@
 # Progress — Phase 1
 
-Previous task progress archived to metrics/progress-before-balmoral.md
+Previous task progress archived to metrics/progress-before-bodiam.md
+
+## Task bodiam — React HUD skeleton
+
+**Status:** Complete
+
+**What was built:**
+- Installed TanStack Query, react-router-dom, Zustand, and zod in `@code-quests/client`
+- `packages/client/src/lib/query-client.ts` — QueryClient with 30s stale time, 1 retry
+- `packages/client/src/lib/api.ts` — typed fetch wrappers for adventurers, quests, epics using shared Zod schemas
+- `packages/client/src/styles/global.css` — medieval theme (parchment off-white, stone gray, banner-red); all contrast ≥ 4.5:1
+- `packages/client/src/routes/town.tsx` — 8 building panels, placeholder modal per building, keyboard nav (Tab/Enter/Escape), ARIA dialog
+- `packages/client/src/app.tsx` — react-router Routes; `/town` default, wildcard redirects
+- `packages/client/src/main.tsx` — QueryClientProvider + BrowserRouter
+- `packages/client/src/__tests__/town.test.tsx` — 9 tests covering render, modal open/close, keyboard, ARIA
+- `packages/client/src/app.test.tsx` — 3 tests updated for routing structure
+
+**Verification:** 12 client + 67 server tests passing, typecheck clean, lint clean, vite build succeeds.
+
+---
+
+Previous balmoral entry below:
 
 ## balmoral — Express API CRUD endpoints
 
