@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdtempSync, writeFileSync, chmodSync, readdirSync } from 'fs';
+import { mkdtempSync, writeFileSync, chmodSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { rm } from 'fs/promises';
@@ -34,6 +34,7 @@ describe('cc-adapter', () => {
   let fakeBinSuccess: string;
   let fakeBinFail: string;
   let fakeBinSlow: string;
+  let fakeBinBadShebang: string;
 
   beforeAll(() => {
     origBin = process.env.CODE_QUESTS_CLAUDE_BIN;
@@ -69,6 +70,10 @@ setTimeout(() => { process.exit(0); }, 60000);
 `,
     );
     chmodSync(fakeBinSlow, 0o755);
+
+    fakeBinBadShebang = join(testTmpDir, 'fake-claude-bad-shebang');
+    writeFileSync(fakeBinBadShebang, '#!/nonexistent-interpreter-xyz-cqtest\necho hi\n');
+    chmodSync(fakeBinBadShebang, 0o755);
   });
 
   afterAll(async () => {
@@ -149,6 +154,55 @@ setTimeout(() => { process.exit(0); }, 60000);
     expect(events.length).toBeGreaterThanOrEqual(1);
     const last = events.at(-1);
     expect(last?.type === 'failed' || last?.type === 'completed').toBe(true);
+
+    await handle.awaitExit();
+
+    const after = getMcpTempFiles();
+    const newFiles = after.filter((f) => !before.includes(f));
+    expect(newFiles).toHaveLength(0);
+  });
+
+  it('writeTempMcpConfig creates temp file with owner-only permissions (0o600)', async () => {
+    process.env.CODE_QUESTS_CLAUDE_BIN = fakeBinSlow;
+    const before = new Set(getMcpTempFiles());
+
+    const adapter = createCcAdapter();
+    const handle = await adapter.spawn!(SPAWN_INPUT);
+
+    const newFile = getMcpTempFiles().find((f) => !before.has(f));
+    expect(newFile).toBeDefined();
+    const stat = statSync(join(tmpdir(), newFile!));
+    expect(stat.mode & 0o777).toBe(0o600);
+
+    await handle.cancel();
+    await handle.awaitExit();
+  });
+
+  it('cancel() after awaitExit() is a no-op and does not throw', async () => {
+    process.env.CODE_QUESTS_CLAUDE_BIN = fakeBinSuccess;
+    const adapter = createCcAdapter();
+    const handle = await adapter.spawn!(SPAWN_INPUT);
+
+    for await (const _ of handle.events()) { /* drain */ }
+    await handle.awaitExit();
+
+    await expect(handle.cancel()).resolves.toBeUndefined();
+  });
+
+  it('emits failed event and cleans up temp file when subprocess cannot be spawned', async () => {
+    process.env.CODE_QUESTS_CLAUDE_BIN = fakeBinBadShebang;
+    const before = getMcpTempFiles();
+
+    const adapter = createCcAdapter();
+    const handle = await adapter.spawn!(SPAWN_INPUT);
+
+    const events: AgentEvent[] = [];
+    for await (const ev of handle.events()) {
+      events.push(ev);
+    }
+
+    const last = events.at(-1);
+    expect(last?.type).toBe('failed');
 
     await handle.awaitExit();
 

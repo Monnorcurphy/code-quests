@@ -90,7 +90,7 @@ async function writeTempMcpConfig(servers: MCPServer[]): Promise<string> {
   };
   const name = randomBytes(8).toString('hex');
   const filePath = join(tmpdir(), `cq-mcp-${name}.json`);
-  await writeFile(filePath, JSON.stringify(mcpConfig), 'utf8');
+  await writeFile(filePath, JSON.stringify(mcpConfig), { encoding: 'utf8', mode: 0o600 });
   return filePath;
 }
 
@@ -180,8 +180,34 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
-  proc.stdin!.write(buildPrompt(input));
-  proc.stdin!.end();
+  let settled = false;
+  const finalize = (code: number | null, reason?: string): void => {
+    if (settled) return;
+    settled = true;
+    if (killTimer !== null) {
+      clearTimeout(killTimer);
+      killTimer = null;
+    }
+    const timestamp = new Date().toISOString();
+    queue.push(
+      code === 0 && !reason
+        ? { type: 'completed', timestamp }
+        : { type: 'failed', timestamp, reason: reason ?? `exit code ${String(code)}` },
+    );
+    queue.close();
+    void unlink(tmpFile)
+      .catch(() => { /* best-effort cleanup */ })
+      .then(() => exitResolve({ exitCode: code }));
+  };
+
+  proc.on('error', (err: Error) => finalize(null, `spawn error: ${err.message}`));
+
+  try {
+    proc.stdin!.write(buildPrompt(input));
+    proc.stdin!.end();
+  } catch {
+    // 'error' handler will fire and finalize; nothing to do here.
+  }
 
   let stdoutBuf = '';
 
@@ -198,13 +224,13 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
 
   proc.stderr!.on('data', (chunk: Buffer) => {
     const text = chunk.toString('utf8').trim();
-    if (text) {
-      queue.push({
-        type: 'progress',
-        timestamp: new Date().toISOString(),
-        message: `warning: ${text}`,
-      });
-    }
+    if (!text) return;
+    const truncated = text.length > 1024 ? text.slice(0, 1024) : text;
+    queue.push({
+      type: 'progress',
+      timestamp: new Date().toISOString(),
+      message: `warning: ${truncated}`,
+    });
   });
 
   proc.on('close', (code: number | null) => {
@@ -212,20 +238,7 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
       const event = parseLine(stdoutBuf);
       if (event) queue.push(event);
     }
-    if (killTimer !== null) {
-      clearTimeout(killTimer);
-      killTimer = null;
-    }
-    const timestamp = new Date().toISOString();
-    queue.push(
-      code === 0
-        ? { type: 'completed', timestamp }
-        : { type: 'failed', timestamp, reason: `exit code ${String(code)}` },
-    );
-    queue.close();
-    void unlink(tmpFile)
-      .catch(() => { /* best-effort cleanup */ })
-      .then(() => exitResolve({ exitCode: code }));
+    finalize(code);
   });
 
   return {
@@ -234,9 +247,11 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
       return queue;
     },
     async cancel(): Promise<void> {
+      if (settled) return;
+      if (killTimer !== null) clearTimeout(killTimer);
       proc.kill('SIGTERM');
       killTimer = setTimeout(() => {
-        proc.kill('SIGKILL');
+        if (!settled) proc.kill('SIGKILL');
       }, 5000);
     },
     async awaitExit(): Promise<{ exitCode: number | null }> {
