@@ -1,13 +1,16 @@
-# Progress — Phase 4
+# Progress — Phase 5
 
-Previous task progress archived to metrics/progress-before-golconda.md
+Previous task progress archived to metrics/progress-before-arbalest.md
 
-## golconda — Phase 4 capstone (complete)
+## arbalest — Quest scene art assets + asset-loader keys
 
-- Extended `seed-dev.ts`: added fully-specified capstone demo quest + pre-completed "Banish the Memory Leak" quest with agent row and events_json
-- Added `ReturnedQuestsBadge` to `town-square.tsx`: shows "X quests returned" badge linking to Hall of Returns when count > 0
-- Created `phase-4-capstone.spec.ts`: full E2E — dispatch → offline adapter completes → Hall of Returns → detail modal; axe checks on Hall of Returns, detail modal, active-quest panel, and Town Square peek
-- Created `phase-4-cancel.spec.ts`: create active quest via PATCH, cancel via UI confirm dialog, verify failed + retire recommendation; axe check on failed detail
-- Updated `README.md` with Phase 4 walkthrough section (offline demo + real CC adapter instructions)
-- Created `specs/done/phase-4-complete.md` phase summary
-- All 204 server tests + 324 client tests pass; typecheck and lint clean
+**Status:** DONE
+
+**What was done:**
+- Added 14 PNG stub assets in `assets/quest/` (all ≥ 1 KB, ≤ 500 KB): 4 backgrounds, 4 props, 4 ground tiles, 2 RGBA monster silhouettes with real transparency (color type 6).
+- Extended `scripts/gen-asset-stubs.mjs` with RGBA support (`makePNGRGBA`), 5 new biome palettes, and humanoid silhouette shape functions.
+- Added `QUEST_ASSET_KEYS` const and `preloadQuestAssets(scene)` export to `asset-loader.ts`. `preloadCommonAssets` unchanged; quest scenes call `preloadQuestAssets` separately.
+- `AssetKey` type now covers both `ASSET_KEYS` and `QUEST_ASSET_KEYS` values so `assetPath()` works for all keys.
+- Updated `assets/CREDITS.md` with a `## Phase 5 — Quest scenes` section listing all 14 files with source, author, license, and required attribution text.
+- Added 7 new tests covering: file existence, 1 KB minimum, 500 KB maximum, `assetPath()` for quest keys, `preloadQuestAssets` registration completeness, non-pollution of town/dungeon keys, and RGBA color type verification for silhouettes.
+- All 331 tests pass; typecheck and lint clean.
