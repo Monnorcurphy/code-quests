@@ -73,17 +73,16 @@ test.describe('Town Square — entry and recruiting', () => {
   });
 
   test('Town Square empty state shows helpful message', async ({ page }) => {
+    await page.route('**/quests', (route) => route.fulfill({ json: [] }));
+    await page.route('**/adventurers', (route) => route.fulfill({ json: [] }));
+
     await page.goto('/town');
 
     await page.getByRole('button', { name: /Town Square/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
-    // Quest board empty state
-    await expect(
-      page.getByText(/No quests yet/i).or(page.getByText(/no adventurers yet/i)),
-    ).toBeVisible({ timeout: 3000 }).catch(() => {
-      // Either or both empty states might appear depending on server state
-    });
+    await expect(page.getByText(/No quests yet/i)).toBeVisible();
+    await expect(page.getByText(/No adventurers yet/i)).toBeVisible();
   });
 
   test('Town Square has no accessibility violations', async ({ page }) => {

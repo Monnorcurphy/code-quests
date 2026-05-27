@@ -234,12 +234,13 @@ describe('TownSquareScene', () => {
 
   it('update skips game logic when activeModal is set', () => {
     scene.create();
-    vi.mocked(useTownStore.getState as MockStoreFn).mockReturnValue(
-      buildMockStore({ activeModal: 'quest-board' }),
-    );
+
+    const pausedStore = buildMockStore({ activeModal: 'quest-board' });
+    vi.mocked(useTownStore.getState as MockStoreFn).mockReturnValue(pausedStore);
 
     scene.update(0, 16);
 
-    expect(mockStore.setPlayerX).not.toHaveBeenCalled();
+    expect(pausedStore.setPlayerX).not.toHaveBeenCalled();
+    expect(pausedStore.setFacing).not.toHaveBeenCalled();
   });
 });

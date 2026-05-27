@@ -90,10 +90,6 @@ export class TownSquareScene extends BaseTownScene {
       })),
     ]);
 
-    this.controller.on('back', () => {
-      useTownStore.getState().setActiveModal(null);
-    });
-
     this.events.once('shutdown', () => {
       useTownStore.getState().setActiveModal(null);
     });
