@@ -1,22 +1,15 @@
 # Progress — Phase 2
 
-Previous task progress archived to metrics/progress-before-bobcat.md
+Previous task progress archived to metrics/progress-before-cobra.md
 
-## bobcat — Pixel art asset pipeline + CREDITS.md
+## cobra — Player avatar + keyboard movement
 
 **Status:** Done
 
 **What was built:**
-- `assets/town/` — 11 PNG files (ground, buildings, trees, fence, path) via synthetic stub generator
-- `assets/dungeon/tileset.png` — 256×256 dungeon tileset PNG
-- `assets/character/` — 4 PNG files (adventurer idle/walk/attack, villager)
-- `assets/CREDITS.md` — structured credits for all three packs (Kenney Tiny Town CC0, Kenney 1-Bit Pack CC0, 0x72 Dungeon Tileset II CC-BY)
-- `assets/manifest.json` — machine-readable catalog (16 entries, each with license/source/pack)
-- `packages/client/public/assets` — symlink to root `assets/` so Vite dev-serves and build-copies all assets
-- `packages/client/src/game/asset-loader.ts` — typed `ASSET_KEYS` const, `assetPath()` helper, `preloadCommonAssets(scene)` callable from any Phaser scene
-- `packages/client/src/game/__tests__/asset-loader.test.ts` — verifies every key maps to an existing file ≥ 1KB
-- `scripts/gen-asset-stubs.mjs` — deterministic PNG generator (replace outputs with real Kenney downloads for release)
-- `scripts/check-asset-licenses.sh` + `scripts/check-asset-licenses.mjs` — CI check: fails if any PNG is unlisted or has no license
-- `package.json` — added `"check:assets"` script
+- `packages/client/src/game/entities/player.ts` — `Player` class with sprite, velocity-based movement, bounds clamping, animation switching (idle/walk), flipX for facing direction, `getX()`, `setX()`, `onInteract()`. Uses `import.meta.env` via optional chaining for `prefers-reduced-motion`.
+- `packages/client/src/game/input/keyboard-controller.ts` — `KeyboardController` wrapping Phaser's keyboard API. Emits `move-left`, `move-right`, `stop`, `interact`, `back`, `tab-next`. One-shot events (interact/back/tab) use prev-state tracking to prevent repeat fires on hold. `reducedMotion` exposed as property.
+- `packages/client/src/game/scenes/test-scene.ts` — DEV-only debug scene (flat ground, Player, KeyboardController wired together). Syncs player position + facing to `useTownStore`. Registered only when `import.meta.env.DEV`.
+- `packages/client/src/stores/town-store.ts` — extended with `facing: 'left' | 'right'`, `setPlayerX()`, `setFacing()` actions.
 
-**Verify results:** 58 unit tests pass, lint clean, typecheck clean, `pnpm check:assets` exits 0, `pnpm build` copies all 16 assets to `dist/assets/`.
+**Tests:** 30 new tests (17 player + 13 keyboard-controller), all passing. Total 155 tests across monorepo.
