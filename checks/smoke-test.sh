@@ -1,18 +1,27 @@
 #!/bin/bash
-# Smoke test: start dev server and verify it responds on expected port
-set -uo pipefail
+# Smoke test: start dev server and verify both client and server respond
+set -euo pipefail
 
+set -m  # enable job control so children get their own process group
 pnpm dev &
 DEV_PID=$!
+DEV_PGID=$DEV_PID
 
-sleep 5
+cleanup() {
+  kill -- -"$DEV_PGID" 2>/dev/null || true
+}
+trap cleanup EXIT
 
-if curl -sf http://localhost:5173 > /dev/null 2>&1 || curl -sf http://localhost:3000 > /dev/null 2>&1; then
-    kill "$DEV_PID" 2>/dev/null
-    wait "$DEV_PID" 2>/dev/null
-    exit 0
-else
-    kill "$DEV_PID" 2>/dev/null
-    wait "$DEV_PID" 2>/dev/null
-    exit 1
-fi
+# Poll up to 30 seconds for the Vite client to come up
+for _ in $(seq 1 30); do
+  if curl -sf http://localhost:5173 > /dev/null 2>&1; then break; fi
+  sleep 1
+done
+
+# Poll up to 30 seconds for the Express server to come up
+for _ in $(seq 1 30); do
+  if curl -sf http://localhost:3000/health > /dev/null 2>&1; then break; fi
+  sleep 1
+done
+
+curl -sf http://localhost:5173 > /dev/null && curl -sf http://localhost:3000/health > /dev/null
