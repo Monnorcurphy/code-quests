@@ -1,4 +1,4 @@
-export type SceneKey = 'boot';
+export type SceneKey = 'boot' | 'test-scene';
 
 type SceneConstructor = new () => object;
 

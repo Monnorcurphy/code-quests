@@ -4,7 +4,6 @@ import { KeyboardController } from '../input/keyboard-controller';
 import { preloadCommonAssets } from '../asset-loader';
 import { useTownStore } from '../../stores/town-store';
 import { registerScene } from '../scene-registry';
-import type { SceneKey } from '../scene-registry';
 
 const SCENE_BOUNDS = { min: 0, max: 2400 };
 const PLAYER_START_X = 200;
@@ -51,5 +50,5 @@ class TestScene extends Phaser.Scene {
 }
 
 if (import.meta.env.DEV) {
-  registerScene('test-scene' as SceneKey, TestScene);
+  registerScene('test-scene', TestScene);
 }

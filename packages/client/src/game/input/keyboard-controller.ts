@@ -10,10 +10,6 @@ export type ControllerEvent =
 
 type Listener = () => void;
 
-export interface KeyboardControllerOptions {
-  reducedMotion?: boolean;
-}
-
 interface KeyLike {
   isDown: boolean;
 }
@@ -38,15 +34,9 @@ export class KeyboardController {
 
   private readonly listeners = new Map<ControllerEvent, Set<Listener>>();
 
-  readonly reducedMotion: boolean;
-
-  constructor(scene: Phaser.Scene, options: KeyboardControllerOptions = {}) {
-    this.reducedMotion =
-      options.reducedMotion ??
-      (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false);
-
+  constructor(scene: Phaser.Scene) {
     this.cursors = scene.input.keyboard!.createCursorKeys() as CursorKeysLike;
-    const keys = scene.input.keyboard!.addKeys('W,A,D,ENTER,ESC,TAB') as Record<
+    const keys = scene.input.keyboard!.addKeys('A,D,ENTER,ESC,TAB') as Record<
       string,
       KeyLike
     >;

@@ -148,4 +148,18 @@ describe('Player', () => {
     const player = new Player(scene, 100, 500, BOUNDS, { reducedMotion: false });
     expect(() => player.interact()).not.toThrow();
   });
+
+  it('uses reduced walk frame rate when reducedMotion is true', () => {
+    new Player(scene, 0, 0, BOUNDS, { reducedMotion: true });
+    const calls = (scene.anims.create as ReturnType<typeof vi.fn>).mock.calls;
+    const walkCall = calls.find((c: unknown[]) => (c[0] as { key: string }).key === 'player-walk');
+    expect((walkCall![0] as { frameRate: number }).frameRate).toBe(2);
+  });
+
+  it('uses normal walk frame rate when reducedMotion is false', () => {
+    new Player(scene, 0, 0, BOUNDS, { reducedMotion: false });
+    const calls = (scene.anims.create as ReturnType<typeof vi.fn>).mock.calls;
+    const walkCall = calls.find((c: unknown[]) => (c[0] as { key: string }).key === 'player-walk');
+    expect((walkCall![0] as { frameRate: number }).frameRate).toBe(8);
+  });
 });

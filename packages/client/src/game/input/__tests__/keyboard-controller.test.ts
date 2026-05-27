@@ -48,7 +48,6 @@ function makeMockScene(): { scene: Phaser.Scene; keys: MockKeys } {
           shift: keys.shift,
         })),
         addKeys: vi.fn(() => ({
-          W: { isDown: false },
           A: keys.A,
           D: keys.D,
           ENTER: keys.ENTER,
@@ -80,7 +79,7 @@ describe('KeyboardController', () => {
   beforeEach(() => {
     const mock = makeMockScene();
     keys = mock.keys;
-    controller = new KeyboardController(mock.scene, { reducedMotion: false });
+    controller = new KeyboardController(mock.scene);
   });
 
   it('emits move-left when left arrow is down', () => {
@@ -179,9 +178,4 @@ describe('KeyboardController', () => {
     expect(tracker.count).toBe(1);
   });
 
-  it('reducedMotion reflects the provided option', () => {
-    const { scene } = makeMockScene();
-    const ctrl = new KeyboardController(scene, { reducedMotion: true });
-    expect(ctrl.reducedMotion).toBe(true);
-  });
 });
