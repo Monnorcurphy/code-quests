@@ -5,6 +5,8 @@ import { useTownStore } from '../stores/town-store';
 import DraftForm from './quests/draft-form';
 import SpecAuditPanel from './quests/spec-audit-panel';
 import DispatchButton from './quests/dispatch-button';
+import ActiveQuestPanel from './quests/active-quest-panel';
+import CancelButton from './quests/cancel-button';
 import { useRunAudit } from './quests/use-run-audit';
 import { api } from '../lib/api';
 import type { Quest } from '@code-quests/shared';
@@ -23,12 +25,12 @@ function QuestDetailSection({
   const [runError, setRunError] = useState<string | null>(null);
   const [runSuccess, setRunSuccess] = useState(false);
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const goToHallOfReturns = useTownStore((s) => s.goToHallOfReturns);
 
   const { data: questData, isLoading, error } = useQuery({
     queryKey: ['quest', questId],
     queryFn: () => api.quests.get(questId),
   });
-  // fetchJson infers a slightly wider type due to Zod default handling; cast to Quest
   const quest = questData as Quest | undefined;
 
   const { mutate: runAudit, isPending } = useRunAudit(questId);
@@ -67,6 +69,49 @@ function QuestDetailSection({
       <p className="war-room-load-error" role="alert">
         Could not load quest. Make sure the server is running.
       </p>
+    );
+  }
+
+  if (quest.status === 'active' || quest.status === 'paused_input' || quest.status === 'user_blocked') {
+    return (
+      <div className="war-room-quest-detail">
+        <ActiveQuestPanel questId={questId} />
+        <CancelButton questId={questId} />
+        <div className="form-actions">
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (quest.status === 'complete' || quest.status === 'failed') {
+    return (
+      <div className="war-room-quest-detail">
+        <h3 className="war-room-quest-title">{quest.title}</h3>
+        <p className={`war-room-terminal-status war-room-terminal-status--${quest.status}`}>
+          {quest.status === 'complete' ? '🎉 Quest complete!' : '💀 Quest failed.'}
+        </p>
+        {quest.failureSummary && (
+          <p className="war-room-failure-reason">{quest.failureSummary.reason}</p>
+        )}
+        <div className="form-actions">
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={goToHallOfReturns}
+          >
+            Return to Hall of Returns
+          </button>
+          <button type="button" className="btn-secondary" onClick={onDraftAnother}>
+            Draft new quest
+          </button>
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
     );
   }
 

@@ -105,6 +105,7 @@ export const api = {
   },
   quests: {
     list: () => fetchJson(z.array(QuestSchema), '/quests'),
+    active: () => fetchJson(z.array(QuestSchema), '/quests/active'),
     get: (id: string) => fetchJson(QuestSchema, `/quests/${id}`),
     create: (input: CreateQuestInput) =>
       postJson(QuestSchema, '/quests', input),
@@ -114,6 +115,8 @@ export const api = {
       postJson(SpecAuditSchema, `/quests/${id}/audit`, {}),
     dispatch: (id: string, bypass = false) =>
       postJson(QuestSchema, `/quests/${id}/dispatch${bypass ? '?bypass=true' : ''}`, {}),
+    cancel: (id: string) =>
+      postJson(QuestSchema, `/quests/${id}/cancel`, {}),
   },
   epics: {
     list: () => fetchJson(z.array(EpicSchema), '/epics'),
