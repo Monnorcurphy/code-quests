@@ -1,48 +1,32 @@
-# BUG: onClick={onCancelRef.current} — unnecessary ref indirection for click handler
-
+# BUG: Duplicate `---` separator at the top of the Phase 5 CREDITS section
 **Severity:** LOW
-**File(s):** `packages/client/src/features/guild/recruit-modal.tsx`
+**File(s):** assets/CREDITS.md
 
 ## Problem
+The Phase 5 section in `assets/CREDITS.md` starts with two consecutive `---` separators (lines 89–91), producing a redundant double horizontal rule when rendered:
 
-The Cancel button uses `onClick={onCancelRef.current}` instead of `onClick={onCancel}`:
+```
+> Dungeon Tileset II by 0x72 — https://0x72.itch.io/dungeontileset-ii — CC-BY 4.0
 
-```tsx
-<button type="button" onClick={onCancelRef.current} disabled={disabled}>
-  Cancel
-</button>
+---
+
+---
+
+## Phase 5 — Quest scenes
 ```
 
-The `onCancelRef` pattern (store callback in ref, sync in layoutless effect) is necessary for the auto-dismiss `setTimeout` callback, because that runs outside the render cycle and would capture a stale closure. DOM event handlers do not have this problem — React updates them on every render, so `onClick={onCancel}` always calls the latest value of `onCancel`.
-
-Using `onCancelRef.current` here:
-- Reads the ref value at render time (same timing as reading the prop directly)
-- Adds complexity without adding correctness
+The first `---` ends the previous (Phase 1) section; the second is the duplicate that the new diff appended.
 
 ## Expected
-
-Click handlers should reference props directly. Refs are the right tool for callbacks invoked asynchronously (timers, subscriptions) — not for synchronous event handlers.
+A single `---` between sections, matching the formatting style used everywhere else in the file.
 
 ## Fix
+Delete the redundant `---` (and its surrounding blank lines) so the structure reads:
 
-```tsx
-// Before
-<button type="button" onClick={onCancelRef.current} disabled={disabled}>
-
-// After
-<button type="button" onClick={onCancel} disabled={disabled}>
 ```
+> Dungeon Tileset II by 0x72 — https://0x72.itch.io/dungeontileset-ii — CC-BY 4.0
 
-After this change, `onCancelRef` is no longer needed at all. Remove it along with the effect that syncs it:
+---
 
-```tsx
-// Remove:
-const onCancelRef = useRef(onCancel);
-
-useEffect(() => {
-  onSuccessRef.current = onSuccess;
-  onCancelRef.current = onCancel;  // remove this line (or remove the whole effect if onSuccess still uses ref)
-});
+## Phase 5 — Quest scenes
 ```
-
-`onSuccessRef` still needs to be kept — it is used inside the `setTimeout` auto-dismiss, which IS an async callback that requires the ref pattern.
