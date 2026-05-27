@@ -4,7 +4,11 @@ import {
   AdventurerClassSchema,
   QuestSchema,
   EpicSchema,
+  SkillSchema,
+  ToolSchema,
+  MCPServerSchema,
 } from '@code-quests/shared';
+import type { Equipment } from '@code-quests/shared';
 
 const BASE_URL = ''; // same-origin via Vite proxy
 
@@ -49,6 +53,23 @@ async function postJson<T>(schema: z.ZodType<T>, path: string, body: unknown): P
   return schema.parse(data);
 }
 
+async function patchJson<T>(schema: z.ZodType<T>, path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const raw: unknown = await res.json().catch(() => ({ error: `${res.statusText}` }));
+    const parsed = ApiErrorBodySchema.safeParse(raw);
+    const msg = parsed.success ? parsed.data.error : `${res.status} ${res.statusText}`;
+    const field = parsed.success ? parsed.data.field : undefined;
+    throw new ApiError(msg, { field, status: res.status });
+  }
+  const data: unknown = await res.json();
+  return schema.parse(data);
+}
+
 const CreateAdventurerInputSchema = z.object({
   name: z.string().min(1),
   class: AdventurerClassSchema,
@@ -66,6 +87,10 @@ const CreateQuestInputSchema = z.object({
 
 export type CreateQuestInput = z.infer<typeof CreateQuestInputSchema>;
 
+export type PatchQuestInput = {
+  equipment?: Equipment;
+};
+
 export const api = {
   adventurers: {
     list: () => fetchJson(z.array(AdventurerSchema), '/adventurers'),
@@ -74,10 +99,18 @@ export const api = {
   },
   quests: {
     list: () => fetchJson(z.array(QuestSchema), '/quests'),
+    get: (id: string) => fetchJson(QuestSchema, `/quests/${id}`),
     create: (input: CreateQuestInput) =>
       postJson(QuestSchema, '/quests', input),
+    patch: (id: string, body: PatchQuestInput) =>
+      patchJson(QuestSchema, `/quests/${id}`, body),
   },
   epics: {
     list: () => fetchJson(z.array(EpicSchema), '/epics'),
+  },
+  equipment: {
+    skills: () => fetchJson(z.array(SkillSchema), '/skills'),
+    tools: () => fetchJson(z.array(ToolSchema), '/tools'),
+    mcpServers: () => fetchJson(z.array(MCPServerSchema), '/mcp-servers'),
   },
 };

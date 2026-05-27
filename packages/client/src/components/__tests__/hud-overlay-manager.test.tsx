@@ -18,8 +18,13 @@ vi.mock('../../lib/api', async (importOriginal) => {
     ...original,
     api: {
       adventurers: { list: vi.fn().mockResolvedValue([]) },
-      quests: { list: vi.fn().mockResolvedValue([]), create: vi.fn() },
+      quests: { list: vi.fn().mockResolvedValue([]), get: vi.fn(), create: vi.fn(), patch: vi.fn() },
       epics: { list: vi.fn().mockResolvedValue([]) },
+      equipment: {
+        skills: vi.fn().mockResolvedValue([]),
+        tools: vi.fn().mockResolvedValue([]),
+        mcpServers: vi.fn().mockResolvedValue([]),
+      },
     },
   };
 });
@@ -100,10 +105,11 @@ describe('HUDOverlayManager', () => {
     expect(screen.getByRole('heading', { name: 'Tavern', level: 2 })).toBeDefined();
   });
 
-  it('renders ComingSoonPanel for armory when activeModal is coming-soon', async () => {
+  it('renders LoadoutPanel when activeModal is armory-loadout', async () => {
     renderAtScene('armory');
-    await act(() => { useTownStore.setState({ activeModal: 'coming-soon' }); });
-    expect(screen.getByRole('heading', { name: 'Armory', level: 2 })).toBeDefined();
+    await act(() => { useTownStore.setState({ activeModal: 'armory-loadout' }); });
+    expect(screen.getByRole('dialog')).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Armory — Equipment Loadout', level: 2 })).toBeDefined();
   });
 
   it('renders ComingSoonPanel for hall-of-returns when activeModal is coming-soon', async () => {
