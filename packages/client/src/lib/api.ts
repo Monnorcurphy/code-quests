@@ -103,7 +103,13 @@ export class ApiError extends Error {
 
 async function fetchJson<S extends z.ZodTypeAny>(schema: S, path: string): Promise<z.output<S>> {
   const res = await fetch(`${BASE_URL}${path}`);
-  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    const raw: unknown = await res.json().catch(() => ({ error: `${res.statusText}` }));
+    const parsed = ApiErrorBodySchema.safeParse(raw);
+    const msg = parsed.success ? parsed.data.error : `${res.status} ${res.statusText}`;
+    const field = parsed.success ? parsed.data.field : undefined;
+    throw new ApiError(msg, { field, status: res.status, data: raw });
+  }
   const data: unknown = await res.json();
   return schema.parse(data) as z.output<S>;
 }

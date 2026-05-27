@@ -110,6 +110,13 @@ describe('QuestRoute', () => {
     expect(mount.getAttribute('data-initial-scene')).toBe('quest-forest');
   });
 
+  it('passes the correct non-forest scene to PhaserMount', async () => {
+    vi.mocked(api.quests.get).mockResolvedValue(makeQuest({ currentScene: 'quest-cave' }));
+    renderRoute();
+    const mount = await screen.findByTestId('phaser-mount');
+    expect(mount.getAttribute('data-initial-scene')).toBe('quest-cave');
+  });
+
   it('shows empty state when API returns 404', async () => {
     vi.mocked(api.quests.get).mockRejectedValue(
       new ApiError('Quest not found', { status: 404 }),

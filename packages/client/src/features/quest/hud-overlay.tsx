@@ -24,9 +24,9 @@ function AdventurerName({ adventurerId }: { adventurerId: string | null }) {
     queryFn: () => (adventurerId ? api.adventurers.get(adventurerId) : Promise.resolve(null)),
     enabled: adventurerId !== null,
   });
-  if (!adventurerId) return <span className="text-gray-500 italic">No adventurer</span>;
-  if (!adventurer) return <span className="text-gray-600">Loading…</span>;
-  return <span className="text-gray-800 font-medium">{adventurer.name}</span>;
+  if (!adventurerId) return <span className="text-gray-300 italic">No adventurer</span>;
+  if (!adventurer) return <span className="text-gray-200">Loading…</span>;
+  return <span className="text-gray-100 font-medium">{adventurer.name}</span>;
 }
 
 export default function HUDOverlay({ quest, onReturnToTown, advanceLoading, advanceError }: HUDOverlayProps) {
@@ -142,7 +142,7 @@ export default function HUDOverlay({ quest, onReturnToTown, advanceLoading, adva
         aria-label="Combat log"
         aria-live="polite"
       >
-        <p className="text-gray-600" style={{ margin: 0, fontSize: '0.8rem', fontStyle: 'italic' }}>
+        <p className="text-gray-200" style={{ margin: 0, fontSize: '0.8rem', fontStyle: 'italic' }}>
           Combat log will appear here
         </p>
       </div>

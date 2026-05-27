@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import HUDOverlay from '../features/quest/hud-overlay';
@@ -26,10 +26,6 @@ export default function QuestRoute() {
     queryFn: () => api.quests.get(questId!),
     enabled: !!questId,
   });
-
-  const mountScene = useRef<SceneKey>(
-    (quest?.currentScene ?? 'quest-forest') as SceneKey,
-  );
 
   const advanceMutation = useMutation({
     mutationFn: ({ expectedFrom }: { expectedFrom: QuestSceneKey; toScene: QuestSceneKey }) =>
@@ -99,7 +95,7 @@ export default function QuestRoute() {
         advanceError={advanceError}
       />
       <Suspense fallback={null}>
-        <PhaserMount initialScene={mountScene.current} />
+        <PhaserMount initialScene={quest.currentScene as SceneKey} />
       </Suspense>
     </main>
   );
