@@ -79,7 +79,7 @@ export default function ActiveQuestPanel({ questId }: { questId: string }) {
 
   return (
     <section className="active-quest-panel" aria-label="Active quest progress">
-      <h4 className="active-quest-title">{quest.title}</h4>
+      <h3 className="active-quest-title">{quest.title}</h3>
       <p className="active-quest-status-row">
         <span className="active-quest-status-label">Status:</span>{' '}
         <span className={`active-quest-status active-quest-status--${quest.status}`}>

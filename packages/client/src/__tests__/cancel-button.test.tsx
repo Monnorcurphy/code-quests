@@ -193,4 +193,32 @@ describe('CancelButton', () => {
     await waitFor(() => screen.getByRole('alert'));
     expect(screen.getByRole('button', { name: /cancel quest/i })).toBeDefined();
   });
+
+  it('Escape dismisses the confirm dialog without cancelling the quest', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    renderButton();
+
+    await user.click(screen.getByRole('button', { name: /cancel quest/i }));
+    expect(screen.getByRole('alertdialog')).toBeDefined();
+
+    await user.keyboard('{Escape}');
+
+    expect(mockCancel).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.getByRole('button', { name: /cancel quest/i })).toBeDefined();
+  });
+
+  it('Escape does NOT fire when confirm dialog is closed (idle state)', async () => {
+    const outerHandler = vi.fn();
+    document.addEventListener('keydown', outerHandler, false);
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    renderButton();
+
+    // Dialog is NOT open — Escape should bubble normally to outer handlers
+    await user.keyboard('{Escape}');
+
+    expect(outerHandler).toHaveBeenCalledTimes(1);
+    document.removeEventListener('keydown', outerHandler, false);
+  });
 });

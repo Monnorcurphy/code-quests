@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
-import { useFocusTrap } from '../../lib/use-focus-trap';
+
+const FOCUSABLE =
+  'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 type CancelState = 'idle' | 'confirming' | 'loading' | 'success' | 'error';
 
@@ -10,7 +12,7 @@ export default function CancelButton({ questId }: { questId: string }) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const keepGoingBtnRef = useRef<HTMLButtonElement>(null);
-  const confirmRef = useFocusTrap(handleAbortCancel);
+  const confirmRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   const { mutate } = useMutation({
@@ -40,6 +42,34 @@ export default function CancelButton({ questId }: { questId: string }) {
     if (state === 'confirming') {
       keepGoingBtnRef.current?.focus();
     }
+  }, [state]);
+
+  useEffect(() => {
+    if (state !== 'confirming') return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        // Stop propagation so outer modal Escape handlers (e.g. WarRoom) don't also fire.
+        e.stopPropagation();
+        setState('idle');
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const panel = confirmRef.current;
+      if (!panel) return;
+      const els = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (els.length === 0) return;
+      const first = els[0];
+      const last = els[els.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
   }, [state]);
 
   function handleAbortCancel(): void {
