@@ -88,8 +88,6 @@ Only CC0 and CC-BY assets are permitted (no CC-NC or commercial-license art).
 
 ---
 
----
-
 ## Phase 5 — Quest scenes
 
 ### Kenney Nature Platformer (backgrounds, ground tiles, forest props)
