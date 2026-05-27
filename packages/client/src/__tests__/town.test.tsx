@@ -1,9 +1,26 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
-import Town from '../routes/town';
+import { PhaserTown } from '../routes/town';
+import { useTownStore } from '../stores/town-store';
+import { sceneRouter } from '../game/scene-router';
+
+vi.mock('../game/phaser-mount', () => ({
+  default: ({ initialScene }: { initialScene: string }) => (
+    <div data-testid="phaser-mount" data-initial-scene={initialScene} />
+  ),
+}));
+
+vi.mock('../game/scene-router', () => ({
+  sceneRouter: {
+    onDoorEnter: vi.fn().mockReturnValue(vi.fn()),
+    goToScene: vi.fn(),
+    onInteractivesChange: vi.fn().mockReturnValue(vi.fn()),
+    emitDoorEnter: vi.fn(),
+  },
+}));
 
 vi.mock('../lib/api', async (importOriginal) => {
   const original = await importOriginal<typeof import('../lib/api')>();
@@ -11,164 +28,130 @@ vi.mock('../lib/api', async (importOriginal) => {
     ...original,
     api: {
       adventurers: { list: vi.fn().mockResolvedValue([]) },
-      quests: {
-        list: vi.fn().mockResolvedValue([]),
-        create: vi.fn(),
-      },
+      quests: { list: vi.fn().mockResolvedValue([]), create: vi.fn() },
       epics: { list: vi.fn().mockResolvedValue([]) },
     },
   };
 });
 
-function renderTown() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+function makeRouter(initialPath: string) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return {
+    router: createMemoryRouter(
+      [{ path: '/town/:sceneKey', element: <PhaserTown /> }],
+      { initialEntries: [initialPath] },
+    ),
+    queryClient,
+  };
+}
+
+function renderAtPath(initialPath: string) {
+  const { router, queryClient } = makeRouter(initialPath);
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <Town />
-      </MemoryRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   );
 }
 
-describe('Town', () => {
-  it('renders all 8 buildings', () => {
-    renderTown();
-    const buildings = [
-      'Town Square',
-      'War Room',
-      'Oracle',
-      'Library',
-      'Tavern',
-      'Armory',
-      'Guild Hall',
-      'Hall of Returns',
-    ];
-    for (const name of buildings) {
-      expect(screen.getByText(name)).toBeDefined();
-    }
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(sceneRouter.onDoorEnter).mockReturnValue(vi.fn());
+  vi.mocked(sceneRouter.onInteractivesChange).mockReturnValue(vi.fn());
+  useTownStore.setState({ activeModal: null });
+});
+
+afterEach(() => {
+  useTownStore.setState({ activeModal: null });
+});
+
+describe('Town — Phaser mode', () => {
+  it('renders the Phaser mount', async () => {
+    renderAtPath('/town/town-square');
+    expect(await screen.findByTestId('phaser-mount')).toBeDefined();
   });
 
-  it('renders the town heading', () => {
-    renderTown();
-    expect(screen.getByRole('heading', { name: 'The Town', level: 1 })).toBeDefined();
+  it('renders the settings button', async () => {
+    renderAtPath('/town/town-square');
+    await screen.findByTestId('phaser-mount');
+    expect(screen.getByRole('button', { name: 'Open settings' })).toBeDefined();
   });
 
-  it('renders buildings as buttons', () => {
-    renderTown();
-    const buttons = screen.getAllByRole('button');
-    expect(buttons.length).toBe(8);
-  });
-
-  it('opens a placeholder modal when a generic building is clicked', async () => {
+  it('opens the settings panel when the settings button is clicked', async () => {
     const user = userEvent.setup();
-    renderTown();
+    renderAtPath('/town/town-square');
+    await screen.findByTestId('phaser-mount');
 
-    const oracleBtn = screen.getByRole('button', { name: /Oracle/i });
-    await user.click(oracleBtn);
-
-    expect(screen.getByRole('dialog')).toBeDefined();
-    expect(screen.getByText('Refine Acceptance Criteria — arriving in Phase 3.')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: 'Open settings' }));
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeDefined();
   });
 
-  it('shows the building name in the modal title', async () => {
+  it('settings panel closes on Escape', async () => {
     const user = userEvent.setup();
-    renderTown();
+    renderAtPath('/town/town-square');
+    await screen.findByTestId('phaser-mount');
 
-    await user.click(screen.getByRole('button', { name: /Oracle/i }));
-
-    expect(screen.getByRole('heading', { name: 'Oracle', level: 2 })).toBeDefined();
-  });
-
-  it('closes the modal when the Close button is clicked (generic building)', async () => {
-    const user = userEvent.setup();
-    renderTown();
-
-    await user.click(screen.getByRole('button', { name: /Oracle/i }));
-    expect(screen.getByRole('dialog')).toBeDefined();
-
-    await user.click(screen.getByRole('button', { name: 'Close' }));
-    expect(screen.queryByRole('dialog')).toBeNull();
-  });
-
-  it('closes the modal when Escape is pressed', async () => {
-    const user = userEvent.setup();
-    renderTown();
-
-    await user.click(screen.getByRole('button', { name: /Armory/i }));
-    expect(screen.getByRole('dialog')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: 'Open settings' }));
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeDefined();
 
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Settings' })).toBeNull();
   });
 
-  it('can open a building with Enter key', async () => {
-    const user = userEvent.setup();
-    renderTown();
+  it('renders the quest-board overlay when activeModal is quest-board', async () => {
+    renderAtPath('/town/town-square');
+    await screen.findByTestId('phaser-mount');
 
-    const libraryBtn = screen.getByRole('button', { name: /Library/i });
-    libraryBtn.focus();
-    await user.keyboard('{Enter}');
+    await act(() => {
+      useTownStore.setState({ activeModal: 'quest-board' });
+    });
 
     expect(screen.getByRole('dialog')).toBeDefined();
-    expect(screen.getByRole('heading', { name: 'Library', level: 2 })).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Town Square', level: 2 })).toBeDefined();
   });
 
-  it('generic modal has aria-modal and aria-labelledby', async () => {
-    const user = userEvent.setup();
-    renderTown();
+  it('renders the draft overlay when activeModal is draft', async () => {
+    renderAtPath('/town/war-room');
+    await screen.findByTestId('phaser-mount');
 
-    await user.click(screen.getByRole('button', { name: /Armory/i }));
+    await act(() => {
+      useTownStore.setState({ activeModal: 'draft' });
+    });
 
-    const dialog = screen.getByRole('dialog');
-    expect(dialog.getAttribute('aria-modal')).toBe('true');
-    expect(dialog.getAttribute('aria-labelledby')).toBe('modal-title');
-  });
-
-  it('Guild Hall opens a dialog with aria-modal', async () => {
-    const user = userEvent.setup();
-    renderTown();
-
-    await user.click(screen.getByRole('button', { name: /Guild Hall/i }));
-
-    const dialog = screen.getByRole('dialog');
-    expect(dialog.getAttribute('aria-modal')).toBe('true');
-    expect(dialog.getAttribute('aria-labelledby')).toBe('guild-hall-title');
-  });
-
-  it('Town Square opens a dialog with roster and recruit button', async () => {
-    const user = userEvent.setup();
-    renderTown();
-
-    await user.click(screen.getByRole('button', { name: /Town Square/i }));
-
-    const dialog = screen.getByRole('dialog');
-    expect(dialog.getAttribute('aria-modal')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Recruit an Adventurer' })).toBeDefined();
-  });
-
-  it('War Room opens the draft form dialog', async () => {
-    const user = userEvent.setup();
-    renderTown();
-
-    await user.click(screen.getByRole('button', { name: /War Room/i }));
-
-    const dialog = screen.getByRole('dialog');
-    expect(dialog.getAttribute('aria-modal')).toBe('true');
-    expect(dialog.getAttribute('aria-labelledby')).toBe('war-room-title');
+    expect(screen.getByRole('dialog')).toBeDefined();
     expect(screen.getByRole('heading', { name: 'War Room', level: 2 })).toBeDefined();
-    expect(screen.getByLabelText('Title')).toBeDefined();
   });
 
-  it('traps focus inside the modal — Tab cycles to Close', async () => {
-    const user = userEvent.setup();
-    renderTown();
-    await user.click(screen.getByRole('button', { name: /Oracle/i }));
-    const close = screen.getByRole('button', { name: 'Close' });
-    expect(close).toHaveFocus();
-    await user.tab();
-    expect(close).toHaveFocus();
+  it('renders the guild-hall overlay when activeModal is guild-hall', async () => {
+    renderAtPath('/town/guild-hall');
+    await screen.findByTestId('phaser-mount');
+
+    await act(() => {
+      useTownStore.setState({ activeModal: 'guild-hall' });
+    });
+
+    expect(screen.getByRole('dialog')).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Guild Hall', level: 2 })).toBeDefined();
+  });
+
+  it('renders coming-soon overlay for placeholder scene when activeModal is coming-soon', async () => {
+    renderAtPath('/town/oracle');
+    await screen.findByTestId('phaser-mount');
+
+    await act(() => {
+      useTownStore.setState({ activeModal: 'coming-soon' });
+    });
+
+    expect(screen.getByRole('dialog')).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Oracle', level: 2 })).toBeDefined();
+    expect(
+      screen.getByText('Refine Acceptance Criteria — arriving in Phase 3.'),
+    ).toBeDefined();
+  });
+
+  it('renders the aria-live heading for the current building', async () => {
+    renderAtPath('/town/war-room');
+    await screen.findByTestId('phaser-mount');
+    expect(screen.getByText('War Room')).toBeDefined();
   });
 });
