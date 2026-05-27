@@ -26,11 +26,14 @@ mkdir -p "${OUTPUT_DIR}"
 OUTPUT="${OUTPUT_DIR}/README.md"
 
 # ── Load phase mapping from profile.yaml if available ──
-SECTIONS=""
-PHASE_NAME=""
-CODENAME_THEME=""
+# Honor env-var overrides (chain-phases.sh sets CODENAME_THEME per phase
+# so different phases get different codename pools instead of all defaulting
+# to "Alphabetical" → alpaca/.../giraffe collision across phases).
+SECTIONS="${SECTIONS:-}"
+PHASE_NAME="${PHASE_NAME:-}"
+CODENAME_THEME="${CODENAME_THEME:-}"
 
-if [ -f "factory/profile.yaml" ]; then
+if [ -z "${CODENAME_THEME}" ] && [ -f "factory/profile.yaml" ]; then
     # Try to extract phase info from profile. The sed uses GNU-only multi-cmd
     # block syntax that BSD/macOS sed rejects; `|| true` keeps the script
     # alive under `set -e -o pipefail` when sed errors out.

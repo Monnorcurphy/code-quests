@@ -18,9 +18,32 @@ source "$REPO_ROOT/scripts/lib.sh"
 
 log() { printf '[chain %s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 
+# Per-phase codename themes. Without this, slice-spec.sh defaults every
+# phase to "Alphabetical" (alpaca/.../giraffe) and phase.sh skips tasks
+# whose branch already has a PR — so Phase 4+ would silently build
+# nothing. Each theme name must match a file in themes/<theme>.txt.
+phase_theme() {
+    case "$1" in
+        1)  echo "castles" ;;     # already used by Phase 1
+        2)  echo "animals" ;;     # already used by Phase 2 (alpaca-giraffe)
+        3)  echo "gemstones" ;;   # already used by Phase 3
+        4)  echo "forts" ;;
+        5)  echo "weapons" ;;
+        6)  echo "ships" ;;
+        7)  echo "storms" ;;
+        8)  echo "stars" ;;
+        9)  echo "trees" ;;
+        10) echo "rivers" ;;
+        11) echo "zodiac" ;;
+        *)  echo "" ;;
+    esac
+}
+
 for PHASE in $(seq "$START" "$END"); do
     PADDED=$(printf '%02d' "$PHASE")
     log "=== PHASE $PHASE ==="
+    export CODENAME_THEME="$(phase_theme "$PHASE")"
+    [ -n "${CODENAME_THEME}" ] && log "Theme for phase $PHASE: ${CODENAME_THEME}"
 
     # Step 0: phase.sh uses `feature/<prev-phase-last-task>` as the parent for
     # the first task of this phase. If that branch lags behind main, the new
