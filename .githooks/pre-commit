@@ -1,0 +1,12 @@
+#!/bin/sh
+# Pre-commit hook — runs lint + test before every commit
+# Installed by dark-factory bootstrap
+
+# No-op until package.json exists (factory scaffolding may commit before Phase 1)
+[ -f package.json ] || exit 0
+
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm lint 2>/dev/null && pnpm test 2>/dev/null
+elif command -v npm >/dev/null 2>&1; then
+  npm run lint 2>/dev/null && npm test 2>/dev/null
+fi
