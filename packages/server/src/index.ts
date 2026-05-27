@@ -1,4 +1,5 @@
 import express from 'express';
+import * as http from 'http';
 import Database from 'better-sqlite3';
 import { openDb } from './db/connection';
 import { runMigrations } from './db/migrator';
@@ -9,6 +10,7 @@ import { createSkillsRouter } from './routes/skills';
 import { createToolsRouter } from './routes/tools';
 import { createMCPServersRouter } from './routes/mcp-servers';
 import { errorHandler } from './middleware/errors';
+import { attachQuestChannel, QuestChannel } from './realtime/quest-channel';
 
 export function createApp(db: Database.Database) {
   const app = express();
@@ -24,12 +26,23 @@ export function createApp(db: Database.Database) {
   return app;
 }
 
+let _questChannel: QuestChannel | undefined;
+
+export function getQuestChannel(): QuestChannel {
+  if (_questChannel === undefined) {
+    throw new Error('QuestChannel not initialized — start the server before calling getQuestChannel()');
+  }
+  return _questChannel;
+}
+
 if (require.main === module) {
   const db = openDb();
   runMigrations(db);
   const app = createApp(db);
+  const server = http.createServer(app);
+  _questChannel = attachQuestChannel(server);
   const port = Number(process.env.PORT) || 4001;
-  app.listen(port, () => {
+  server.listen(port, () => {
     process.stdout.write(`server listening on :${port}\n`);
   });
 }
