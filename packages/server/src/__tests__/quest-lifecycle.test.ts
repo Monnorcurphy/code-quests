@@ -146,6 +146,31 @@ describe('POST /quests/:id/fail', () => {
     expect(agent.ended_at).not.toBeNull();
     expect(agent.exit_code).toBe(1);
   });
+
+  it('does not overwrite existing failure_summary when quest is already failed (race regression)', async () => {
+    db.prepare(
+      `INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json, status, failure_summary_json)
+       VALUES (?, ?, ?, ?, ?, 'failed', ?)`,
+    ).run(
+      'q-race-fail',
+      GOOD_QUEST_PROPS.title,
+      GOOD_QUEST_PROPS.description,
+      GOOD_QUEST_PROPS.acceptance_criteria_json,
+      GOOD_QUEST_PROPS.edge_cases_json,
+      JSON.stringify({ reason: 'User cancelled', recommendation: 'retire' }),
+    );
+
+    const res = await request(app)
+      .post('/quests/q-race-fail/fail')
+      .send({ summary: 'Runner also failed', recommendation: 'repost_with_clarification' });
+    expect(res.status).toBe(409);
+
+    const row = db.prepare('SELECT failure_summary_json FROM quests WHERE id = ?').get('q-race-fail') as {
+      failure_summary_json: string;
+    };
+    const summary = JSON.parse(row.failure_summary_json) as { recommendation: string };
+    expect(summary.recommendation).toBe('retire');
+  });
 });
 
 describe('POST /quests/:id/cancel', () => {

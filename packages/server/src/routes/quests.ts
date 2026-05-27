@@ -437,9 +437,15 @@ export function createQuestsRouter(
     });
     try {
       const now = new Date().toISOString();
-      db.prepare('UPDATE quests SET failure_summary_json = ?, updated_at = ? WHERE id = ?')
-        .run(JSON.stringify(failureSummary), now, req.params.id);
-      transitionQuestStatus(db, req.params.id, 'active', 'failed');
+      const result = db
+        .prepare(
+          "UPDATE quests SET status = 'failed', failure_summary_json = ?, updated_at = ? WHERE id = ? AND status = 'active'",
+        )
+        .run(JSON.stringify(failureSummary), now, req.params.id) as { changes: number };
+      if (result.changes === 0) {
+        res.status(409).json({ error: 'Quest must be active to fail manually' });
+        return;
+      }
       const agent = findAgentByQuest(db, req.params.id);
       if (agent && agent.endedAt === null) {
         endAgent(db, agent.id, 1);
@@ -447,10 +453,6 @@ export function createQuestsRouter(
       const updated = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
       res.json(rowToApi(updated));
     } catch (err) {
-      if (err instanceof InvalidTransitionError) {
-        res.status(409).json({ error: err.message });
-        return;
-      }
       const msg = err instanceof Error ? err.message : String(err);
       process.stderr.write(`[quests] POST /quests/:id/fail failed: ${msg}\n`);
       res.status(500).json({ error: 'Failed to fail quest' });
@@ -473,9 +475,15 @@ export function createQuestsRouter(
     });
     try {
       const now = new Date().toISOString();
-      db.prepare('UPDATE quests SET failure_summary_json = ?, updated_at = ? WHERE id = ?')
-        .run(JSON.stringify(failureSummary), now, req.params.id);
-      transitionQuestStatus(db, req.params.id, 'active', 'failed');
+      const result = db
+        .prepare(
+          "UPDATE quests SET status = 'failed', failure_summary_json = ?, updated_at = ? WHERE id = ? AND status = 'active'",
+        )
+        .run(JSON.stringify(failureSummary), now, req.params.id) as { changes: number };
+      if (result.changes === 0) {
+        res.status(409).json({ error: 'Only active quests can be cancelled' });
+        return;
+      }
       const agent = findAgentByQuest(db, req.params.id);
       if (agent && agent.endedAt === null) {
         endAgent(db, agent.id, null);
@@ -487,10 +495,6 @@ export function createQuestsRouter(
       const updated = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
       res.json(rowToApi(updated));
     } catch (err) {
-      if (err instanceof InvalidTransitionError) {
-        res.status(409).json({ error: err.message });
-        return;
-      }
       const msg = err instanceof Error ? err.message : String(err);
       process.stderr.write(`[quests] POST /quests/:id/cancel failed: ${msg}\n`);
       res.status(500).json({ error: 'Failed to cancel quest' });

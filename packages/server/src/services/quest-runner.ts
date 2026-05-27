@@ -5,8 +5,6 @@ import { createAgent, endAgent } from './agents-service';
 import { getQuestAdapter } from '../agents/select-adapter';
 import { transitionQuestStatus, InvalidTransitionError } from './quest-status';
 
-const COMBAT_LOG_MAX_CHARS = 5000;
-
 export interface RunQuestDeps {
   db: Database.Database;
   publishEvent?: (questId: string, event: AgentEvent) => void;
@@ -57,14 +55,9 @@ export async function runQuest(
   activeHandles.set(quest.id, handle);
 
   const done = (async () => {
-    let combatLog = '';
     try {
       for await (const event of handle.events()) {
         publishEvent?.(quest.id, event);
-        const entry = JSON.stringify(event) + '\n';
-        if (combatLog.length + entry.length <= COMBAT_LOG_MAX_CHARS) {
-          combatLog += entry;
-        }
         if (event.type === 'completed') {
           try {
             transitionQuestStatus(db, quest.id, 'active', 'complete');
@@ -80,20 +73,35 @@ export async function runQuest(
             recommendation: 'repost_with_clarification' as const,
           };
           const ts = new Date().toISOString();
-          db.prepare('UPDATE quests SET failure_summary_json = ?, updated_at = ? WHERE id = ?')
-            .run(JSON.stringify(failureSummary), ts, quest.id);
-          try {
-            transitionQuestStatus(db, quest.id, 'active', 'failed');
-          } catch (err) {
-            if (!(err instanceof InvalidTransitionError)) throw err;
+          const result = db
+            .prepare(
+              "UPDATE quests SET status = 'failed', failure_summary_json = ?, updated_at = ? WHERE id = ? AND status = 'active'",
+            )
+            .run(JSON.stringify(failureSummary), ts, quest.id) as { changes: number };
+          if (result.changes > 0) {
+            endAgent(db, agent.id, 1);
           }
-          endAgent(db, agent.id, 1);
           return;
         }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       process.stderr.write(`[quest-runner] event loop error for quest ${quest.id}: ${msg}\n`);
+      try {
+        const failureSummary = { reason: `Adventurer's stream broke: ${msg}`, recommendation: 'retry' as const };
+        const ts = new Date().toISOString();
+        const result = db
+          .prepare(
+            "UPDATE quests SET status = 'failed', failure_summary_json = ?, updated_at = ? WHERE id = ? AND status = 'active'",
+          )
+          .run(JSON.stringify(failureSummary), ts, quest.id) as { changes: number };
+        if (result.changes > 0) {
+          endAgent(db, agent.id, null);
+          publishEvent?.(quest.id, { type: 'failed', timestamp: ts, reason: msg });
+        }
+      } catch {
+        // DB unavailable (e.g. shutdown in progress); original error already logged above
+      }
     } finally {
       activeHandles.delete(quest.id);
     }
