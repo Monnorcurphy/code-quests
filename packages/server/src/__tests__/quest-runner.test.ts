@@ -11,7 +11,7 @@ import type { AgentEvent } from '@code-quests/shared';
 import { QuestSchema, AdventurerSchema } from '@code-quests/shared';
 import { openDb } from '../db/connection';
 import { runMigrations } from '../db/migrator';
-import { runQuest } from '../services/quest-runner';
+import { runQuest, PROGRESS_EVENTS_PER_SCENE } from '../services/quest-runner';
 import { getQuestAdapter } from '../agents/select-adapter';
 import { offlineAdapter } from '../agents/offline-adapter';
 
@@ -338,5 +338,179 @@ describe('runQuest error recovery (bug regression)', () => {
     const summary = JSON.parse(row.failure_summary_json) as { recommendation: string; reason: string };
     expect(summary.recommendation).toBe('retire');
     expect(summary.reason).toBe('User cancelled');
+  });
+});
+
+describe('runQuest scene progression heuristic', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    runMigrations(db);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    db.close();
+  });
+
+  it(`emits scene_change after every ${PROGRESS_EVENTS_PER_SCENE} progress events`, async () => {
+    insertAdventurer(db, 'adv-heuristic');
+    insertQuest(db, 'q-heuristic', 'adv-heuristic');
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-progress',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            // Emit exactly PROGRESS_EVENTS_PER_SCENE progress events to trigger one scene_change
+            for (let i = 0; i < PROGRESS_EVENTS_PER_SCENE; i++) {
+              yield { type: 'progress', timestamp: ts, message: `Step ${i + 1}` };
+            }
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-heuristic');
+    const adventurer = parseAdventurer(db, 'adv-heuristic');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const publishedEvents = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    const sceneChangeEvents = publishedEvents.filter((e) => e.type === 'scene_change');
+
+    // First scene_change from the heuristic (3 progress events → forest→cave)
+    const firstHeuristicChange = sceneChangeEvents[0];
+    expect(firstHeuristicChange).toBeDefined();
+    expect(firstHeuristicChange.type).toBe('scene_change');
+    if (firstHeuristicChange.type === 'scene_change') {
+      expect(firstHeuristicChange.from).toBe('quest-forest');
+      expect(firstHeuristicChange.to).toBe('quest-cave');
+    }
+  });
+
+  it('does not emit scene_change before the Nth progress event', async () => {
+    insertAdventurer(db, 'adv-nodelay');
+    insertQuest(db, 'q-nodelay', 'adv-nodelay');
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-early',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            // Only 2 progress events — not enough to trigger heuristic (N=3)
+            yield { type: 'progress', timestamp: ts, message: 'Step 1' };
+            yield { type: 'progress', timestamp: ts, message: 'Step 2' };
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-nodelay');
+    const adventurer = parseAdventurer(db, 'adv-nodelay');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const publishedEvents = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    // Heuristic did NOT fire (only 2 progress events, need 3)
+    const heuristicSceneChanges = publishedEvents.filter(
+      (e) => e.type === 'scene_change' &&
+             publishedEvents.findIndex((x) => x === e) <
+             publishedEvents.findIndex((x) => x.type === 'completed'),
+    );
+    expect(heuristicSceneChanges).toHaveLength(0);
+  });
+
+  it('advances to quest-boss-room on completed event regardless of current scene', async () => {
+    insertAdventurer(db, 'adv-complete');
+    insertQuest(db, 'q-complete', 'adv-complete'); // starts at quest-forest
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-complete',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            // Only 1 progress event — stays at forest (not enough for heuristic)
+            yield { type: 'progress', timestamp: new Date().toISOString(), message: 'Starting' };
+            yield { type: 'completed', timestamp: new Date().toISOString() };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-complete');
+    const adventurer = parseAdventurer(db, 'adv-complete');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    // DB state must be boss-room
+    const questRow = db.prepare('SELECT current_scene FROM quests WHERE id = ?').get('q-complete') as {
+      current_scene: string;
+    };
+    expect(questRow.current_scene).toBe('quest-boss-room');
+
+    // scene_change events must have been emitted
+    const publishedEvents = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    const sceneChangeEvents = publishedEvents.filter((e) => e.type === 'scene_change');
+    expect(sceneChangeEvents.length).toBeGreaterThan(0);
+
+    // Last scene_change must end at boss-room
+    const last = sceneChangeEvents[sceneChangeEvents.length - 1];
+    if (last.type === 'scene_change') {
+      expect(last.to).toBe('quest-boss-room');
+    }
+  });
+
+  it('does not double-emit scene_change when already at boss-room on completed', async () => {
+    insertAdventurer(db, 'adv-atboss');
+    // Insert quest already at boss-room
+    insertQuest(db, 'q-atboss', 'adv-atboss');
+    db.prepare("UPDATE quests SET current_scene = 'quest-boss-room' WHERE id = ?").run('q-atboss');
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-atboss',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            yield { type: 'completed', timestamp: new Date().toISOString() };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-atboss');
+    const adventurer = parseAdventurer(db, 'adv-atboss');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const publishedEvents = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    const sceneChangeEvents = publishedEvents.filter((e) => e.type === 'scene_change');
+    // Already at boss-room — no scene_change needed
+    expect(sceneChangeEvents).toHaveLength(0);
   });
 });

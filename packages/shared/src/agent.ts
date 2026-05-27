@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { QuestStatusSchema } from './quest';
+import { QuestStatusSchema, QuestSceneKeySchema } from './quest';
 
 export const AgentSchema = z.object({
   id: z.string().min(1),
@@ -45,6 +45,12 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
     type: z.literal('failed'),
     timestamp: z.string(),
     reason: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('scene_change'),
+    timestamp: z.string(),
+    from: QuestSceneKeySchema,
+    to: QuestSceneKeySchema,
   }),
 ]);
 

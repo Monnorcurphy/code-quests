@@ -2,6 +2,15 @@ import { z } from 'zod';
 import { EquipmentSchema } from './equipment';
 import { SpecAuditSchema } from './spec-audit';
 
+export const QuestSceneKeySchema = z.enum([
+  'quest-forest',
+  'quest-cave',
+  'quest-dungeon',
+  'quest-boss-room',
+]);
+
+export type QuestSceneKey = z.infer<typeof QuestSceneKeySchema>;
+
 export const FailureSummaryRecommendationSchema = z.enum([
   'retry',
   'repost_with_clarification',
@@ -45,6 +54,7 @@ export const QuestSchema = z.object({
   equipment: EquipmentSchema.default({ skillIds: [], toolIds: [], mcpServerIds: [] }),
   specAudit: SpecAuditSchema.nullable().default(null),
   failureSummary: FailureSummarySchema.nullable().default(null),
+  currentScene: QuestSceneKeySchema.default('quest-forest'),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
