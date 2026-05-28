@@ -15,7 +15,7 @@ import {
   MonsterSchema,
   MonsterEncounterSchema,
 } from '@code-quests/shared';
-import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter } from '@code-quests/shared';
+import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope } from '@code-quests/shared';
 
 const ReturnedAgentSchema = z.object({
   id: z.string(),
@@ -222,7 +222,7 @@ export const api = {
   monsters: {
     listTypes: (): Promise<MonsterType[]> =>
       fetchJson(z.array(MonsterTypeSchema), '/monster-types'),
-    list: (opts?: { scope?: string; typeId?: string }): Promise<Monster[]> => {
+    list: (opts?: { scope?: MonsterScope; typeId?: string }): Promise<Monster[]> => {
       const params = new URLSearchParams();
       if (opts?.scope !== undefined) params.set('scope', opts.scope);
       if (opts?.typeId !== undefined) params.set('typeId', opts.typeId);
