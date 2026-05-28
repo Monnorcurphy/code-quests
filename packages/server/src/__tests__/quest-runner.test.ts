@@ -1178,3 +1178,124 @@ describe('runQuest paused_input / resumed handling', () => {
     expect(['failed', 'paused_input']).toContain(row.status);
   });
 });
+
+describe('runQuest adventure framing integration', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    runMigrations(db);
+    vi.mocked(getQuestAdapter).mockReturnValue(offlineAdapter);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    db.close();
+  });
+
+  it('publishes a follow-up paused_input event with adventureFraming after framing completes', async () => {
+    insertAdventurer(db, 'adv-frame');
+    insertQuest(db, 'q-frame', 'adv-frame');
+
+    const quest = parseQuest(db, 'q-frame');
+    const adventurer = parseAdventurer(db, 'adv-frame');
+
+    let resolveFramingReceived!: () => void;
+    const framingReceived = new Promise<void>((res) => { resolveFramingReceived = res; });
+    let capturedFraming: string | undefined;
+    let capturedDbJson: string | null = null;
+
+    const { done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input') {
+          if (event.adventureFraming) {
+            // Follow-up event with framing — capture data, then respond so quest can proceed
+            capturedFraming = event.adventureFraming;
+            const row = db.prepare('SELECT input_request_json FROM quests WHERE id = ?').get(questId) as {
+              input_request_json: string | null;
+            };
+            capturedDbJson = row.input_request_json;
+            resolveFramingReceived();
+            void getActiveHandle(questId)?.respond('test response');
+          }
+          // Do NOT respond on the first paused_input (no framing) — wait for framing first
+        }
+      },
+    });
+
+    await Promise.all([done, framingReceived]);
+
+    // Framing event was published
+    expect(capturedFraming).toBeDefined();
+    // Fallback framing contains adventurer name
+    expect(capturedFraming).toContain('Hero adv-frame');
+    // DB was updated with adventureFraming at the time the event was published
+    expect(capturedDbJson).not.toBeNull();
+    const parsed = JSON.parse(capturedDbJson!) as { adventureFraming?: string };
+    expect(parsed.adventureFraming).toBe(capturedFraming);
+  });
+
+  it('first paused_input event has no adventureFraming (non-blocking)', async () => {
+    insertAdventurer(db, 'adv-frame-nb');
+    insertQuest(db, 'q-frame-nb', 'adv-frame-nb');
+
+    const quest = parseQuest(db, 'q-frame-nb');
+    const adventurer = parseAdventurer(db, 'adv-frame-nb');
+
+    let firstPausedInputHadFraming = true;
+
+    const { done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input' && !event.adventureFraming) {
+          firstPausedInputHadFraming = false;
+          void getActiveHandle(questId)?.respond('test response');
+        }
+      },
+    });
+
+    await done;
+
+    // The immediate paused_input event must NOT have adventureFraming
+    expect(firstPausedInputHadFraming).toBe(false);
+  });
+
+  it('does not publish framing event or corrupt DB when agent responds before framing resolves', async () => {
+    insertAdventurer(db, 'adv-frame-race');
+    insertQuest(db, 'q-frame-race', 'adv-frame-race');
+
+    const quest = parseQuest(db, 'q-frame-race');
+    const adventurer = parseAdventurer(db, 'adv-frame-race');
+
+    let spuriousFramingAfterResumed = false;
+    let resumedSeen = false;
+
+    const { done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input' && !event.adventureFraming) {
+          // Respond immediately — simulate the race: user answers before framing resolves
+          void getActiveHandle(questId)?.respond('fast response');
+        }
+        if (event.type === 'resumed') {
+          resumedSeen = true;
+        }
+        if (event.type === 'paused_input' && event.adventureFraming && resumedSeen) {
+          // Framing event published AFTER resumed — this is the stale-write bug
+          spuriousFramingAfterResumed = true;
+        }
+      },
+    });
+
+    await done;
+
+    // No spurious framing event published after resumed
+    expect(spuriousFramingAfterResumed).toBe(false);
+    // DB must be NULL — cleared by resumed and NOT overwritten by stale framing
+    const row = db.prepare('SELECT input_request_json FROM quests WHERE id = ?').get('q-frame-race') as {
+      input_request_json: string | null;
+    };
+    expect(row.input_request_json).toBeNull();
+  });
+});

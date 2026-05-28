@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import type { AgentEvent, Quest, Adventurer, Agent } from '@code-quests/shared';
+import type { AgentEvent, Quest, Adventurer, Agent, InputRequest } from '@code-quests/shared';
 import type { AgentHandle } from '../agents/adapter';
 import { createAgent, endAgent } from './agents-service';
 import { getQuestAdapter } from '../agents/select-adapter';
@@ -8,6 +8,7 @@ import { advanceQuestScene } from './quest-scene-progression';
 import { classifyCombatEvent, recordEncounter, resolveEncounter } from './monster-detection';
 import { getMonsterType } from './monster-types';
 import { setInputRequest, clearInputRequest } from '../db/quest-repository';
+import { frameInputRequest } from './adventure-framing';
 
 export const PROGRESS_EVENTS_PER_SCENE = 3;
 export const LICH_REPEAT_THRESHOLD = 3;
@@ -104,6 +105,51 @@ export async function runQuest(
           collectedEvents.push(event);
           publishEvent?.(quest.id, event);
           persistEvents();
+
+          // Async framing — non-blocking. Parchment modal renders raw question immediately;
+          // framing follow-up event updates it once the haiku call completes.
+          const capturedEvent = event;
+          void (async () => {
+            try {
+              const adventureFraming = await frameInputRequest(
+                capturedEvent.question,
+                adventurer.name,
+                capturedEvent.context,
+              );
+              // Gate: discard framing if the quest already moved past paused_input.
+              // Re-read the DB so we don't overwrite NULL (cleared by resumed) or a new cycle.
+              const currentRow = db
+                .prepare('SELECT input_request_json FROM quests WHERE id = ?')
+                .get(quest.id) as { input_request_json: string | null } | undefined;
+              if (!currentRow?.input_request_json) return;
+              const currentRequest = JSON.parse(currentRow.input_request_json) as { awaitingSince?: string };
+              if (currentRequest.awaitingSince !== capturedEvent.timestamp) return;
+
+              const updatedRequest: InputRequest = {
+                question: capturedEvent.question,
+                context: capturedEvent.context,
+                awaitingSince: capturedEvent.timestamp,
+                adventureFraming,
+              };
+              setInputRequest(db, quest.id, updatedRequest);
+              const framingEvent: AgentEvent = {
+                type: 'paused_input',
+                timestamp: new Date().toISOString(),
+                question: capturedEvent.question,
+                context: capturedEvent.context,
+                adventureFraming,
+              };
+              collectedEvents.push(framingEvent);
+              persistEvents();
+              publishEvent?.(quest.id, framingEvent);
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              process.stderr.write(
+                `[quest-runner] framing update error for quest ${quest.id}: ${msg}\n`,
+              );
+            }
+          })();
+
           continue;
         }
 
