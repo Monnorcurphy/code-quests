@@ -139,8 +139,7 @@ export function PausedInputModal({ questId }: PausedInputModalProps) {
 
           <p
             id="paused-input-body"
-            role="status"
-            aria-live="assertive"
+            role="alert"
             aria-atomic="true"
             style={{
               margin: '0 0 20px',

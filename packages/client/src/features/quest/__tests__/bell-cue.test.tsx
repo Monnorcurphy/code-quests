@@ -40,4 +40,19 @@ describe('BellCue', () => {
     rerender(<BellCue questId="q-1" />);
     expect(screen.getByText(/bell rings.*attention needed/i)).toBeDefined();
   });
+
+  it('remounts announcement span on second bell event while component stays visible', () => {
+    const { rerender } = render(<BellCue questId="q-1" />);
+    act(() => { useQuestStore.getState().setStatus('q-1', 'paused_input'); });
+    rerender(<BellCue questId="q-1" />);
+    const first = screen.getByText(/bell rings.*attention needed/i);
+
+    act(() => { useQuestStore.getState().setStatus('q-1', 'user_blocked'); });
+    rerender(<BellCue questId="q-1" />);
+    act(() => { useQuestStore.getState().setStatus('q-1', 'paused_input'); });
+    rerender(<BellCue questId="q-1" />);
+    const second = screen.getByText(/bell rings.*attention needed/i);
+
+    expect(first).not.toBe(second);
+  });
 });

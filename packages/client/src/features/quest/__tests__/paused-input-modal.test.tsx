@@ -97,13 +97,13 @@ describe('PausedInputModal', () => {
     expect(screen.queryByText(SAMPLE_REQUEST_WITH_FRAMING.question)).toBeNull();
   });
 
-  it('has aria-modal=true and aria-live=assertive on body', () => {
+  it('has aria-modal=true and body uses role=alert', () => {
     setInputState(SAMPLE_REQUEST);
     renderModal();
     const dialog = screen.getByRole('dialog');
     expect(dialog.getAttribute('aria-modal')).toBe('true');
-    const body = screen.getByRole('status');
-    expect(body.getAttribute('aria-live')).toBe('assertive');
+    const body = screen.getByRole('alert');
+    expect(body.textContent).toContain(SAMPLE_REQUEST.question);
   });
 
   it('disables Send reply button when textarea is empty', () => {
@@ -139,8 +139,7 @@ describe('PausedInputModal', () => {
     renderModal();
     await user.type(screen.getByLabelText(/your reply/i), 'My reply');
     await user.click(screen.getByRole('button', { name: /send reply/i }));
-    await waitFor(() => expect(screen.getByRole('alert')).toBeDefined());
-    expect(screen.getByText('Request failed')).toBeDefined();
+    await waitFor(() => expect(screen.getByText('Request failed')).toBeDefined());
   });
 
   it('shows loading state while submitting', async () => {

@@ -29,13 +29,13 @@ export function useBellEvent(questId: string, callback: BellEventCallback): void
 
 export function BellCue({ questId }: BellCueProps) {
   const [ringing, setRinging] = useState(false);
-  const [announce, setAnnounce] = useState(false);
+  const [eventCount, setEventCount] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const status = useQuestStore((s) => s.statusByQuest[questId]);
   const visible = status !== undefined && PAUSED_STATUSES.has(status);
 
   const onBell = useCallback(() => {
-    setAnnounce(false);
+    setEventCount((c) => c + 1);
     if (!reducedMotion) {
       setRinging(true);
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -44,7 +44,6 @@ export function BellCue({ questId }: BellCueProps) {
         timerRef.current = null;
       }, 2000);
     }
-    setAnnounce(true);
   }, []);
 
   useBellEvent(questId, onBell);
@@ -86,8 +85,9 @@ export function BellCue({ questId }: BellCueProps) {
           <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6V11c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
         </svg>
       </div>
-      {announce && (
+      {eventCount > 0 && (
         <span
+          key={eventCount}
           role="status"
           aria-live="assertive"
           aria-atomic="true"
