@@ -27,6 +27,10 @@ function formatEvent(event: AgentEvent): { icon: string; text: string } {
       return { icon: '👾', text: `${event.monsterName} appeared!` };
     case 'monster_resolved':
       return { icon: '⚔', text: `Encounter ${event.outcome}.` };
+    case 'paused_input':
+      return { icon: '⏸', text: `Awaiting input: ${event.question}` };
+    case 'resumed':
+      return { icon: '▶', text: `Resumed (${event.source === 'input_response' ? 'input received' : 'user unblocked'})` };
   }
 }
 
