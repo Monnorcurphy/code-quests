@@ -5,6 +5,9 @@ import { useEncounterStore } from '../../stores/encounter-store';
 import CombatLog from './combat-log';
 import ReturnToTownButton from './return-to-town-button';
 import { BlockControls } from './block-controls';
+import { PausedInputModal } from './paused-input-modal';
+import { UserBlockedModal } from './user-blocked-modal';
+import { BellCue } from './bell-cue';
 import type { Quest } from '@code-quests/shared';
 import type { ConnectionStatus } from '../../lib/quest-socket';
 
@@ -263,6 +266,13 @@ export default function HUDOverlay({
       >
         <CombatLog questId={questId} />
       </div>
+
+      {/* Bell cue — attention signal for paused_input / user_blocked */}
+      <BellCue questId={questId} />
+
+      {/* Parchment modals — self-show based on store state */}
+      <PausedInputModal questId={questId} />
+      <UserBlockedModal questId={questId} />
     </div>
   );
 }
