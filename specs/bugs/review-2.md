@@ -1,48 +1,20 @@
-# BUG: onClick={onCancelRef.current} — unnecessary ref indirection for click handler
-
+# BUG: duplicate horizontal-rule separator in CREDITS.md
 **Severity:** LOW
-**File(s):** `packages/client/src/features/guild/recruit-modal.tsx`
+**File(s):** assets/CREDITS.md
 
 ## Problem
+The Phase 6 addition introduces two consecutive `---` separators (existing line 165 plus a new one at line 167) with only a blank line between them, before the `## Phase 6 — Monster Sprites` heading. Rendered, this produces a doubled horizontal rule that does not appear anywhere else in the document.
 
-The Cancel button uses `onClick={onCancelRef.current}` instead of `onClick={onCancel}`:
-
-```tsx
-<button type="button" onClick={onCancelRef.current} disabled={disabled}>
-  Cancel
-</button>
 ```
-
-The `onCancelRef` pattern (store callback in ref, sync in layoutless effect) is necessary for the auto-dismiss `setTimeout` callback, because that runs outside the render cycle and would capture a stale closure. DOM event handlers do not have this problem — React updates them on every render, so `onClick={onCancel}` always calls the latest value of `onCancel`.
-
-Using `onCancelRef.current` here:
-- Reads the ref value at render time (same timing as reading the prop directly)
-- Adds complexity without adding correctness
+---           <- end of previous Kenney 1-Bit Pack section
+              <- blank line (added)
+---           <- duplicate, added by this task
+              <- blank line (added)
+## Phase 6 — Monster Sprites
+```
 
 ## Expected
-
-Click handlers should reference props directly. Refs are the right tool for callbacks invoked asynchronously (timers, subscriptions) — not for synchronous event handlers.
+A single `---` separator between sections, consistent with the pattern used elsewhere in CREDITS.md (e.g. lines 149, 165, 194 each stand alone).
 
 ## Fix
-
-```tsx
-// Before
-<button type="button" onClick={onCancelRef.current} disabled={disabled}>
-
-// After
-<button type="button" onClick={onCancel} disabled={disabled}>
-```
-
-After this change, `onCancelRef` is no longer needed at all. Remove it along with the effect that syncs it:
-
-```tsx
-// Remove:
-const onCancelRef = useRef(onCancel);
-
-useEffect(() => {
-  onSuccessRef.current = onSuccess;
-  onCancelRef.current = onCancel;  // remove this line (or remove the whole effect if onSuccess still uses ref)
-});
-```
-
-`onSuccessRef` still needs to be kept — it is used inside the `setTimeout` auto-dismiss, which IS an async callback that requires the ref pattern.
+Delete the redundant `---` block added on or around line 167 of `assets/CREDITS.md` so only the pre-existing separator on line 165 remains between the previous section and `## Phase 6 — Monster Sprites`.
