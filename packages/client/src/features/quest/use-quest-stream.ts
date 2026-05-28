@@ -40,6 +40,10 @@ export function useQuestStream(questId: string): QuestStreamResult {
           store.setStatus(questId, event.to);
         }
 
+        if (event.type === 'monster_appeared') {
+          void queryClientRef.current.invalidateQueries({ queryKey: ['monsters'] });
+        }
+
         if (event.type === 'completed') {
           store.setStatus(questId, 'complete');
           void queryClientRef.current.invalidateQueries({ queryKey: ['quest', questId] });
