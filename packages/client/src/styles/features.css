@@ -616,6 +616,45 @@
   min-width: 2rem;
 }
 
+.settings-switch {
+  padding: 0.25rem 0.75rem;
+  border: 2px solid var(--color-stone-border);
+  border-radius: 4px;
+  background: var(--color-parchment);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-width: 3.5rem;
+  flex-shrink: 0;
+}
+
+.settings-switch--on {
+  background: var(--color-banner-red);
+  color: #fff;
+  border-color: var(--color-banner-red-dark);
+}
+
+.settings-switch:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.settings-volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.settings-volume-label {
+  min-width: 2.75rem;
+  text-align: right;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
 /* Armory loadout panel */
 .armory-panel {
   max-width: 800px;
