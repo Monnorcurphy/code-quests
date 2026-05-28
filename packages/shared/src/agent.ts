@@ -52,6 +52,22 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
     from: QuestSceneKeySchema,
     to: QuestSceneKeySchema,
   }),
+  z.object({
+    type: z.literal('monster_appeared'),
+    timestamp: z.string(),
+    encounterId: z.string(),
+    monsterId: z.string(),
+    monsterName: z.string(),
+    monsterTypeId: z.string(),
+    spritePath: z.string(),
+    difficulty: z.number().int().min(1).max(5),
+  }),
+  z.object({
+    type: z.literal('monster_resolved'),
+    timestamp: z.string(),
+    encounterId: z.string(),
+    outcome: z.enum(['victory', 'defeat', 'escape']),
+  }),
 ]);
 
 export type AgentEvent = z.infer<typeof AgentEventSchema>;
