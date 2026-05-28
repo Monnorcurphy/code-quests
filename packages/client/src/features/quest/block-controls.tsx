@@ -21,7 +21,8 @@ export function BlockControls({ questId, status }: BlockControlsProps) {
     setUnblockError(null);
     try {
       await api.quests.unblock(questId);
-      setUnblockLoading(false);
+      // Do not clear unblockLoading — keep "Resuming…" until the WebSocket
+      // status_change to 'active' unmounts this branch.
     } catch (err) {
       if (err instanceof ApiError && (err.status === 409 || err.status === 410)) {
         setUnblockError('The agent is no longer running this quest');
@@ -32,6 +33,8 @@ export function BlockControls({ questId, status }: BlockControlsProps) {
       setUnblockLoading(false);
     }
   }, [questId, queryClient]);
+
+  const handleDialogClose = useCallback(() => setDialogOpen(false), []);
 
   if (status !== 'active' && status !== 'paused_input' && status !== 'user_blocked') {
     return null;
@@ -98,7 +101,7 @@ export function BlockControls({ questId, status }: BlockControlsProps) {
         <SeekCounselDialog
           questId={questId}
           triggerRef={seekCounselBtnRef}
-          onClose={() => setDialogOpen(false)}
+          onClose={handleDialogClose}
         />
       )}
     </>

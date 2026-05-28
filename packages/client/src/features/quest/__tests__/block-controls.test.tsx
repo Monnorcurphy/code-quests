@@ -171,15 +171,18 @@ describe('BlockControls — unblock button', () => {
     expect(btn.disabled).toBe(false);
   });
 
-  it('clears loading state after successful unblock', async () => {
+  it('keeps Resuming… visible after API resolves (waits for WebSocket status_change)', async () => {
     const user = userEvent.setup();
     mockUnblock.mockResolvedValueOnce({});
     renderControls('user_blocked');
     await user.click(screen.getByRole('button', { name: /unblock/i }));
     await waitFor(() => {
-      const btn = screen.queryByRole('button', { name: /resuming/i });
-      expect(btn).toBeNull();
+      expect(mockUnblock).toHaveBeenCalledOnce();
     });
+    // "Resuming…" must persist — loading only clears when WS status_change unmounts this branch
+    const btn = screen.queryByRole('button', { name: /resuming/i }) as HTMLButtonElement | null;
+    expect(btn).not.toBeNull();
+    expect(btn!.disabled).toBe(true);
   });
 });
 

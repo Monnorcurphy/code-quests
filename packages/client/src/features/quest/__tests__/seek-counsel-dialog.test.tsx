@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef } from 'react';
+import { createRef, useRef } from 'react';
 import { SeekCounselDialog } from '../seek-counsel-dialog';
 import { ApiError } from '../../../lib/api';
 
@@ -153,6 +153,43 @@ describe('SeekCounselDialog', () => {
     await user.click(screen.getByRole('button', { name: /mark blocked/i }));
     await waitFor(() => expect(screen.getByRole('alert')).toBeDefined());
     expect(screen.getByText('Failed to mark blocked. Try again.')).toBeDefined();
+  });
+
+  it('focus trap: Tab from Mark blocked wraps focus to textarea', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByLabelText(/what are you waiting on/i), 'waiting');
+    const markBlockedBtn = screen.getByRole('button', { name: /mark blocked/i });
+    markBlockedBtn.focus();
+    expect(document.activeElement).toBe(markBlockedBtn);
+    await user.keyboard('{Tab}');
+    expect(document.activeElement).toBe(screen.getByLabelText(/what are you waiting on/i));
+  });
+
+  it('focus trap: Shift+Tab from textarea wraps focus to Mark blocked', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByLabelText(/what are you waiting on/i), 'waiting');
+    const textarea = screen.getByLabelText(/what are you waiting on/i);
+    textarea.focus();
+    expect(document.activeElement).toBe(textarea);
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /mark blocked/i }));
+  });
+
+  it('returns focus to trigger element when dialog unmounts', () => {
+    function WithTrigger({ show }: { show: boolean }) {
+      const triggerRef = useRef<HTMLButtonElement>(null);
+      return (
+        <>
+          <button ref={triggerRef} type="button">Seek counsel</button>
+          {show && <SeekCounselDialog questId="q-1" triggerRef={triggerRef} onClose={() => {}} />}
+        </>
+      );
+    }
+    const { rerender } = render(<WithTrigger show={true} />);
+    rerender(<WithTrigger show={false} />);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /seek counsel/i }));
   });
 
   it('re-enables submit after an error', async () => {

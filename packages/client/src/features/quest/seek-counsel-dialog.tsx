@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '../../lib/api';
 
 interface SeekCounselDialogProps {
@@ -47,6 +47,10 @@ export function SeekCounselDialog({ questId, triggerRef, onClose }: SeekCounselD
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) onClose();
+  }, [onClose]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!description.trim()) return;
@@ -74,9 +78,7 @@ export function SeekCounselDialog({ questId, triggerRef, onClose }: SeekCounselD
         zIndex: 50,
         pointerEvents: 'auto',
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onClick={handleBackdropClick}
     >
       <div
         ref={dialogRef}
