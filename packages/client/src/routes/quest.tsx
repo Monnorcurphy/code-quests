@@ -10,9 +10,44 @@ import type { QuestSceneKey } from '@code-quests/shared';
 
 const PhaserMount = lazy(() => import('../game/phaser-mount'));
 
+function EmptyState({ is404 }: { is404: boolean }) {
+  const navigate = useNavigate();
+  return (
+    <main
+      style={{
+        width: '100vw',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '16px',
+      }}
+      aria-live="polite"
+    >
+      <p className="text-gray-700">
+        {is404
+          ? 'Quest not found — return to town'
+          : 'Could not load quest. Make sure the server is running.'}
+      </p>
+      <button
+        onClick={() => navigate('/town/town-square')}
+        className="text-gray-700"
+        style={{
+          padding: '8px 16px',
+          border: '1px solid currentColor',
+          borderRadius: '4px',
+          cursor: 'pointer',
+        }}
+      >
+        Return to Town
+      </button>
+    </main>
+  );
+}
+
 export default function QuestRoute() {
   const { questId } = useParams<{ questId: string }>();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [advanceError, setAdvanceError] = useState<string | null>(null);
@@ -56,10 +91,6 @@ export default function QuestRoute() {
     return sceneRouter.onSceneAdvance(handleSceneAdvance);
   }, [handleSceneAdvance]);
 
-  const handleReturnToTown = useCallback(() => {
-    navigate('/town/town-square');
-  }, [navigate]);
-
   if (isLoading) {
     return (
       <main
@@ -80,38 +111,7 @@ export default function QuestRoute() {
 
   const is404 = error instanceof ApiError && error.status === 404;
   if (isError || !quest) {
-    return (
-      <main
-        style={{
-          width: '100vw',
-          height: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '16px',
-        }}
-        aria-live="polite"
-      >
-        <p className="text-gray-700">
-          {is404
-            ? 'Quest not found — return to town'
-            : 'Could not load quest. Make sure the server is running.'}
-        </p>
-        <button
-          onClick={() => navigate('/town/town-square')}
-          className="text-gray-700"
-          style={{
-            padding: '8px 16px',
-            border: '1px solid currentColor',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
-        >
-          Return to Town
-        </button>
-      </main>
-    );
+    return <EmptyState is404={is404} />;
   }
 
   return (
@@ -119,7 +119,6 @@ export default function QuestRoute() {
       <HUDOverlay
         quest={quest}
         questId={questId!}
-        onReturnToTown={handleReturnToTown}
         advanceLoading={advanceMutation.isPending}
         advanceError={advanceError}
         connectionStatus={connectionStatus}
