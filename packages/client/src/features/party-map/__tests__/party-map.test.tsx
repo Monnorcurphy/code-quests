@@ -248,4 +248,26 @@ describe('PartyMap', () => {
       expect(screen.getByText('Awaiting Input')).toBeDefined();
     });
   });
+
+  it('shows "⚔ Offline" in banner when the query errors', async () => {
+    vi.mocked(api.quests.active).mockRejectedValue(new Error('Network error'));
+    renderPartyMap();
+    await waitFor(() => {
+      expect(screen.getByText(/⚔ Offline/)).toBeDefined();
+    });
+  });
+
+  it('empty state shows navigate button when no active quests', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.quests.active).mockResolvedValue([]);
+    renderPartyMap();
+    await waitFor(() => expect(screen.getByText(/⚔ No quests/)).toBeDefined());
+    const banner = screen.getByRole('button', { name: /party map/i });
+    await user.click(banner);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /go to town square/i })).toBeDefined();
+    });
+    await user.click(screen.getByRole('button', { name: /go to town square/i }));
+    expect(mockNavigate).toHaveBeenCalledWith('/town/town-square');
+  });
 });

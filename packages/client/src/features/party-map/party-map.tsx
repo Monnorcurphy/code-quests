@@ -96,7 +96,7 @@ function QuestRow({
 export default function PartyMap() {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
-  const { entries, isLoading } = useActiveQuests();
+  const { entries, isLoading, error } = useActiveQuests();
 
   const count = entries.length;
 
@@ -120,13 +120,21 @@ export default function PartyMap() {
     [navigate],
   );
 
-  const bannerLabel = isLoading ? '⚔ …' : count === 0 ? '⚔ No quests' : `⚔ ${count} active`;
+  const bannerLabel = error
+    ? '⚔ Offline'
+    : isLoading
+      ? '⚔ …'
+      : count === 0
+        ? '⚔ No quests'
+        : `⚔ ${count} active`;
 
   return (
     <div
       data-testid="party-map"
-      style={{ position: 'fixed', top: '8px', right: '8px', zIndex: 20, pointerEvents: 'none' }}
+      role="complementary"
       aria-label="Party Map"
+      style={{ position: 'fixed', top: '8px', right: '8px', zIndex: 20, pointerEvents: 'none' }}
+      aria-busy={isLoading || undefined}
       onKeyDown={handleKeyDown}
     >
       <div style={{ pointerEvents: 'auto' }}>
@@ -142,7 +150,7 @@ export default function PartyMap() {
           }
           style={BANNER_STYLE}
         >
-          {bannerLabel}
+          <span aria-live="polite" aria-atomic="true">{bannerLabel}</span>
         </button>
 
         {expanded && (
@@ -153,16 +161,27 @@ export default function PartyMap() {
             style={LIST_STYLE}
           >
             {count === 0 ? (
-              <p
-                style={{
-                  padding: '12px',
-                  margin: 0,
-                  fontSize: '0.8rem',
-                  color: 'rgb(160, 140, 100)',
-                }}
-              >
-                No active quests — visit the War Room to start one.
-              </p>
+              <div style={{ padding: '12px' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgb(190, 165, 110)' }}>
+                  No active quests.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/town/town-square')}
+                  style={{
+                    marginTop: '8px',
+                    padding: '4px 8px',
+                    background: 'rgba(30, 20, 10, 0.8)',
+                    border: '1px solid rgba(200, 160, 80, 0.5)',
+                    borderRadius: '4px',
+                    color: 'rgb(220, 190, 120)',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                  }}
+                >
+                  Go to Town Square
+                </button>
+              </div>
             ) : (
               <ul aria-label="Active quest list" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {entries.slice(0, MAX_ROWS).map((entry) => (

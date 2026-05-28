@@ -9,8 +9,8 @@ export interface ActiveQuestEntry {
   status: QuestStatus;
 }
 
-export function useActiveQuests(): { entries: ActiveQuestEntry[]; isLoading: boolean } {
-  const { data, isLoading } = useQuery({
+export function useActiveQuests(): { entries: ActiveQuestEntry[]; isLoading: boolean; error: unknown } {
+  const { data, isLoading, error } = useQuery({
     queryKey: ['quests', 'active'],
     queryFn: api.quests.active,
     refetchInterval: 5_000,
@@ -27,5 +27,5 @@ export function useActiveQuests(): { entries: ActiveQuestEntry[]; isLoading: boo
     status: statusByQuest[quest.id] ?? quest.status,
   }));
 
-  return { entries, isLoading };
+  return { entries, isLoading, error };
 }
