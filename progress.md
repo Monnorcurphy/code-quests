@@ -1,17 +1,19 @@
 # Progress — Phase 7
 
-Previous task progress archived to metrics/progress-before-arctic-storm.md
+Previous task progress archived to metrics/progress-before-cloudburst.md
 
-## arctic-storm — Schemas + repository for InputRequest and UserBlocker
+## Task: cloudburst — Agent adapter pause/resume contract
 
 **Status:** Complete
 
-**What was done:**
-- Added `InputRequestSchema` and `UserBlockerSchema` to `packages/shared/src/quest.ts`
-- Extended `QuestSchema` with `inputRequest: InputRequestSchema.nullable().default(null)` and `userBlocker: UserBlockerSchema.nullable().default(null)`
-- Added `paused_input` (with `question: string.min(1)`, optional `context`) and `resumed` (with `source: 'input_response' | 'user_unblock'`) variants to `AgentEventSchema` in `packages/shared/src/agent.ts`
-- Exported all new types (`InputRequestSchema`, `UserBlockerSchema`, `InputRequest`, `UserBlocker`) from `packages/shared/src/index.ts`
-- Created `packages/server/src/db/quest-repository.ts` with `setInputRequest`, `clearInputRequest`, `setUserBlocker`, `getInputRequest`, `getUserBlocker` functions
-- Updated `QuestRow` type and `rowToApi` mapper in `packages/server/src/routes/quests.ts` to parse `input_request_json` and `user_blocker_json` columns
-- Updated all `Quest` test fixtures across server and client packages to include the new `inputRequest: null` and `userBlocker: null` fields
-- Tests: 83 shared + 314 server + 561 client all pass; lint and typecheck clean
+**What was built:**
+- `packages/server/src/agents/adapter.ts` — Added `respond(text: string): Promise<void>` to the `AgentHandle` interface
+- `packages/server/src/agents/offline-adapter.ts` — Rewrote to include scripted pause/resume flow: emits `paused_input` after first progress event, blocks until `respond()` is called, then emits `resumed` and continues. Exported `OFFLINE_PAUSE_QUESTION` constant. `cancel()` safely resolves the pause during shutdown.
+- `packages/server/src/agents/cc-adapter.ts` — Added `PAUSED_INPUT_MARKER` regex (`[[PAUSED_INPUT question="..." context="..."]]`), marker detection in stdout handler and close handler, `respond()` method that writes to stdin and emits `resumed` event. stdin kept open for the respond() protocol.
+- `packages/server/src/services/quest-runner.ts` — Imported `setInputRequest`/`clearInputRequest` from quest-repository; added handlers for `paused_input` (transition to paused_input status, set input_request_json, publish status_change + event, persist events) and `resumed` (transition back to active, clear input_request_json, publish).
+- New test: `offline-adapter-pause-resume.test.ts` — 4 tests covering full pause/resume cycle, cancel during pause, events after resumed.
+- Updated: `offline-adapter-spawn.test.ts` — Updated 5 tests to use `drainWithRespond` helper that calls `respond()` when paused_input is received.
+- Updated: `cc-adapter.test.ts` — Added 2 marker detection tests (with and without context field).
+- Updated: `quest-runner.test.ts` — Updated 3 existing offline-adapter tests to auto-respond during pause; added 3 new paused_input/resumed integration tests.
+
+**Tests:** 324 passed (0 failed). TypeScript strict: clean. ESLint: clean.
