@@ -568,3 +568,190 @@ describe('runQuest scene progression heuristic', () => {
     expect(sceneChangeEvents).toHaveLength(0);
   });
 });
+
+describe('runQuest combat/encounter integration', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    runMigrations(db);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    db.close();
+  });
+
+  it('publishes monster_appeared before combat and resolves all encounters as victory on completed', async () => {
+    insertAdventurer(db, 'adv-vic');
+    insertQuest(db, 'q-vic', 'adv-vic');
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-victory',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            yield { type: 'progress', timestamp: ts, message: 'Starting' };
+            yield { type: 'combat', timestamp: ts, message: 'lint error: no-console violation' };
+            yield { type: 'combat', timestamp: ts, message: 'typescript error: type mismatch' };
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-vic');
+    const adventurer = parseAdventurer(db, 'adv-vic');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const published = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    const types = published.map((e) => e.type);
+
+    // monster_appeared must precede its corresponding combat event
+    const firstAppearedIdx = types.indexOf('monster_appeared');
+    const firstCombatIdx = types.indexOf('combat');
+    expect(firstAppearedIdx).toBeGreaterThanOrEqual(0);
+    expect(firstAppearedIdx).toBeLessThan(firstCombatIdx);
+
+    // Two monster_appeared events (one per combat)
+    expect(published.filter((e) => e.type === 'monster_appeared')).toHaveLength(2);
+
+    // Two monster_resolved events, both victory, all published after completed
+    const resolvedEvents = published.filter((e) => e.type === 'monster_resolved');
+    expect(resolvedEvents).toHaveLength(2);
+    for (const e of resolvedEvents) {
+      if (e.type === 'monster_resolved') expect(e.outcome).toBe('victory');
+    }
+    const completedIdx = types.indexOf('completed');
+    const resolvedIndices = types.map((t, i) => (t === 'monster_resolved' ? i : -1)).filter((i) => i >= 0);
+    for (const idx of resolvedIndices) {
+      expect(idx).toBeGreaterThan(completedIdx);
+    }
+
+    // DB: both encounters have outcome victory
+    const encounters = db
+      .prepare("SELECT outcome FROM monster_encounters WHERE quest_id = ?")
+      .all('q-vic') as { outcome: string }[];
+    expect(encounters).toHaveLength(2);
+    for (const enc of encounters) {
+      expect(enc.outcome).toBe('victory');
+    }
+  });
+
+  it('resolves last encounter as defeat and earlier encounters as escape on failed', async () => {
+    insertAdventurer(db, 'adv-def');
+    insertQuest(db, 'q-def', 'adv-def');
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-defeat',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            yield { type: 'progress', timestamp: ts, message: 'Starting' };
+            yield { type: 'combat', timestamp: ts, message: 'lint error: no-console' };
+            yield { type: 'combat', timestamp: ts, message: 'typescript error: type error' };
+            yield { type: 'failed', timestamp: ts, reason: 'could not fix errors' };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 1 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-def');
+    const adventurer = parseAdventurer(db, 'adv-def');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const published = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    const types = published.map((e) => e.type);
+
+    // Two monster_resolved events published after the failed event
+    const resolvedEvents = published.filter((e) => e.type === 'monster_resolved');
+    expect(resolvedEvents).toHaveLength(2);
+
+    const failedIdx = types.indexOf('failed');
+    const resolvedIndices = types.map((t, i) => (t === 'monster_resolved' ? i : -1)).filter((i) => i >= 0);
+    for (const idx of resolvedIndices) {
+      expect(idx).toBeGreaterThan(failedIdx);
+    }
+
+    // First encounter: escape; last encounter: defeat
+    const [first, last] = resolvedEvents;
+    if (first.type === 'monster_resolved') expect(first.outcome).toBe('escape');
+    if (last.type === 'monster_resolved') expect(last.outcome).toBe('defeat');
+
+    // DB reflects the same outcome ordering
+    const encounters = db
+      .prepare("SELECT outcome FROM monster_encounters WHERE quest_id = ? ORDER BY appeared_at ASC")
+      .all('q-def') as { outcome: string }[];
+    expect(encounters).toHaveLength(2);
+    expect(encounters[0].outcome).toBe('escape');
+    expect(encounters[1].outcome).toBe('defeat');
+  });
+
+  it('clears pending encounters after resolution so a second quest run starts clean', async () => {
+    insertAdventurer(db, 'adv-clear');
+    insertQuest(db, 'q-clear-a', 'adv-clear');
+    insertQuest(db, 'q-clear-b', 'adv-clear');
+
+    const ts = new Date().toISOString();
+
+    // First quest: one combat then completed
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-clear-a',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            yield { type: 'combat', timestamp: ts, message: 'lint error' };
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const questA = parseQuest(db, 'q-clear-a');
+    const adventurer = parseAdventurer(db, 'adv-clear');
+    const { done: doneA } = await runQuest(questA, adventurer, { db });
+    await doneA;
+
+    // Second quest: no combat, just completed — should emit zero monster_resolved events
+    db.prepare("UPDATE quests SET status = 'active' WHERE id = ?").run('q-clear-b');
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-clear-b',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const questB = parseQuest(db, 'q-clear-b');
+    const spyB = vi.fn();
+    const { done: doneB } = await runQuest(questB, adventurer, { db, publishEvent: spyB });
+    await doneB;
+
+    const eventsB = spyB.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    expect(eventsB.filter((e) => e.type === 'monster_resolved')).toHaveLength(0);
+  });
+});
