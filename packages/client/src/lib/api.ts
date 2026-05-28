@@ -205,6 +205,10 @@ export const api = {
       postJson(QuestSchema, `/quests/${id}/cancel`, {}),
     advanceScene: (id: string, expectedFrom: QuestSceneKey) =>
       postJson(AdvanceSceneResponseSchema, `/quests/${id}/advance-scene`, { expectedFrom }),
+    block: (id: string, description: string) =>
+      postJson(QuestSchema, `/quests/${id}/block`, { description }),
+    unblock: (id: string) =>
+      postJson(QuestSchema, `/quests/${id}/unblock`, {}),
     returned: (opts?: { limit?: number; offset?: number }) =>
       fetchJson(
         ReturnedQuestsPageSchema,

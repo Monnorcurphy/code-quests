@@ -4,6 +4,7 @@ import { useQuestStore } from '../../stores/quest-store';
 import { useEncounterStore } from '../../stores/encounter-store';
 import CombatLog from './combat-log';
 import ReturnToTownButton from './return-to-town-button';
+import { BlockControls } from './block-controls';
 import type { Quest } from '@code-quests/shared';
 import type { ConnectionStatus } from '../../lib/quest-socket';
 
@@ -123,7 +124,10 @@ export default function HUDOverlay({
           </span>
         </div>
 
-        <ReturnToTownButton />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <BlockControls questId={questId} status={displayStatus} />
+          <ReturnToTownButton />
+        </div>
       </div>
 
       {/* Advance-scene / parse-error feedback strip */}
