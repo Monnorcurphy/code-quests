@@ -1,6 +1,7 @@
 import type { AudioBackend } from './backend';
 import type { AudioEvent } from './audio-events';
 import { LOOPING_EVENTS } from './audio-events';
+import { dispatchCue } from './audio-cue-bus';
 import type { QuestStatus } from '@code-quests/shared';
 import type { ActiveEncounter } from '../stores/encounter-store';
 import { isQuestSceneKey } from '../game/scene-registry';
@@ -126,6 +127,7 @@ export function createAudioController(deps: {
     );
     if (nowPausedOrBlocked && !prevPausedOrBlocked) {
       backend.play('PAUSE_BELL', { loop: false });
+      dispatchCue('PAUSE_BELL');
     }
     prevPausedOrBlocked = nowPausedOrBlocked;
 
@@ -134,6 +136,7 @@ export function createAudioController(deps: {
       const prev = prevEncounterOutcomeByQuest[qid] ?? 'none';
       if (enc?.outcome === 'victory' && prev !== 'victory') {
         backend.play('VICTORY_STINGER', { loop: false });
+        dispatchCue('VICTORY_STINGER');
       }
       prevEncounterOutcomeByQuest[qid] = enc?.outcome ?? 'none';
     }
@@ -143,8 +146,10 @@ export function createAudioController(deps: {
       const prev = prevStatusByQuest[qid];
       if (status === 'complete' && prev !== 'complete') {
         backend.play('QUEST_COMPLETE', { loop: false });
+        dispatchCue('QUEST_COMPLETE');
       } else if (status === 'failed' && prev !== 'failed') {
         backend.play('QUEST_FAILED', { loop: false });
+        dispatchCue('QUEST_FAILED');
       }
       prevStatusByQuest[qid] = status;
     }
@@ -155,6 +160,7 @@ export function createAudioController(deps: {
     if (loopEvent !== currentLoopEvent) {
       backend.play(loopEvent, { loop: LOOPING_EVENTS.has(loopEvent) });
       currentLoopEvent = loopEvent;
+      dispatchCue(loopEvent);
     }
   }
 
@@ -186,6 +192,7 @@ export function createAudioController(deps: {
       const loopEvent = deriveAudioEvent(snapshot);
       backend.play(loopEvent, { loop: LOOPING_EVENTS.has(loopEvent) });
       currentLoopEvent = loopEvent;
+      dispatchCue(loopEvent);
 
       // Subscribe to store changes.
       unsubs.push(deps.questStore.subscribe(onStateChange));

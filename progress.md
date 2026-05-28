@@ -1,17 +1,21 @@
 # Progress — Phase 8
 
-Previous task progress archived to metrics/progress-before-electra.md
+Previous task progress archived to metrics/progress-before-elnath.md
 
-## Task electra — Audio Settings UI
+## Task elnath — Visual cues: silent-mode parity for every audio event
 
-**Status:** Complete
+**Status:** Done
 
-**Deliverables:**
-- `packages/client/src/audio/audio-provider.tsx` — `AudioProvider` React component that picks `WebAudioBackend` or `SilentBackend` based on `silentMode`, syncs `muted`/`masterVolume` to the active backend, disposes old backend on swap, registers one-time autoplay unlock listeners. Exposes `AudioBackendContext` for consumers and tests.
-- `packages/client/src/components/audio-settings.tsx` — Three controls: Mute switch (`role="switch"`), Silent Mode switch (with helper text), Master Volume range slider (0–100 display, 0–1 store, `aria-valuetext`).
-- `packages/client/src/components/__tests__/audio-settings.test.tsx` — 19 tests covering render, store interaction, aria attributes, keyboard nav, persistence round-trip, and backend swap (provider test with mocked constructors).
-- Updated `packages/client/src/components/settings-button.tsx` — `<AudioSettings />` added inside `SettingsPanel`.
-- Updated `packages/client/src/main.tsx` — app wrapped with `<AudioProvider>`.
-- Added `.settings-switch`, `.settings-switch--on`, `.settings-volume-wrap`, `.settings-volume-label` CSS classes to `features.css`.
+**What was built:**
+- `audio/audio-cue-bus.ts` — pub-sub singleton; `dispatchCue(event)` / `subscribeCue(listener)` used by controller and components
+- `audio-controller.ts` updated — calls `dispatchCue` for every event it plays (loop + one-shot)
+- `audio/visual-cues/scene-mood-indicator.tsx` — fixed bottom-left badge showing current loop mood (Town · Calm / On the Road / In Combat / Boss Fight); animates on change, instant swap under `prefers-reduced-motion`
+- `audio/visual-cues/pause-bell-flash.tsx` — parchment-gold screen-edge overlay on PAUSE_BELL; 300ms animated fade-out without reduced motion; 1500ms static ring with reduced motion
+- `audio/visual-cues/stinger-toast.tsx` — top-center banner for VICTORY_STINGER / QUEST_COMPLETE (auto-dismiss 3s) and QUEST_FAILED (persists, manual dismiss button)
+- `audio/visual-cues/aria-announcer.tsx` — `aria-live="polite"` sr-only region; every AudioEvent maps to a human-readable announcement
+- `audio/visual-cues/__tests__/visual-cues.test.tsx` — 38 tests covering all 8 events, prefers-reduced-motion, fake-timer auto-dismiss, QUEST_FAILED persistence, and dismiss button
+- `lib/use-reduced-motion.ts` — shared hook reading `matchMedia` + `data-reduced-motion` attribute
+- `components/app-shell.tsx` — wired all 4 components so they render on every route
+- `styles/features.css` — CSS for scene-mood-indicator, pause-bell-flash, and stinger-toast with `prefers-reduced-motion` opt-out
 
-**Verification:** 766/766 tests pass, zero lint errors, zero type errors.
+**Tests:** 818 passed (55 files). Typecheck: clean. Lint: clean.
