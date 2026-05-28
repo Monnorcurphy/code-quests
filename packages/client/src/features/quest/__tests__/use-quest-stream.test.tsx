@@ -461,48 +461,19 @@ describe('useQuestStream', () => {
   // status_change → user_blocked
   // ---------------------------------------------------------------------------
 
-  it('refetches quest and sets userBlocker on status_change to user_blocked', async () => {
-    const blocker = {
-      rawDescription: 'Waiting for access credentials',
-      markedAt: '2024-01-01T12:00:00.000Z',
-    };
-    mockQuestGet.mockResolvedValue({
-      id: 'q1',
-      status: 'user_blocked',
-      userBlocker: blocker,
-      inputRequest: null,
-      title: 'Test Quest',
-      description: '',
-      acceptanceCriteria: [],
-      edgeCases: [],
-      context: '',
-      epicId: null,
-      adventurerId: null,
-      agentId: null,
-      equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
-      specAudit: null,
-      failureSummary: null,
-      currentScene: 'quest-forest',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-
+  it('invalidates quest query on status_change to user_blocked', () => {
     renderHook(() => useQuestStream('q1'));
 
-    await act(async () => {
+    act(() => {
       mockConnects[0].onEvent({
         type: 'status_change',
         timestamp: new Date().toISOString(),
         from: 'active',
         to: 'user_blocked',
       });
-      // Let promises settle
-      await Promise.resolve();
-      await Promise.resolve();
     });
 
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['quest', 'q1'] });
-    expect(useQuestStore.getState().userBlockerByQuest['q1']).toEqual(blocker);
   });
 
   it('sets status in store on status_change to user_blocked', () => {

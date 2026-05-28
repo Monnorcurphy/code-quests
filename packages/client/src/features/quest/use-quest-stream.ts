@@ -107,13 +107,6 @@ export function useQuestStream(questId: string): QuestStreamResult {
 
           if (event.to === 'user_blocked') {
             void queryClientRef.current.invalidateQueries({ queryKey: ['quest', questId] });
-            void api.quests.get(questId).then((quest) => {
-              if (quest.userBlocker) {
-                useQuestStore.getState().setUserBlocker(questId, quest.userBlocker);
-              }
-            }).catch(() => {
-              // Best-effort — silently ignore API errors during user_blocked hydration
-            });
           } else if (event.to === 'active') {
             store.clearInputRequest(questId);
             store.clearUserBlocker(questId);

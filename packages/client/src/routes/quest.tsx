@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import HUDOverlay from '../features/quest/hud-overlay';
 import { useQuestStream } from '../features/quest/use-quest-stream';
 import { sceneRouter } from '../game/scene-router';
+import { useQuestStore } from '../stores/quest-store';
 import { api, ApiError } from '../lib/api';
 import type { SceneKey } from '../game/scene-registry';
 import type { QuestSceneKey } from '@code-quests/shared';
@@ -90,6 +91,22 @@ export default function QuestRoute() {
   useEffect(() => {
     return sceneRouter.onSceneAdvance(handleSceneAdvance);
   }, [handleSceneAdvance]);
+
+  useEffect(() => {
+    if (!quest || !questId) return;
+    const store = useQuestStore.getState();
+    store.setStatus(questId, quest.status);
+    if (quest.inputRequest) {
+      store.setInputRequest(questId, quest.inputRequest);
+    } else {
+      store.clearInputRequest(questId);
+    }
+    if (quest.userBlocker) {
+      store.setUserBlocker(questId, quest.userBlocker);
+    } else {
+      store.clearUserBlocker(questId);
+    }
+  }, [quest, questId]);
 
   if (isLoading) {
     return (

@@ -153,16 +153,10 @@ describe('QuestForestScene', () => {
   });
 
   it('create() uses fade duration 0 when prefers-reduced-motion is set', () => {
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: vi.fn().mockReturnValue({ matches: true }),
-    });
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
     scene.create();
     expect(scene.cameras.main.fadeIn).toHaveBeenCalledWith(0);
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: undefined,
-    });
+    vi.unstubAllGlobals();
   });
 
   it('reaching right edge emits requestSceneAdvance to quest-cave', () => {
@@ -349,6 +343,7 @@ describe('BaseQuestScene freeze behavior', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     // Clean up the store subscription registered by scene.create()
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
     (scene as any)._unsubscribeStore?.();
@@ -411,34 +406,36 @@ describe('BaseQuestScene freeze behavior', () => {
     expect(scene.tweens.pauseAll.mock.calls.length).toBe(callCount);
   });
 
+  it('does not move player when update fires during freeze', () => {
+    scene.create();
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    const beforeX = scene.player.getX();
+    scene.update(0, 16);
+    expect(scene.player.getX()).toBe(beforeX);
+  });
+
+  it('does not trigger scene advance when player is at edge during freeze', () => {
+    scene.create();
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    scene.player.setX(2320);
+    scene.update(0, 16);
+    expect(sceneRouter.requestSceneAdvance).not.toHaveBeenCalled();
+  });
+
   it('reduced-motion: sets canvas opacity to 0.7 on freeze instead of overlay', () => {
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: vi.fn().mockReturnValue({ matches: true }),
-    });
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
     scene.create();
     useQuestStore.getState().setStatus('q1', 'paused_input');
     expect(canvasStyle.opacity).toBe('0.7');
     // No dim overlay created in reduced-motion mode
     expect(scene._dimOverlay).toBeNull();
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: undefined,
-    });
   });
 
   it('reduced-motion: restores canvas opacity to 1 on resume', () => {
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: vi.fn().mockReturnValue({ matches: true }),
-    });
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
     scene.create();
     useQuestStore.getState().setStatus('q1', 'paused_input');
     useQuestStore.getState().setStatus('q1', 'active');
     expect(canvasStyle.opacity).toBe('1');
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: undefined,
-    });
   });
 });

@@ -159,6 +159,7 @@ export abstract class BaseQuestScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     this._delta = delta;
+    if (this._frozen) return;
     this.controller.update();
 
     const next = this.nextSceneKey;
