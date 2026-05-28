@@ -164,6 +164,35 @@ Only CC0 and CC-BY assets are permitted (no CC-NC or commercial-license art).
 
 ---
 
+---
+
+## Phase 6 — Monster Sprites
+
+### Kenney 1-Bit Pack — monster glyphs
+
+| Field | Value |
+|-------|-------|
+| **Pack** | 1-Bit Pack |
+| **Creator** | Kenney (kenney.nl) |
+| **Version** | 1.0 |
+| **License** | CC0 1.0 Universal (public domain) |
+| **Source** | https://kenney.nl/assets/1-bit-pack |
+| **Attribution required** | No |
+
+**Files:**
+- `monsters/goblin.png` — Goblin sprite (difficulty 1, lint errors)
+- `monsters/imp.png` — Imp sprite (difficulty 2, type errors)
+- `monsters/wraith.png` — Wraith sprite (difficulty 3, flaky tests)
+- `monsters/ogre.png` — Ogre sprite (difficulty 3, failing tests)
+- `monsters/hydra.png` — Hydra sprite (difficulty 4, AC mismatches)
+- `monsters/mimic.png` — Mimic sprite (difficulty 4, silent failures)
+- `monsters/wizard.png` — Wizard sprite (difficulty 3, env/dep errors)
+- `monsters/troll.png` — Troll sprite (difficulty 4, build failures)
+- `monsters/lich.png` — Lich sprite (difficulty 5, repeated failures)
+- `monsters/dragon.png` — Dragon sprite (difficulty 5, epic obstacles)
+
+---
+
 ## Notes
 
 - Assets marked CC0 require no attribution but are acknowledged here for provenance.

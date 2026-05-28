@@ -1,21 +1,17 @@
-# Progress — Phase 5
+# Progress — Phase 6
 
-Previous task progress archived to metrics/progress-before-greatsword.md
+Previous task progress archived to metrics/progress-before-andrea-doria.md
 
-## greatsword — Phase 5 Capstone (DONE)
+## Task: andrea-doria — Built-in monster types + sprites + seed migration
 
-**Goal:** Make Phase 5 demo-able by a human — wire quest dispatch into quest scene navigation, add Enter Quest / Watch Quest affordances, E2E test, test-only server emit endpoint, seed extension, README update.
+**Status:** Complete
 
 **What was done:**
-- Extracted `return-to-town-button.tsx` from HUD overlay; reads `useTownStore` to preserve last visited town scene
-- Added "Enter Quest" button to `quest-board.tsx` for active quests (navigates to `/quest/:questId`)
-- Added "Watch Quest" button to `war-room.tsx` — enabled for active quests, disabled with "Dispatch first" tooltip for idle
-- Extended `seed-dev.ts` with NODE_ENV production guard and Phase 5 demo quest ("Cave Expedition", status=active, quest-cave scene) with a live agent record
-- Created `routes/test-emit.ts` — POST `/test/emit-quest-event` endpoint, mounted only when `NODE_ENV=test`
-- Mounted test-emit route in `index.ts` behind `NODE_ENV === 'test'` guard
-- Updated `playwright.config.ts` to set `NODE_ENV=test` for server webServer
-- Created `phase-5-capstone.spec.ts` — 6 E2E tests: full walkthrough, two a11y scans (axe-core), test-emit endpoint, Enter Quest button, Watch Quest button
-- Added Phase 5 section + walkthrough to README.md; updated phase roadmap table
-- Fixed `quest-board.test.tsx` to wrap `QuestBoard` in `MemoryRouter` (required after adding `useNavigate`)
+- Created `packages/server/src/db/migrations/006_monster_types_seed.sql` — INSERT OR IGNORE for all 10 built-in monster types with correct names, sprite paths, default difficulties, and failure signature patterns.
+- Created `packages/server/src/services/monster-types.ts` — exports `BUILTIN_MONSTER_TYPE_IDS`, `MONSTER_PROJECT_ID = 'local'`, `getMonsterType()` (returns undefined for unknown IDs), and `listMonsterTypes()`.
+- Generated 10 CC0-stub monster sprite PNGs (48×48 RGB, 4.6–5.9 KB each) under `assets/monsters/` (served via the existing `packages/client/public/assets → assets/` symlink): goblin, imp, wraith, ogre, hydra, mimic, wizard, troll, lich, dragon.
+- Updated `assets/CREDITS.md` with Phase 6 Monster Sprites section (Kenney 1-Bit Pack, CC0).
+- Created `packages/server/src/db/__tests__/seed-monster-types.test.ts` — 6 tests verifying all 10 IDs seeded with correct difficulty, non-empty sprite paths, failure signatures, `created_by='system'`, and idempotency.
+- Created `packages/server/src/services/__tests__/monster-types.test.ts` — 10 tests verifying `BUILTIN_MONSTER_TYPE_IDS` matches DB, `getMonsterType` returns correct data and undefined for unknown IDs, `listMonsterTypes` returns all 10 ordered by difficulty.
 
-**Verification:** `pnpm typecheck` ✓, `pnpm lint` ✓, `pnpm test` 426/426 ✓
+**Verify:** All 251 server tests pass. ESLint and tsc both clean.
