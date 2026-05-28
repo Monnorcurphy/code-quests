@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '../lib/use-focus-trap';
+import { AudioSettings } from './audio-settings';
 
 const STORAGE_KEY = 'code-quests:reduced-motion';
 
@@ -71,6 +72,7 @@ function SettingsPanel({ onClose }: SettingsPanelProps) {
             </span>
           </label>
         </div>
+        <AudioSettings />
         <div className="form-actions">
           <button ref={closeRef} className="btn-secondary" onClick={onClose}>
             Close

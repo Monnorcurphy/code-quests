@@ -6,6 +6,7 @@ import App from './app';
 import AppShell from './components/app-shell';
 import { queryClient } from './lib/query-client';
 import { applyReducedMotionPreference } from './components/settings-button';
+import { AudioProvider } from './audio/audio-provider';
 import './styles/global.css';
 import './styles/features.css';
 
@@ -18,9 +19,11 @@ createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AppShell>
-          <App />
-        </AppShell>
+        <AudioProvider>
+          <AppShell>
+            <App />
+          </AppShell>
+        </AudioProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,
