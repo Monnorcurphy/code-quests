@@ -107,6 +107,41 @@ describe('WebAudioBackend', () => {
       const roadGain = mockCtx.createdGains[2];
       expect(roadGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.5, expect.any(Number));
     });
+
+    it('same-event replay stops the first source instead of leaking it', async () => {
+      await backend.preload(['TOWN']);
+
+      backend.play('TOWN', { loop: true });
+      const firstSource = mockCtx.createdSources[0];
+
+      backend.play('TOWN', { loop: true });
+
+      expect(firstSource.stop).toHaveBeenCalled();
+    });
+
+    it('A→B→A within crossfade window does not silence the new A via stale ended listener', async () => {
+      await backend.preload(['TOWN', 'ROAD']);
+
+      backend.play('TOWN', { loop: true }); // T1
+      const t1Src = mockCtx.createdSources[0];
+
+      backend.play('ROAD', { loop: true }); // T1 fades out, R1 starts
+
+      backend.play('TOWN', { loop: true }); // R1 fades out, T2 starts
+      // masterGain=gains[0], T1_gain=gains[1], R1_gain=gains[2], T2_gain=gains[3]
+      const t2Gain = mockCtx.createdGains[3];
+
+      // Simulate all 'ended' callbacks on T1 firing (the ghost from the first TOWN play)
+      const endedCalls = (t1Src.addEventListener as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (c: unknown[]) => c[0] === 'ended',
+      );
+      for (const call of endedCalls) {
+        (call[1] as () => void)();
+      }
+
+      // T2's gain must NOT have been disconnected — the live track must keep playing
+      expect(t2Gain.disconnect).not.toHaveBeenCalled();
+    });
   });
 
   describe('play — one-shot', () => {

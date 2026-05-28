@@ -74,18 +74,38 @@ export class WebAudioBackend implements AudioBackend {
     const now = ctx.currentTime;
     const crossfadeEnd = now + CROSSFADE_DURATION;
 
+    // Handle same-event re-entrant: fade out and clean up the existing instance before replacing
+    const existingSource = this.loopingSources.get(event);
+    const existingGain = this.loopingGains.get(event);
+    if (existingSource && existingGain) {
+      existingGain.gain.linearRampToValueAtTime(0, crossfadeEnd);
+      try {
+        existingSource.stop(crossfadeEnd);
+      } catch {
+        // already scheduled to stop
+      }
+      existingSource.addEventListener('ended', () => {
+        existingGain.disconnect();
+        if (this.loopingGains.get(event) === existingGain) this.loopingGains.delete(event);
+        if (this.loopingSources.get(event) === existingSource) this.loopingSources.delete(event);
+      });
+    }
+
+    // Fade out the previously active (different) event; capture refs to avoid stale-closure bugs
     if (this.activeLoopedEvent && this.activeLoopedEvent !== event) {
       const prevGain = this.loopingGains.get(this.activeLoopedEvent);
-      prevGain?.gain.linearRampToValueAtTime(0, crossfadeEnd);
-
       const prevSource = this.loopingSources.get(this.activeLoopedEvent);
-      prevSource?.stop(crossfadeEnd);
-
+      prevGain?.gain.linearRampToValueAtTime(0, crossfadeEnd);
+      try {
+        prevSource?.stop(crossfadeEnd);
+      } catch {
+        // already scheduled to stop
+      }
       const prevEvent = this.activeLoopedEvent;
       prevSource?.addEventListener('ended', () => {
-        this.loopingGains.get(prevEvent)?.disconnect();
-        this.loopingGains.delete(prevEvent);
-        this.loopingSources.delete(prevEvent);
+        prevGain?.disconnect();
+        if (this.loopingGains.get(prevEvent) === prevGain) this.loopingGains.delete(prevEvent);
+        if (this.loopingSources.get(prevEvent) === prevSource) this.loopingSources.delete(prevEvent);
       });
     }
 
