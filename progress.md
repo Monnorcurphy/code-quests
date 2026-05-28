@@ -1,24 +1,13 @@
-# Progress — Phase 7
+# Progress — Phase 8
 
-Previous task progress archived to metrics/progress-before-gustnado.md
+Previous task progress archived to metrics/progress-before-achernar.md
 
-## Task: gustnado (Capstone — parchment modal, bell, E2E integration)
+## Task achernar — AudioBackend interface + AudioEvent types
 
-**Status:** Complete
-
-**Deliverables:**
-- `packages/client/src/features/quest/paused-input-modal.tsx` — parchment modal for PAUSED_INPUT state; focus trap, aria-modal, aria-live, cancel quest button, respond-input call
-- `packages/client/src/features/quest/user-blocked-modal.tsx` — parchment modal for USER_BLOCKED state; unblock button, edit description link
-- `packages/client/src/features/quest/bell-cue.tsx` — bell SVG overlay with CSS ring animation, prefers-reduced-motion support, `useBellEvent` hook for Phase 8 audio
-- `packages/client/src/features/quest/hud-overlay.tsx` — wired in BellCue, PausedInputModal, UserBlockedModal
-- `packages/client/src/features/quest/seek-counsel-dialog.tsx` — added `initialDescription` prop for edit-description flow
-- `packages/client/src/lib/api.ts` — added `respondInput` endpoint
-- `packages/client/src/styles/features.css` — parchment CSS tokens + bell-ring keyframe animation
-- `packages/client/tests/e2e/paused-input-flow.spec.ts` — Playwright E2E covering paused_input and user_blocked flows with axe-core zero-violations assertions
-- `packages/client/src/features/quest/__tests__/bell-cue.test.tsx` — 5 unit tests
-- `packages/client/src/features/quest/__tests__/paused-input-modal.test.tsx` — 11 unit tests
-- `packages/client/src/features/quest/__tests__/user-blocked-modal.test.tsx` — 10 unit tests
-- `packages/client/src/features/quest/__tests__/hud-overlay-encounter.test.tsx` — fixed mock to include new store fields
-- `specs/done/phase-7-walkthrough.md` — step-by-step demo script with screenshots guidance
-
-**Test results:** 655 client tests + 374 server tests, all passing. TypeCheck clean. Lint clean.
+- Created `packages/client/src/audio/audio-events.ts` — `AudioEvent` union type, `LOOPING_EVENTS`, `ONE_SHOT_EVENTS` sets
+- Created `packages/client/src/audio/backend.ts` — `AudioBackend` interface (strict TypeScript, no `any`)
+- Created `packages/client/src/audio/silent-backend.ts` — no-op `SilentBackend` class recording all calls into `calls[]`
+- Created `packages/client/src/stores/audio-store.ts` — Zustand store with persist middleware; persists `muted`, `silentMode`, `masterVolume` to localStorage under `code-quests.audio`; defaults: muted=false, silentMode=false, masterVolume=0.7
+- Created `packages/client/src/audio/__tests__/silent-backend.test.ts` — 12 tests, all passing
+- Created `packages/client/src/stores/__tests__/audio-store.test.ts` — 15 tests, all passing (includes localStorage persistence + rehydration)
+- All 50 test files pass; typecheck and lint clean
