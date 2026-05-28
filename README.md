@@ -261,6 +261,38 @@ After the replay completes, open the Bestiary to see the freshly created monster
 - **Monster detail**: type, scope, difficulty stars, encounter history with quest titles
 - **Nemesis modal**: confirm or rename before promoting; success auto-dismisses after 4 seconds
 
+## Phase 8 — Audio
+
+Phase 8 adds the full **audio layer** to Code Quests — ambient chiptune music that reacts to quest state, one-shot stingers for key moments, and full silent-mode parity so every sound has a visual equivalent.
+
+### What's new in Phase 8
+
+- **Town theme** plays on the town screen; **Road theme** plays when on a quest route; **Combat theme** and **Boss theme** respond to monster encounters
+- **Pause Bell** rings (and flashes the screen edge) when the agent needs user input (`PAUSED_INPUT` / `USER_BLOCKED`)
+- **One-shot stingers**: Victory flourish on monster defeat, fanfare on quest complete, sombre stinger on failure
+- **Scene Mood Indicator** (bottom-left corner) shows the current audio mood in text — visible even with sound off
+- **Stinger toasts** announce each audio event as a dismissable banner
+- **Mute toggle** — silences output but keeps audio playing; unmute resumes mid-track
+- **Silent Mode** — swaps to a no-op backend; every cue remains visible via the mood indicator and toasts
+- **Master Volume** slider (0–100%) with live label
+- **Credits screen** (Settings → Credits) — lists every audio file with author and license
+
+### Audio controls (Settings → ⚙)
+
+| Control | What it does |
+|---|---|
+| **Mute** | Silences playback; toggle off to resume mid-track |
+| **Silent Mode** | Disables all audio, activates visual-only cues |
+| **Master Volume** | 0–100% volume slider |
+
+All three settings persist across reloads (localStorage, key `code-quests.audio`).
+
+### Troubleshooting audio
+
+- **No sound on first load**: browsers block autoplay until the user interacts with the page. Click anywhere or press any key to unlock audio.
+- **Strict CSP blocking audio**: if your environment has a Content-Security-Policy that restricts `media-src`, the Web Audio `fetch()` calls will fail silently. Enable Silent Mode or relax `media-src` to allow `self`.
+- **Placeholder audio files**: Phase 8 ships with self-generated placeholder tones. Swap in real CC0/CC-BY tracks by replacing files under `packages/client/public/audio/` — no code changes required (the manifest in `packages/client/src/audio/asset-manifest.ts` is the single source of truth for paths).
+
 ## Phase roadmap
 
 | Phase | Status | Content |
@@ -271,5 +303,7 @@ After the replay completes, open the Bestiary to see the freshly created monster
 | 4 | Done | Agent subprocess adapter, WebSocket stream, Hall of Returns |
 | 5 | Done | Quest scenes, scene progression, Party Map, quest HUD |
 | 6 | Done | Monster system, Bestiary, Lich aggregator, Nemesis promotion |
+| 7 | Done | PAUSED_INPUT modal, user-blocked flow, Pause Bell |
+| 8 | Done | Audio layer — ambient themes, stingers, silent mode, credits |
 | 9 | Future | Re-post / Retire buttons, feedback loop |
 | 10 | Future | Skills learning loop; user-defined MonsterTypes |

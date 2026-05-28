@@ -1,24 +1,20 @@
-# Progress — Phase 7
+# Progress — Phase 8
 
-Previous task progress archived to metrics/progress-before-gustnado.md
+Previous task progress archived to metrics/progress-before-gacrux.md
 
-## Task: gustnado (Capstone — parchment modal, bell, E2E integration)
+## gacrux — Audio capstone (2026-05-28)
 
-**Status:** Complete
+**Status:** Done
 
-**Deliverables:**
-- `packages/client/src/features/quest/paused-input-modal.tsx` — parchment modal for PAUSED_INPUT state; focus trap, aria-modal, aria-live, cancel quest button, respond-input call
-- `packages/client/src/features/quest/user-blocked-modal.tsx` — parchment modal for USER_BLOCKED state; unblock button, edit description link
-- `packages/client/src/features/quest/bell-cue.tsx` — bell SVG overlay with CSS ring animation, prefers-reduced-motion support, `useBellEvent` hook for Phase 8 audio
-- `packages/client/src/features/quest/hud-overlay.tsx` — wired in BellCue, PausedInputModal, UserBlockedModal
-- `packages/client/src/features/quest/seek-counsel-dialog.tsx` — added `initialDescription` prop for edit-description flow
-- `packages/client/src/lib/api.ts` — added `respondInput` endpoint
-- `packages/client/src/styles/features.css` — parchment CSS tokens + bell-ring keyframe animation
-- `packages/client/tests/e2e/paused-input-flow.spec.ts` — Playwright E2E covering paused_input and user_blocked flows with axe-core zero-violations assertions
-- `packages/client/src/features/quest/__tests__/bell-cue.test.tsx` — 5 unit tests
-- `packages/client/src/features/quest/__tests__/paused-input-modal.test.tsx` — 11 unit tests
-- `packages/client/src/features/quest/__tests__/user-blocked-modal.test.tsx` — 10 unit tests
-- `packages/client/src/features/quest/__tests__/hud-overlay-encounter.test.tsx` — fixed mock to include new store fields
-- `specs/done/phase-7-walkthrough.md` — step-by-step demo script with screenshots guidance
+**What was built:**
+- `packages/client/src/audio/audio-controller-mount.tsx` — React component that wires `createAudioController` to the active `AudioBackend` from context. Includes a `makeSceneBridge` adapter that detects `/quest/` routes and synthesizes a quest scene key for the audio controller's scene store, enabling ROAD audio on quest routes.
+- `packages/client/src/audio/credits-data.ts` — Hand-mirrored audio credits constants (mirrors `assets/CREDITS.md` Phase 8 section).
+- `packages/client/src/features/credits.tsx` — Credits screen component with a table of all 8 audio files (file, author, license). Reachable from Settings → Credits button.
+- `packages/client/src/app.tsx` — Updated to mount `<AudioControllerMount />` so the controller runs for all routes.
+- `packages/client/src/components/settings-button.tsx` — Added Credits button and sub-panel to the settings modal.
+- `packages/client/src/audio/audio-cue-bus.ts` — Added `window.__audioLog__` test hook (appends dispatched events for E2E inspection).
+- `packages/client/tests/e2e/phase-8-audio-capstone.spec.ts` — Playwright E2E: boot, mood indicator, quest route audio transition, settings controls, credits screen, a11y on all surfaces.
+- `README.md` — Added Phase 8 Audio section with controls reference, troubleshooting, and updated phase roadmap.
+- `specs/done/phase-8-walkthrough.md` — Human walkthrough (8 sections from boot to credits).
 
-**Test results:** 655 client tests + 374 server tests, all passing. TypeCheck clean. Lint clean.
+**Verification:** `pnpm typecheck` ✓ | `pnpm lint` ✓ | `pnpm test` 820/820 ✓ | `pnpm build` ✓
