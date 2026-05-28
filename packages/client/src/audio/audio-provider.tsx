@@ -22,11 +22,32 @@ export function AudioProvider({ children }: AudioProviderProps) {
   const backendRef = useRef<AudioBackend | null>(null);
   backendRef.current = backend;
 
-  // Create a new backend when silentMode changes; dispose the old one on cleanup
+  // Create a new backend when silentMode changes; preload all events before exposing it.
+  // Disposing on cleanup cancels the pending setBackend so controllers don't start on a dead backend.
   useEffect(() => {
     const b: AudioBackend = silentMode ? new SilentBackend() : new WebAudioBackend();
-    setBackend(b);
+    let cancelled = false;
+    void b
+      .preload([
+        'TOWN',
+        'ROAD',
+        'COMBAT',
+        'BOSS',
+        'VICTORY_STINGER',
+        'QUEST_COMPLETE',
+        'QUEST_FAILED',
+        'PAUSE_BELL',
+      ])
+      .then(() => {
+        if (!cancelled) {
+          setBackend(b);
+          if (import.meta.env.DEV && typeof window !== 'undefined') {
+            (window as unknown as Record<string, unknown>).__audioBackend__ = b;
+          }
+        }
+      });
     return () => {
+      cancelled = true;
       b.dispose();
     };
   }, [silentMode]);
@@ -35,6 +56,11 @@ export function AudioProvider({ children }: AudioProviderProps) {
   useEffect(() => {
     if (!backend) return;
     backend.setMuted(muted);
+    if (import.meta.env.DEV && typeof window !== 'undefined') {
+      const w = window as unknown as Record<string, unknown>;
+      if (!Array.isArray(w.__setMutedCalls__)) w.__setMutedCalls__ = [];
+      (w.__setMutedCalls__ as boolean[]).push(muted);
+    }
   }, [backend, muted]);
 
   // Sync master volume whenever backend or masterVolume changes
