@@ -705,10 +705,10 @@ export function createQuestsRouter(
             // Gate: discard framing if the quest moved past user_blocked (e.g. user unblocked).
             const currentBlocker = getUserBlocker(db, req.params.id);
             if (!currentBlocker || currentBlocker.markedAt !== capturedNow) return;
+            if (currentBlocker.unblockedAt) return;
             setUserBlocker(db, req.params.id, {
-              rawDescription: capturedDescription,
+              ...currentBlocker,
               adventureFraming,
-              markedAt: capturedNow,
             });
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);

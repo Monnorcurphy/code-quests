@@ -6,6 +6,11 @@ vi.mock('../agents/select-adapter', () => ({
   getAuditAdapter: vi.fn(),
 }));
 
+vi.mock('../services/adventure-framing', () => ({
+  frameUserBlocker: vi.fn().mockResolvedValue('The adventurer awaits.'),
+  frameInputRequest: vi.fn().mockResolvedValue('A vision appears.'),
+}));
+
 import request from 'supertest';
 import express from 'express';
 import type { AgentEvent } from '@code-quests/shared';
@@ -18,6 +23,7 @@ import { errorHandler } from '../middleware/errors';
 import { runQuest } from '../services/quest-runner';
 import { getQuestAdapter } from '../agents/select-adapter';
 import { offlineAdapter } from '../agents/offline-adapter';
+import { frameUserBlocker } from '../services/adventure-framing';
 
 function makeApp(db: Database.Database, getChannel?: () => { publishQuestEvent: (questId: string, event: AgentEvent) => void } | undefined) {
   const app = express();
@@ -495,7 +501,6 @@ describe('POST /quests/:id/unblock', () => {
   it('full block → unblock cycle: quest completes after unblock respawns the agent', async () => {
     insertAdventurer(db, 'adv-full-cycle');
     insertQuest(db, 'q-full-cycle', 'adv-full-cycle', 'active');
-    const markedAt = new Date().toISOString();
 
     const app = makeApp(db);
 
@@ -537,7 +542,62 @@ describe('POST /quests/:id/unblock', () => {
     const blocker = JSON.parse(questRow.user_blocker_json) as { markedAt: string; unblockedAt?: string };
     expect(blocker.markedAt).toBeTruthy();
     expect(blocker.unblockedAt).toBeTruthy();
+  });
 
-    void markedAt; // suppress unused warning
+  it('framing writeback does not overwrite unblockedAt from a concurrent unblock', async () => {
+    insertAdventurer(db, 'adv-blk-race');
+    insertQuest(db, 'q-blk-race', 'adv-blk-race', 'active');
+
+    let resolveFraming!: (value: string) => void;
+    const framingPromise = new Promise<string>((resolve) => { resolveFraming = resolve; });
+    vi.mocked(frameUserBlocker).mockReturnValueOnce(framingPromise);
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-race',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            yield { type: 'completed', timestamp: new Date().toISOString() };
+          },
+          async cancel() {},
+          async respond() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const app = makeApp(db);
+
+    // Block the quest — framing is now in flight (deferred)
+    const blockRes = await request(app)
+      .post('/quests/q-blk-race/block')
+      .send({ description: 'Awaiting security review' });
+    expect(blockRes.status).toBe(200);
+
+    // Unblock before framing resolves — sets unblockedAt
+    const unblockRes = await request(app).post('/quests/q-blk-race/unblock');
+    expect(unblockRes.status).toBe(200);
+
+    const rowAfterUnblock = db.prepare('SELECT user_blocker_json FROM quests WHERE id = ?').get('q-blk-race') as {
+      user_blocker_json: string;
+    };
+    const blockerAfterUnblock = JSON.parse(rowAfterUnblock.user_blocker_json) as { unblockedAt?: string };
+    expect(blockerAfterUnblock.unblockedAt).toBeTruthy();
+
+    // Resolve the framing — the gate must not overwrite unblockedAt
+    resolveFraming('The hero rests at camp, awaiting word from the council.');
+    await framingPromise;
+    await new Promise<void>((r) => setImmediate(r));
+
+    const rowFinal = db.prepare('SELECT user_blocker_json FROM quests WHERE id = ?').get('q-blk-race') as {
+      user_blocker_json: string;
+    };
+    const blockerFinal = JSON.parse(rowFinal.user_blocker_json) as {
+      unblockedAt?: string;
+      adventureFraming?: string;
+    };
+    expect(blockerFinal.unblockedAt).toBeTruthy();
+    expect(blockerFinal.adventureFraming).toBeUndefined();
   });
 });
