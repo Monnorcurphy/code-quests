@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useQuestStore } from '../../stores/quest-store';
+import { useEncounterStore } from '../../stores/encounter-store';
 import CombatLog from './combat-log';
 import ReturnToTownButton from './return-to-town-button';
 import type { Quest } from '@code-quests/shared';
@@ -51,6 +52,7 @@ export default function HUDOverlay({
 }: HUDOverlayProps) {
   const storeStatus = useQuestStore((s) => s.statusByQuest[questId]);
   const storeScene = useQuestStore((s) => s.currentSceneByQuest[questId]);
+  const encounter = useEncounterStore((s) => s.byQuest[questId] ?? null);
   const displayStatus = storeStatus ?? quest.status;
   const displayScene = storeScene ?? quest.currentScene;
   const statusLabel = STATUS_LABELS[displayStatus] ?? displayStatus;
@@ -152,6 +154,92 @@ export default function HUDOverlay({
           )}
         </div>
       )}
+
+      {/* Encounter panel — screen-reader accessible version of the Phaser canvas combat */}
+      <div
+        aria-live="polite"
+        aria-label="Active encounter"
+        role="region"
+        style={{
+          position: 'absolute',
+          top: '60px',
+          right: '16px',
+          pointerEvents: 'none',
+          minWidth: '130px',
+          transition: 'opacity 0.2s ease',
+          opacity: encounter ? 1 : 0,
+        }}
+      >
+        {encounter && (
+          <div
+            style={{
+              background: 'rgba(20, 10, 0, 0.88)',
+              border: '1px solid rgba(245, 222, 179, 0.4)',
+              borderRadius: '6px',
+              padding: '10px 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <img
+              src={encounter.spritePath}
+              alt={encounter.monsterName}
+              style={{ width: '48px', height: '48px', imageRendering: 'pixelated' }}
+            />
+            <span
+              style={{ fontWeight: 600, fontSize: '0.875rem', color: '#f5f5f5' }}
+            >
+              {encounter.monsterName}
+            </span>
+            <span
+              aria-label={`Difficulty ${encounter.difficulty} out of 5`}
+              style={{ color: '#f5deb3', fontSize: '0.8rem', letterSpacing: '2px' }}
+            >
+              {'★'.repeat(encounter.difficulty)}{'☆'.repeat(5 - encounter.difficulty)}
+            </span>
+            <div
+              role="meter"
+              aria-label={`HP: ${encounter.hp}%`}
+              aria-valuenow={encounter.hp}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              style={{ width: '100%' }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '3px',
+                }}
+              >
+                <span style={{ fontSize: '0.7rem', color: '#aaa' }}>HP</span>
+                <span style={{ fontSize: '0.7rem', color: '#f5f5f5' }}>{encounter.hp}%</span>
+              </div>
+              <div
+                style={{
+                  width: '100%',
+                  height: '7px',
+                  background: '#333',
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    width: `${encounter.hp}%`,
+                    height: '100%',
+                    background:
+                      encounter.hp > 50 ? '#44cc44' : encounter.hp > 25 ? '#ccaa44' : '#cc4444',
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Combat log */}
       <div
