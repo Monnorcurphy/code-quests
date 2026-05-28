@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import QuestBoard from '../features/quests/quest-board';
 import { api } from '../lib/api';
@@ -45,9 +46,11 @@ function renderBoard() {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <QuestBoard />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <QuestBoard />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 

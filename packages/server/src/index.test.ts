@@ -23,4 +23,16 @@ describe('app', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'ok' });
   });
+
+  it('POST /test/emit-quest-event returns 404 when NODE_ENV is not test', async () => {
+    const original = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const { app } = makeApp();
+      const res = await request(app).post('/test/emit-quest-event').send({});
+      expect(res.status).toBe(404);
+    } finally {
+      process.env.NODE_ENV = original;
+    }
+  });
 });

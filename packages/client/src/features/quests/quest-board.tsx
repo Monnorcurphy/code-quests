@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import type { Quest, QuestStatus } from '@code-quests/shared';
 import { api } from '../../lib/api';
 import { useTownStore } from '../../stores/town-store';
@@ -41,6 +42,7 @@ function AuditBadge({ quest }: { quest: Quest }) {
 }
 
 export default function QuestBoard() {
+  const navigate = useNavigate();
   const setSelectedQuestId = useTownStore((s) => s.setSelectedQuestId);
   const setActiveModal = useTownStore((s) => s.setActiveModal);
 
@@ -82,7 +84,7 @@ export default function QuestBoard() {
   return (
     <ul className="quest-board-list" role="list" aria-label="Quest board" tabIndex={0}>
       {quests.map((quest) => (
-        <li key={quest.id} className="quest-board-item">
+        <li key={quest.id} className="quest-board-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             type="button"
             className="quest-board-item-btn"
@@ -103,6 +105,17 @@ export default function QuestBoard() {
             )}
             <AuditBadge quest={quest} />
           </button>
+          {quest.status === 'active' && (
+            <button
+              type="button"
+              className="btn-primary enter-quest-btn"
+              onClick={() => navigate(`/quest/${quest.id}`)}
+              aria-label={`Enter quest: ${quest.title}`}
+              style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              Enter Quest
+            </button>
+          )}
         </li>
       ))}
     </ul>

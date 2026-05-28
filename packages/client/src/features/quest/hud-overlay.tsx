@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { useQuestStore } from '../../stores/quest-store';
 import CombatLog from './combat-log';
+import ReturnToTownButton from './return-to-town-button';
 import type { Quest } from '@code-quests/shared';
 import type { ConnectionStatus } from '../../lib/quest-socket';
 
@@ -23,7 +24,6 @@ const CONNECTION_LABELS: Record<ConnectionStatus, string> = {
 interface HUDOverlayProps {
   quest: Quest;
   questId: string;
-  onReturnToTown: () => void;
   advanceLoading: boolean;
   advanceError: string | null;
   connectionStatus: ConnectionStatus;
@@ -44,20 +44,22 @@ function AdventurerName({ adventurerId }: { adventurerId: string | null }) {
 export default function HUDOverlay({
   quest,
   questId,
-  onReturnToTown,
   advanceLoading,
   advanceError,
   connectionStatus,
   parseError,
 }: HUDOverlayProps) {
   const storeStatus = useQuestStore((s) => s.statusByQuest[questId]);
+  const storeScene = useQuestStore((s) => s.currentSceneByQuest[questId]);
   const displayStatus = storeStatus ?? quest.status;
+  const displayScene = storeScene ?? quest.currentScene;
   const statusLabel = STATUS_LABELS[displayStatus] ?? displayStatus;
 
   return (
     <div
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10 }}
       aria-label="Quest HUD"
+      data-current-scene={displayScene}
     >
       {/* Top banner */}
       <div
@@ -116,22 +118,7 @@ export default function HUDOverlay({
           </span>
         </div>
 
-        <button
-          onClick={onReturnToTown}
-          className="text-gray-100"
-          style={{
-            padding: '6px 14px',
-            background: 'rgba(80, 60, 30, 0.9)',
-            border: '1px solid rgba(200,160,80,0.6)',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-          }}
-          aria-label="Return to Town"
-        >
-          Return to Town
-        </button>
+        <ReturnToTownButton />
       </div>
 
       {/* Advance-scene / parse-error feedback strip */}

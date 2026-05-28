@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
 import DraftForm from './quests/draft-form';
@@ -26,6 +27,7 @@ function QuestDetailSection({
   const [runSuccess, setRunSuccess] = useState(false);
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const goToHallOfReturns = useTownStore((s) => s.goToHallOfReturns);
+  const navigate = useNavigate();
 
   const { data: questData, isLoading, error } = useQuery({
     queryKey: ['quest', questId],
@@ -78,6 +80,14 @@ function QuestDetailSection({
         <ActiveQuestPanel questId={questId} />
         <CancelButton questId={questId} />
         <div className="form-actions">
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => { onClose(); navigate(`/quest/${questId}`); }}
+            aria-label="Watch quest in progress"
+          >
+            Watch Quest
+          </button>
           <button type="button" className="btn-secondary" onClick={onClose}>
             Close
           </button>
@@ -127,6 +137,16 @@ function QuestDetailSection({
       />
       <DispatchButton quest={quest} />
       <div className="form-actions">
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled
+          title="Dispatch first"
+          aria-disabled="true"
+          aria-label="Watch quest (dispatch first to enable)"
+        >
+          Watch Quest
+        </button>
         <button type="button" className="btn-secondary" onClick={onDraftAnother}>
           Draft new quest
         </button>

@@ -1,13 +1,21 @@
 # Progress — Phase 5
 
-Previous task progress archived to metrics/progress-before-glaive.md
+Previous task progress archived to metrics/progress-before-greatsword.md
 
-## glaive — Party Map peek-overlay
+## greatsword — Phase 5 Capstone (DONE)
 
-- Created `packages/client/src/features/party-map/scene-display-name.ts` — maps QuestSceneKey to human-friendly display names
-- Created `packages/client/src/features/party-map/use-active-quests.ts` — hook polling `/quests/active` every 5s, merging store's currentScene/status on top
-- Created `packages/client/src/features/party-map/party-map.tsx` — collapsed banner (⚔ N active), expandable list of up to 8 rows; keyboard-accessible; pointer-events:none wrapper
-- Created `packages/client/src/components/app-shell.tsx` — thin shell wrapper that mounts `<PartyMap />` globally
-- Modified `packages/client/src/main.tsx` — wrap `<App />` in `<AppShell>` so PartyMap is visible from all routes
-- Tests: `__tests__/party-map.test.tsx` (13 cases), `__tests__/use-active-quests.test.ts` (7 cases)
-- All 424 tests pass; typecheck clean; lint clean; build succeeds
+**Goal:** Make Phase 5 demo-able by a human — wire quest dispatch into quest scene navigation, add Enter Quest / Watch Quest affordances, E2E test, test-only server emit endpoint, seed extension, README update.
+
+**What was done:**
+- Extracted `return-to-town-button.tsx` from HUD overlay; reads `useTownStore` to preserve last visited town scene
+- Added "Enter Quest" button to `quest-board.tsx` for active quests (navigates to `/quest/:questId`)
+- Added "Watch Quest" button to `war-room.tsx` — enabled for active quests, disabled with "Dispatch first" tooltip for idle
+- Extended `seed-dev.ts` with NODE_ENV production guard and Phase 5 demo quest ("Cave Expedition", status=active, quest-cave scene) with a live agent record
+- Created `routes/test-emit.ts` — POST `/test/emit-quest-event` endpoint, mounted only when `NODE_ENV=test`
+- Mounted test-emit route in `index.ts` behind `NODE_ENV === 'test'` guard
+- Updated `playwright.config.ts` to set `NODE_ENV=test` for server webServer
+- Created `phase-5-capstone.spec.ts` — 6 E2E tests: full walkthrough, two a11y scans (axe-core), test-emit endpoint, Enter Quest button, Watch Quest button
+- Added Phase 5 section + walkthrough to README.md; updated phase roadmap table
+- Fixed `quest-board.test.tsx` to wrap `QuestBoard` in `MemoryRouter` (required after adding `useNavigate`)
+
+**Verification:** `pnpm typecheck` ✓, `pnpm lint` ✓, `pnpm test` 426/426 ✓

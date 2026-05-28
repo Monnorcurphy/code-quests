@@ -20,10 +20,11 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'pnpm --filter=@code-quests/server dev',
+      command: 'NODE_ENV=test pnpm --filter=@code-quests/server dev',
       url: 'http://localhost:4001/health',
       reuseExistingServer: !process.env.CI,
       timeout: 15000,
+      env: { NODE_ENV: 'test' },
     },
     {
       command: 'pnpm --filter=@code-quests/client dev',
