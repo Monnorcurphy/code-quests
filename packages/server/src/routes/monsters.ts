@@ -26,6 +26,14 @@ type EncounterRow = {
   combat_log_json: string;
   outcome: string;
   loot_json: string;
+  resolved_at: string | null;
+};
+
+type QuestEncounterRow = EncounterRow & {
+  monster_type_id: string;
+  monster_name: string;
+  calibrated_difficulty: number;
+  sprite_path: string;
 };
 
 function rowToMonster(row: MonsterRow) {
@@ -54,14 +62,32 @@ function rowToEncounter(row: EncounterRow) {
     combatLog: JSON.parse(row.combat_log_json) as unknown[],
     outcome: row.outcome,
     loot: JSON.parse(row.loot_json) as unknown[],
+    resolvedAt: row.resolved_at ?? null,
+  };
+}
+
+function rowToQuestEncounter(row: QuestEncounterRow) {
+  return {
+    ...rowToEncounter(row),
+    monsterTypeId: row.monster_type_id,
+    monsterName: row.monster_name,
+    difficulty: Math.max(1, Math.min(5, row.calibrated_difficulty)) as 1 | 2 | 3 | 4 | 5,
+    spritePath: row.sprite_path,
   };
 }
 
 const ENCOUNTER_BY_MONSTER_SQL =
   'SELECT * FROM monster_encounters WHERE monster_id = ? ORDER BY appeared_at DESC';
 
-const ENCOUNTER_BY_QUEST_SQL =
-  'SELECT * FROM monster_encounters WHERE quest_id = ? ORDER BY appeared_at ASC';
+const ENCOUNTER_BY_QUEST_SQL = `
+  SELECT me.*, m.type_id AS monster_type_id, m.name AS monster_name,
+         m.calibrated_difficulty, mt.sprite_path
+  FROM monster_encounters me
+  JOIN monsters m ON me.monster_id = m.id
+  JOIN monster_types mt ON m.type_id = mt.id
+  WHERE me.quest_id = ?
+  ORDER BY me.appeared_at ASC
+`.trim();
 
 const MONSTER_FILTER_SQL = `
   SELECT * FROM monsters
@@ -121,8 +147,8 @@ export function createMonstersRouter(db: Database.Database): Router {
   router.get('/quests/:questId/encounters', (req, res) => {
     const rows = db
       .prepare(ENCOUNTER_BY_QUEST_SQL)
-      .all(req.params.questId) as EncounterRow[];
-    res.json(rows.map(rowToEncounter));
+      .all(req.params.questId) as QuestEncounterRow[];
+    res.json(rows.map(rowToQuestEncounter));
   });
 
   return router;

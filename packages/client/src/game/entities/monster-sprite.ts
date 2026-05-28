@@ -1,7 +1,6 @@
 import type Phaser from 'phaser';
+import { HpBar } from '../hp-bar';
 
-const HP_BAR_WIDTH = 120;
-const HP_BAR_HEIGHT = 10;
 const HP_BAR_Y_OFFSET = -70;
 const NAME_Y_OFFSET = 56;
 const STARS_Y_OFFSET = -90;
@@ -20,12 +19,9 @@ export class MonsterSprite {
   private readonly sprite: Phaser.GameObjects.Image;
   private readonly nameLabel: Phaser.GameObjects.Text;
   private readonly difficultyBanner: Phaser.GameObjects.Text;
-  private readonly hpBarBg: Phaser.GameObjects.Graphics;
-  private readonly hpBarFg: Phaser.GameObjects.Graphics;
+  private readonly _hpBar: HpBar;
   readonly reducedMotion: boolean;
 
-  private readonly _cx: number;
-  private readonly _cy: number;
   private _hp = 100;
 
   constructor(
@@ -39,8 +35,6 @@ export class MonsterSprite {
   ) {
     this.scene = scene;
     this.reducedMotion = options.reducedMotion ?? false;
-    this._cx = x;
-    this._cy = y;
 
     this.sprite = scene.add.image(x, y, assetKey);
 
@@ -61,32 +55,12 @@ export class MonsterSprite {
       })
       .setOrigin(0.5);
 
-    this.hpBarBg = scene.add.graphics();
-    this.hpBarFg = scene.add.graphics();
-    this._drawHpBar(1.0);
-  }
-
-  private _drawHpBar(ratio: number): void {
-    const bx = this._cx - HP_BAR_WIDTH / 2;
-    const by = this._cy + HP_BAR_Y_OFFSET;
-
-    this.hpBarBg.clear();
-    this.hpBarBg.fillStyle(0x222222, 0.9);
-    this.hpBarBg.fillRect(bx, by, HP_BAR_WIDTH, HP_BAR_HEIGHT);
-
-    this.hpBarFg.clear();
-    const fillWidth = Math.round(HP_BAR_WIDTH * ratio);
-    if (fillWidth > 0) {
-      const color = ratio > 0.5 ? 0x44cc44 : ratio > 0.25 ? 0xccaa44 : 0xcc4444;
-      this.hpBarFg.fillStyle(color, 1);
-      this.hpBarFg.fillRect(bx, by, fillWidth, HP_BAR_HEIGHT);
-    }
+    this._hpBar = new HpBar(scene, x, y + HP_BAR_Y_OFFSET);
   }
 
   setHp(hp: number): void {
     this._hp = hp;
-    const ratio = Math.max(0, Math.min(100, hp)) / 100;
-    this._drawHpBar(ratio);
+    this._hpBar.setRatio(Math.max(0, Math.min(100, hp)) / 100);
   }
 
   getHp(): number {
@@ -110,7 +84,7 @@ export class MonsterSprite {
       },
     });
     this.scene.tweens.add({
-      targets: [this.nameLabel, this.difficultyBanner, this.hpBarBg, this.hpBarFg],
+      targets: [this.nameLabel, this.difficultyBanner, ...this._hpBar.objects],
       alpha: 0,
       duration: VICTORY_DURATION_MS / 2,
     });
@@ -118,11 +92,15 @@ export class MonsterSprite {
 
   playDefeat(onComplete: () => void): void {
     if (this.reducedMotion) {
+      this._destroyAll();
       onComplete();
       return;
     }
     this.scene.cameras.main.shake(DEFEAT_SHAKE_MS, 0.02);
-    this.scene.time.delayedCall(DEFEAT_COMPLETE_MS, onComplete);
+    this.scene.time.delayedCall(DEFEAT_COMPLETE_MS, () => {
+      this._destroyAll();
+      onComplete();
+    });
   }
 
   playEscape(onComplete: () => void): void {
@@ -143,7 +121,7 @@ export class MonsterSprite {
       },
     });
     this.scene.tweens.add({
-      targets: [this.hpBarBg, this.hpBarFg],
+      targets: this._hpBar.objects,
       alpha: 0,
       duration: ESCAPE_DURATION_MS / 2,
     });
@@ -153,8 +131,7 @@ export class MonsterSprite {
     this.sprite.destroy();
     this.nameLabel.destroy();
     this.difficultyBanner.destroy();
-    this.hpBarBg.destroy();
-    this.hpBarFg.destroy();
+    this._hpBar.destroy();
   }
 
   destroy(): void {
