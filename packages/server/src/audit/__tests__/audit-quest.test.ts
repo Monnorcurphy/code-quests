@@ -24,6 +24,8 @@ function makeQuest(overrides: Partial<Quest> = {}): Quest {
     equipment: { skillIds: ['linters_bane'], toolIds: [], mcpServerIds: [] },
     specAudit: null,
     failureSummary: null,
+    inputRequest: null,
+    userBlocker: null,
     currentScene: 'quest-forest',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

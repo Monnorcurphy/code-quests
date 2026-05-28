@@ -68,6 +68,17 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
     encounterId: z.string(),
     outcome: z.enum(['victory', 'defeat', 'escape']),
   }),
+  z.object({
+    type: z.literal('paused_input'),
+    timestamp: z.string(),
+    question: z.string().min(1),
+    context: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('resumed'),
+    timestamp: z.string(),
+    source: z.enum(['input_response', 'user_unblock']),
+  }),
 ]);
 
 export type AgentEvent = z.infer<typeof AgentEventSchema>;

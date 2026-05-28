@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { QuestSchema, EpicSchema, QuestStatusSchema } from '../quest';
+import { QuestSchema, EpicSchema, QuestStatusSchema, InputRequestSchema, UserBlockerSchema } from '../quest';
 
 describe('QuestStatusSchema', () => {
   it('accepts all valid statuses', () => {
@@ -118,5 +118,149 @@ describe('EpicSchema', () => {
 
   it('rejects empty title', () => {
     expect(() => EpicSchema.parse({ ...valid, title: '' })).toThrow();
+  });
+});
+
+describe('InputRequestSchema', () => {
+  it('parses a valid InputRequest with all fields', () => {
+    const result = InputRequestSchema.parse({
+      question: 'Which API key should I use?',
+      context: 'The agent needs auth credentials.',
+      awaitingSince: '2026-01-01T00:00:00Z',
+      adventureFraming: 'The hero stands before the sealed gate.',
+    });
+    expect(result.question).toBe('Which API key should I use?');
+    expect(result.adventureFraming).toBe('The hero stands before the sealed gate.');
+  });
+
+  it('parses a minimal InputRequest (required fields only)', () => {
+    const result = InputRequestSchema.parse({
+      question: 'What approach to use?',
+      awaitingSince: '2026-05-01T12:00:00Z',
+    });
+    expect(result.question).toBe('What approach to use?');
+    expect(result.context).toBeUndefined();
+    expect(result.adventureFraming).toBeUndefined();
+  });
+
+  it('rejects empty question', () => {
+    expect(() =>
+      InputRequestSchema.parse({ question: '', awaitingSince: '2026-01-01T00:00:00Z' }),
+    ).toThrow();
+  });
+
+  it('rejects missing question', () => {
+    expect(() =>
+      InputRequestSchema.parse({ awaitingSince: '2026-01-01T00:00:00Z' }),
+    ).toThrow();
+  });
+
+  it('rejects missing awaitingSince', () => {
+    expect(() =>
+      InputRequestSchema.parse({ question: 'What next?' }),
+    ).toThrow();
+  });
+});
+
+describe('UserBlockerSchema', () => {
+  it('parses a valid UserBlocker with all fields', () => {
+    const result = UserBlockerSchema.parse({
+      rawDescription: 'Waiting on design review.',
+      adventureFraming: 'The hero rests at camp awaiting counsel.',
+      markedAt: '2026-01-02T10:00:00Z',
+      unblockedAt: '2026-01-02T15:00:00Z',
+    });
+    expect(result.rawDescription).toBe('Waiting on design review.');
+    expect(result.unblockedAt).toBe('2026-01-02T15:00:00Z');
+  });
+
+  it('parses a minimal UserBlocker (required fields only)', () => {
+    const result = UserBlockerSchema.parse({
+      rawDescription: 'Waiting on legal sign-off.',
+      markedAt: '2026-03-01T08:00:00Z',
+    });
+    expect(result.rawDescription).toBe('Waiting on legal sign-off.');
+    expect(result.adventureFraming).toBeUndefined();
+    expect(result.unblockedAt).toBeUndefined();
+  });
+
+  it('rejects empty rawDescription', () => {
+    expect(() =>
+      UserBlockerSchema.parse({ rawDescription: '', markedAt: '2026-01-01T00:00:00Z' }),
+    ).toThrow();
+  });
+
+  it('rejects missing rawDescription', () => {
+    expect(() =>
+      UserBlockerSchema.parse({ markedAt: '2026-01-01T00:00:00Z' }),
+    ).toThrow();
+  });
+
+  it('rejects missing markedAt', () => {
+    expect(() =>
+      UserBlockerSchema.parse({ rawDescription: 'Blocked.' }),
+    ).toThrow();
+  });
+});
+
+describe('QuestSchema — inputRequest and userBlocker fields', () => {
+  const base = {
+    id: 'q-1',
+    epicId: null,
+    title: 'Slay the Dragon',
+    description: '',
+    acceptanceCriteria: [],
+    edgeCases: [],
+    context: '',
+    status: 'active' as const,
+    adventurerId: 'adv-1',
+    agentId: null,
+    equipment: {},
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  };
+
+  it('defaults inputRequest to null when omitted', () => {
+    const result = QuestSchema.parse(base);
+    expect(result.inputRequest).toBeNull();
+  });
+
+  it('defaults userBlocker to null when omitted', () => {
+    const result = QuestSchema.parse(base);
+    expect(result.userBlocker).toBeNull();
+  });
+
+  it('accepts a valid inputRequest', () => {
+    const result = QuestSchema.parse({
+      ...base,
+      inputRequest: {
+        question: 'Which path?',
+        awaitingSince: '2026-01-01T00:00:00Z',
+      },
+    });
+    expect(result.inputRequest).not.toBeNull();
+    expect(result.inputRequest!.question).toBe('Which path?');
+  });
+
+  it('accepts a valid userBlocker', () => {
+    const result = QuestSchema.parse({
+      ...base,
+      userBlocker: {
+        rawDescription: 'Waiting on team feedback.',
+        markedAt: '2026-01-01T00:00:00Z',
+      },
+    });
+    expect(result.userBlocker).not.toBeNull();
+    expect(result.userBlocker!.rawDescription).toBe('Waiting on team feedback.');
+  });
+
+  it('accepts explicit null for inputRequest and userBlocker', () => {
+    const result = QuestSchema.parse({
+      ...base,
+      inputRequest: null,
+      userBlocker: null,
+    });
+    expect(result.inputRequest).toBeNull();
+    expect(result.userBlocker).toBeNull();
   });
 });
