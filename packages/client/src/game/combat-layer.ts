@@ -97,9 +97,11 @@ export class CombatLayer {
     const questId = this.questId;
 
     const onComplete = () => {
+      const s = this._sprite;
       this._sprite = null;
       this._active = false;
       this._animPlaying = false;
+      if (s) s.destroy();
       useEncounterStore.getState().clearQuest(questId);
     };
 

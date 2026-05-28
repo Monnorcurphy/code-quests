@@ -27,6 +27,7 @@ export interface MonsterEncounter {
   combatLogJson: string;
   outcome: 'victory' | 'defeat' | 'escape';
   lootJson: string;
+  resolvedAt: string | null;
 }
 
 export interface CombatEvent {
@@ -69,6 +70,7 @@ function rowToEncounter(row: Record<string, unknown>): MonsterEncounter {
     combatLogJson: row['combat_log_json'] as string,
     outcome: row['outcome'] as 'victory' | 'defeat' | 'escape',
     lootJson: row['loot_json'] as string,
+    resolvedAt: (row['resolved_at'] as string | null | undefined) ?? null,
   };
 }
 
@@ -179,7 +181,12 @@ export function resolveEncounter(
     );
   }
 
-  db.prepare('UPDATE monster_encounters SET outcome = ? WHERE id = ?').run(outcome, encounterId);
+  const resolvedAt = new Date().toISOString();
+  db.prepare('UPDATE monster_encounters SET outcome = ?, resolved_at = ? WHERE id = ?').run(
+    outcome,
+    resolvedAt,
+    encounterId,
+  );
 
   const monsterId = encounterRow['monster_id'] as string;
   if (outcome === 'victory') {

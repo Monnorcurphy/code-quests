@@ -92,11 +92,15 @@ export class MonsterSprite {
 
   playDefeat(onComplete: () => void): void {
     if (this.reducedMotion) {
+      this._destroyAll();
       onComplete();
       return;
     }
     this.scene.cameras.main.shake(DEFEAT_SHAKE_MS, 0.02);
-    this.scene.time.delayedCall(DEFEAT_COMPLETE_MS, onComplete);
+    this.scene.time.delayedCall(DEFEAT_COMPLETE_MS, () => {
+      this._destroyAll();
+      onComplete();
+    });
   }
 
   playEscape(onComplete: () => void): void {

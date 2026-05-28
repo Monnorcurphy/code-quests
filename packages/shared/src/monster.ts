@@ -37,5 +37,10 @@ export const MonsterEncounterSchema = z.object({
   combatLog: z.array(z.unknown()),
   outcome: z.enum(['victory', 'defeat', 'escape']),
   loot: z.array(z.unknown()),
+  resolvedAt: z.string().nullable().optional(),
+  monsterTypeId: z.string().optional(),
+  monsterName: z.string().optional(),
+  spritePath: z.string().optional(),
+  difficulty: z.number().int().min(1).max(5).optional(),
 });
 export type MonsterEncounter = z.infer<typeof MonsterEncounterSchema>;

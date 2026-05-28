@@ -230,6 +230,20 @@ describe('CombatLayer', () => {
       layer.destroy();
     });
 
+    it('sprite.destroy is called when defeat onComplete fires', () => {
+      const scene = makeScene();
+      const layer = new CombatLayer(scene, 'q1', { monsterX: 500, monsterY: 400, reducedMotion: false });
+
+      useEncounterStore.getState().handleAgentEvent('q1', makeAppearedEvent());
+      useEncounterStore.getState().handleAgentEvent('q1', makeResolvedEvent('defeat'));
+
+      const onComplete = mockSpriteInstance.playDefeat.mock.calls[0][0] as () => void;
+      onComplete();
+
+      expect(mockSpriteInstance.destroy).toHaveBeenCalledTimes(1);
+      layer.destroy();
+    });
+
     it('does not play outcome animation twice if already animating', () => {
       const scene = makeScene();
       const layer = new CombatLayer(scene, 'q1', { monsterX: 500, monsterY: 400, reducedMotion: false });
