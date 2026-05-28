@@ -3,8 +3,11 @@ import type { AgentEvent, QuestSceneKey, QuestStatus } from '@code-quests/shared
 
 const MAX_LOG_ENTRIES = 200;
 
+export type StoredEvent = AgentEvent & { _id: number };
+
 interface QuestStoreState {
-  entriesByQuest: Record<string, AgentEvent[]>;
+  _nextId: number;
+  entriesByQuest: Record<string, StoredEvent[]>;
   currentSceneByQuest: Record<string, QuestSceneKey>;
   statusByQuest: Record<string, QuestStatus>;
   appendEvent(questId: string, event: AgentEvent): void;
@@ -14,16 +17,21 @@ interface QuestStoreState {
 }
 
 export const useQuestStore = create<QuestStoreState>((set) => ({
+  _nextId: 0,
   entriesByQuest: {},
   currentSceneByQuest: {},
   statusByQuest: {},
 
   appendEvent(questId, event) {
     set((state) => {
+      const stored: StoredEvent = { ...event, _id: state._nextId };
       const existing = state.entriesByQuest[questId] ?? [];
-      const next = [...existing, event];
+      const next = [...existing, stored];
       const capped = next.length > MAX_LOG_ENTRIES ? next.slice(-MAX_LOG_ENTRIES) : next;
-      return { entriesByQuest: { ...state.entriesByQuest, [questId]: capped } };
+      return {
+        _nextId: state._nextId + 1,
+        entriesByQuest: { ...state.entriesByQuest, [questId]: capped },
+      };
     });
   },
 

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { connectQuestSocket } from '../../lib/quest-socket';
 import { useQuestStore } from '../../stores/quest-store';
 import { sceneRouter } from '../../game/scene-router';
@@ -14,12 +15,17 @@ export interface QuestStreamResult {
 export function useQuestStream(questId: string): QuestStreamResult {
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const [parseError, setParseError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const queryClientRef = useRef(queryClient);
+  queryClientRef.current = queryClient;
 
   useEffect(() => {
+    setParseError(null);
     const handle = connectQuestSocket(questId, {
       onConnectionChange: setStatus,
       onParseError: (msg) => setParseError(msg),
       onEvent: (event) => {
+        setParseError(null);
         const store = useQuestStore.getState();
         store.appendEvent(questId, event);
 
@@ -30,6 +36,16 @@ export function useQuestStream(questId: string): QuestStreamResult {
 
         if (event.type === 'status_change') {
           store.setStatus(questId, event.to);
+        }
+
+        if (event.type === 'completed') {
+          store.setStatus(questId, 'complete');
+          void queryClientRef.current.invalidateQueries({ queryKey: ['quest', questId] });
+        }
+
+        if (event.type === 'failed') {
+          store.setStatus(questId, 'failed');
+          void queryClientRef.current.invalidateQueries({ queryKey: ['quest', questId] });
         }
       },
     });

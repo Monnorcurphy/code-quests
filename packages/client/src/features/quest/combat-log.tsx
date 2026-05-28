@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuestStore } from '../../stores/quest-store';
+import type { StoredEvent } from '../../stores/quest-store';
 import type { AgentEvent } from '@code-quests/shared';
 
-const LOG_EVENT_TYPES = new Set<AgentEvent['type']>(['progress', 'log', 'combat']);
-const EMPTY_ENTRIES: AgentEvent[] = [];
+const LOG_EVENT_TYPES = new Set<AgentEvent['type']>(['progress', 'log', 'combat', 'completed', 'failed']);
+const EMPTY_ENTRIES: StoredEvent[] = [];
 
 const TYPE_LABELS: Partial<Record<AgentEvent['type'], string>> = {
   progress: 'Progress',
   log: 'Log',
   combat: 'Combat',
+  completed: 'Complete',
+  failed: 'Failed',
 };
 
 function formatTimestamp(ts: string): string {
@@ -19,9 +22,11 @@ function formatTimestamp(ts: string): string {
   }
 }
 
-function getMessage(event: AgentEvent): string {
+function getMessage(event: StoredEvent): string {
   if (event.type === 'progress' || event.type === 'log') return event.message;
   if (event.type === 'combat') return event.message;
+  if (event.type === 'completed') return event.summary ?? 'Quest completed';
+  if (event.type === 'failed') return event.reason ?? 'Quest failed';
   return '';
 }
 
@@ -74,9 +79,9 @@ export default function CombatLog({ questId }: CombatLogProps) {
           Combat log will appear here
         </p>
       ) : (
-        logEntries.map((event, idx) => (
+        logEntries.map((event) => (
           <div
-            key={idx}
+            key={event._id}
             style={{
               display: 'flex',
               gap: '8px',

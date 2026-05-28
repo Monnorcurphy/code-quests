@@ -8,6 +8,7 @@ function makeProgressEvent(msg: string): AgentEvent {
 
 beforeEach(() => {
   useQuestStore.setState({
+    _nextId: 0,
     entriesByQuest: {},
     currentSceneByQuest: {},
     statusByQuest: {},

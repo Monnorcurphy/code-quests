@@ -15,6 +15,18 @@ vi.mock('../../../game/scene-router', () => ({
   },
 }));
 
+// Stable mock queryClient — same reference across renders to avoid effect re-runs
+const mockInvalidateQueries = vi.fn();
+const mockQueryClient = { invalidateQueries: mockInvalidateQueries };
+
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return {
+    ...actual,
+    useQueryClient: vi.fn(() => mockQueryClient),
+  };
+});
+
 // Capture onEvent / onConnectionChange callbacks for each call
 type ConnectArgs = {
   onEvent: (event: AgentEvent) => void;
@@ -43,6 +55,7 @@ beforeEach(() => {
   mockCloses.length = 0;
   vi.clearAllMocks();
   useQuestStore.setState({
+    _nextId: 0,
     entriesByQuest: {},
     currentSceneByQuest: {},
     statusByQuest: {},
@@ -93,7 +106,7 @@ describe('useQuestStream', () => {
     });
 
     expect(useQuestStore.getState().entriesByQuest['q1']).toHaveLength(1);
-    expect(useQuestStore.getState().entriesByQuest['q1'][0]).toEqual(event);
+    expect(useQuestStore.getState().entriesByQuest['q1'][0]).toMatchObject(event);
   });
 
   it('calls sceneRouter.goToScene and updates store on scene_change', () => {
@@ -131,6 +144,44 @@ describe('useQuestStream', () => {
     expect(useQuestStore.getState().statusByQuest['q1']).toBe('complete');
   });
 
+  it('sets status to complete and invalidates query on completed event', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    const event: AgentEvent = {
+      type: 'completed',
+      timestamp: new Date().toISOString(),
+      summary: 'The dragon is slain.',
+    };
+
+    act(() => {
+      mockConnects[0].onEvent(event);
+    });
+
+    expect(useQuestStore.getState().statusByQuest['q1']).toBe('complete');
+    expect(useQuestStore.getState().entriesByQuest['q1']).toHaveLength(1);
+    expect(useQuestStore.getState().entriesByQuest['q1'][0]).toMatchObject(event);
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['quest', 'q1'] });
+  });
+
+  it('sets status to failed and invalidates query on failed event', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    const event: AgentEvent = {
+      type: 'failed',
+      timestamp: new Date().toISOString(),
+      reason: 'The party was defeated.',
+    };
+
+    act(() => {
+      mockConnects[0].onEvent(event);
+    });
+
+    expect(useQuestStore.getState().statusByQuest['q1']).toBe('failed');
+    expect(useQuestStore.getState().entriesByQuest['q1']).toHaveLength(1);
+    expect(useQuestStore.getState().entriesByQuest['q1'][0]).toMatchObject(event);
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['quest', 'q1'] });
+  });
+
   it('exposes parseError when onParseError is called', () => {
     const { result } = renderHook(() => useQuestStream('q1'));
 
@@ -139,6 +190,41 @@ describe('useQuestStream', () => {
     });
 
     expect(result.current.parseError).toBe('Malformed AgentEvent payload');
+  });
+
+  it('clears parseError when a valid event arrives after a bad frame', () => {
+    const { result } = renderHook(() => useQuestStream('q1'));
+
+    act(() => {
+      mockConnects[0].onParseError?.('Bad frame');
+    });
+    expect(result.current.parseError).toBe('Bad frame');
+
+    act(() => {
+      mockConnects[0].onEvent({
+        type: 'progress',
+        timestamp: new Date().toISOString(),
+        message: 'recovered',
+      });
+    });
+
+    expect(result.current.parseError).toBeNull();
+  });
+
+  it('clears parseError when questId changes', () => {
+    const { result, rerender } = renderHook(
+      ({ id }: { id: string }) => useQuestStream(id),
+      { initialProps: { id: 'q1' } },
+    );
+
+    act(() => {
+      mockConnects[0].onParseError?.('Bad frame on q1');
+    });
+    expect(result.current.parseError).toBe('Bad frame on q1');
+
+    rerender({ id: 'q2' });
+
+    expect(result.current.parseError).toBeNull();
   });
 
   it('creates a new socket when questId changes', () => {
