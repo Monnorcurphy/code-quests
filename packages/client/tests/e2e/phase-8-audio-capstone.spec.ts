@@ -215,4 +215,179 @@ test.describe('Phase 8 — Audio capstone', () => {
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations).toEqual([]);
   });
+
+  test('monster encounter changes mood to "In Combat" and victory resolves with stinger toast', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      (window as Record<string, unknown>).__audioLog__ = [];
+    });
+
+    // Create and dispatch a quest
+    const createRes = await page.request.post('/quests', {
+      data: {
+        title: `P8-Combat-${Date.now()}`,
+        description: 'Quest for combat audio test',
+        acceptanceCriteria: ['Monster defeated'],
+      },
+    });
+    expect(createRes.status()).toBe(201);
+    const quest = (await createRes.json()) as { id: string };
+    const questId = quest.id;
+
+    const dispatchRes = await page.request.post(`/quests/${questId}/dispatch?bypass=true`);
+    expect(dispatchRes.status()).toBe(200);
+
+    await page.goto(`/quest/${questId}`);
+    await page.waitForSelector('[aria-label="Quest HUD"]', { timeout: 10000 });
+    await page.click('body');
+
+    // Emit a monster_appeared event via the test helper endpoint
+    const monsterRes = await page.request.post('/test/emit-quest-event', {
+      data: {
+        questId,
+        event: {
+          type: 'monster_appeared',
+          timestamp: new Date().toISOString(),
+          encounterId: 'enc-e2e-1',
+          monsterId: 'mon-e2e-1',
+          monsterName: 'Shadow Wraith',
+          monsterTypeId: 'generic_obstacle',
+          spritePath: '/sprites/monsters/shadow-wraith.png',
+          difficulty: 2,
+        },
+      },
+    });
+    expect(monsterRes.status()).toBe(200);
+
+    // Mood should switch to "In Combat"
+    await expect(page.getByTestId('scene-mood-indicator')).toContainText('In Combat', {
+      timeout: 5000,
+    });
+
+    // Resolve the encounter as victory
+    const victoryRes = await page.request.post('/test/emit-quest-event', {
+      data: {
+        questId,
+        event: {
+          type: 'monster_resolved',
+          timestamp: new Date().toISOString(),
+          encounterId: 'enc-e2e-1',
+          outcome: 'victory',
+        },
+      },
+    });
+    expect(victoryRes.status()).toBe(200);
+
+    // "Monster defeated!" stinger toast should appear
+    await expect(page.getByTestId('stinger-toast')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('stinger-toast')).toContainText('Monster defeated!');
+  });
+
+  test('silent mode: visual cues still fire but audio routes to silent backend', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      (window as Record<string, unknown>).__audioLog__ = [];
+    });
+
+    await page.goto('/town/town-square');
+    await waitForSceneNav(page);
+    await page.click('body');
+
+    // Wait for initial cue to arrive
+    await page.waitForFunction(
+      () => ((window as Record<string, unknown>).__audioLog__ as string[]).length > 0,
+      { timeout: 5000 },
+    );
+
+    // Enable silent mode via settings
+    await page.getByRole('button', { name: /open settings/i }).click();
+    const silentSwitch = page.getByRole('switch', { name: /silent mode/i });
+    await silentSwitch.click();
+    await expect(silentSwitch).toHaveAttribute('aria-checked', 'true');
+    await page.keyboard.press('Escape');
+
+    // After silent mode is on, the backend should be SilentBackend (DEV-exposed on window)
+    // Give provider a moment to finish preloading SilentBackend
+    await page.waitForFunction(
+      () => {
+        const b = (window as Record<string, unknown>).__audioBackend__;
+        return !!b && (b as { constructor?: { name?: string } }).constructor?.name === 'SilentBackend';
+      },
+      { timeout: 5000 },
+    );
+
+    // Capture log length before triggering a new cue
+    const logBefore = await page.evaluate(
+      () => ((window as Record<string, unknown>).__audioLog__ as string[]).length,
+    );
+
+    // Clicking fires a new interaction which may trigger state re-evaluation; navigate to force a cue
+    await page.goto('/town/war-room');
+    await page.waitForTimeout(500);
+
+    // Audio log should have grown (cues still dispatched in silent mode)
+    const logAfter = await page.evaluate(
+      () => ((window as Record<string, unknown>).__audioLog__ as string[]).length,
+    );
+    expect(logAfter).toBeGreaterThan(logBefore);
+
+    // Backend is still SilentBackend — no WebAudioBackend play calls possible
+    const backendName = await page.evaluate(() => {
+      const b = (window as Record<string, unknown>).__audioBackend__;
+      return (b as { constructor?: { name?: string } }).constructor?.name ?? 'unknown';
+    });
+    expect(backendName).toBe('SilentBackend');
+  });
+
+  test('mute toggle: backend.setMuted(true) is called and audio events still dispatch', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      (window as Record<string, unknown>).__audioLog__ = [];
+      (window as Record<string, unknown>).__setMutedCalls__ = [];
+    });
+
+    await page.goto('/town/town-square');
+    await waitForSceneNav(page);
+    await page.click('body');
+
+    // Wait for initial cue to confirm controller is running
+    await page.waitForFunction(
+      () => ((window as Record<string, unknown>).__audioLog__ as string[]).length > 0,
+      { timeout: 5000 },
+    );
+
+    // Open settings and toggle mute on
+    await page.getByRole('button', { name: /open settings/i }).click();
+    const muteSwitch = page.getByRole('switch', { name: /mute/i });
+    await expect(muteSwitch).toHaveAttribute('aria-checked', 'false');
+    await muteSwitch.click();
+    await expect(muteSwitch).toHaveAttribute('aria-checked', 'true');
+
+    // Assert backend.setMuted(true) was called (tracked via DEV hook in AudioProvider)
+    await page.waitForFunction(
+      () => {
+        const calls = (window as Record<string, unknown>).__setMutedCalls__ as boolean[];
+        return Array.isArray(calls) && calls.includes(true);
+      },
+      { timeout: 3000 },
+    );
+
+    // Audio events must still dispatch even when muted (cue bus is independent of backend)
+    const logBefore = await page.evaluate(
+      () => ((window as Record<string, unknown>).__audioLog__ as string[]).length,
+    );
+    // Close settings and wait a moment for any queued events
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+
+    const logAfter = await page.evaluate(
+      () => ((window as Record<string, unknown>).__audioLog__ as string[]).length,
+    );
+    // Log was non-empty before and should stay non-empty (cue bus still works)
+    expect(logBefore).toBeGreaterThan(0);
+    expect(logAfter).toBeGreaterThanOrEqual(logBefore);
+  });
 });

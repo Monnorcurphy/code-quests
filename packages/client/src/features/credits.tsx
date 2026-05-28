@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { AUDIO_CREDITS } from '../audio/credits-data';
 
 interface CreditsProps {
@@ -5,13 +6,23 @@ interface CreditsProps {
 }
 
 export default function Credits({ onBack }: CreditsProps) {
+  const backRef = useRef<HTMLButtonElement>(null);
+
+  // Move focus to Back button when credits view mounts so keyboard users have a sensible target
+  useEffect(() => {
+    backRef.current?.focus();
+  }, []);
+
   return (
     <div data-testid="credits-screen">
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-        <button className="btn-secondary" onClick={onBack} aria-label="Back to settings">
+        <button ref={backRef} className="btn-secondary" onClick={onBack} aria-label="Back to settings">
           ← Back
         </button>
-        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#2c2416' }}>
+        <h3
+          id="credits-title"
+          style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#2c2416' }}
+        >
           Audio Credits
         </h3>
       </div>

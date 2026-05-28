@@ -32,10 +32,21 @@ function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [creditsOpen, setCreditsOpen] = useState(false);
   const panelRef = useFocusTrap(onClose);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const creditsButtonRef = useRef<HTMLButtonElement>(null);
+  // Tracks whether the user has opened Credits at least once this session.
+  // Prevents the "return focus to credits button" effect from firing on initial mount.
+  const wasInCreditsRef = useRef(false);
 
   useEffect(() => {
     closeRef.current?.focus();
   }, []);
+
+  // Return focus to Credits button when the user navigates back from the Credits view
+  useEffect(() => {
+    if (!creditsOpen && wasInCreditsRef.current) {
+      creditsButtonRef.current?.focus();
+    }
+  }, [creditsOpen]);
 
   function handleToggle() {
     const next = !reducedMotion;
@@ -43,12 +54,17 @@ function SettingsPanel({ onClose }: SettingsPanelProps) {
     applyValue(next);
   }
 
+  function handleOpenCredits() {
+    wasInCreditsRef.current = true;
+    setCreditsOpen(true);
+  }
+
   return (
     <div
       className="modal-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="settings-title"
+      aria-labelledby={creditsOpen ? 'credits-title' : 'settings-title'}
       style={{ zIndex: 200 }}
     >
       <div ref={panelRef} className="modal-panel settings-panel">
@@ -81,8 +97,9 @@ function SettingsPanel({ onClose }: SettingsPanelProps) {
             <AudioSettings />
             <div className="form-actions" style={{ justifyContent: 'space-between' }}>
               <button
+                ref={creditsButtonRef}
                 className="btn-secondary"
-                onClick={() => setCreditsOpen(true)}
+                onClick={handleOpenCredits}
                 data-testid="open-credits-btn"
               >
                 Credits

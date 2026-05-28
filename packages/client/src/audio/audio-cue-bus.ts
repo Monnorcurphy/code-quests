@@ -12,11 +12,8 @@ export function subscribeCue(listener: CueListener): () => void {
 
 export function dispatchCue(event: AudioEvent): void {
   for (const l of listeners) l(event);
-  // Test hook: append to window.__audioLog__ if it exists (set by E2E tests)
-  if (typeof window !== 'undefined') {
-    const w = window as unknown as Record<string, unknown>;
-    if (Array.isArray(w.__audioLog__)) {
-      (w.__audioLog__ as AudioEvent[]).push(event);
-    }
+  if (import.meta.env.DEV && typeof window !== 'undefined') {
+    const log = (window as { __audioLog__?: AudioEvent[] }).__audioLog__;
+    if (Array.isArray(log)) log.push(event);
   }
 }
