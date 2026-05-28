@@ -15,6 +15,13 @@ vi.mock('../../../game/scene-router', () => ({
   },
 }));
 
+const mockHandleAgentEvent = vi.fn();
+vi.mock('../../../stores/encounter-store', () => ({
+  useEncounterStore: {
+    getState: () => ({ handleAgentEvent: mockHandleAgentEvent }),
+  },
+}));
+
 // Stable mock queryClient — same reference across renders to avoid effect re-runs
 const mockInvalidateQueries = vi.fn();
 const mockQueryClient = { invalidateQueries: mockInvalidateQueries };
@@ -60,6 +67,7 @@ beforeEach(() => {
     currentSceneByQuest: {},
     statusByQuest: {},
   });
+  mockHandleAgentEvent.mockClear();
 });
 
 afterEach(() => {
@@ -238,5 +246,59 @@ describe('useQuestStream', () => {
     expect(mockConnects).toHaveLength(2);
     // Old socket should be closed
     expect(mockCloses[0]).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls encounterStore.handleAgentEvent for every incoming event', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    const event: AgentEvent = {
+      type: 'progress',
+      timestamp: new Date().toISOString(),
+      message: 'adventuring',
+    };
+
+    act(() => {
+      mockConnects[0].onEvent(event);
+    });
+
+    expect(mockHandleAgentEvent).toHaveBeenCalledWith('q1', event);
+  });
+
+  it('calls encounterStore.handleAgentEvent for monster_appeared', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    const event: AgentEvent = {
+      type: 'monster_appeared',
+      timestamp: new Date().toISOString(),
+      encounterId: 'enc-1',
+      monsterId: 'mon-1',
+      monsterName: 'Goblin',
+      monsterTypeId: 'goblin_linter',
+      spritePath: 'monsters/goblin.png',
+      difficulty: 1,
+    };
+
+    act(() => {
+      mockConnects[0].onEvent(event);
+    });
+
+    expect(mockHandleAgentEvent).toHaveBeenCalledWith('q1', event);
+  });
+
+  it('calls encounterStore.handleAgentEvent for monster_resolved', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    const event: AgentEvent = {
+      type: 'monster_resolved',
+      timestamp: new Date().toISOString(),
+      encounterId: 'enc-1',
+      outcome: 'victory',
+    };
+
+    act(() => {
+      mockConnects[0].onEvent(event);
+    });
+
+    expect(mockHandleAgentEvent).toHaveBeenCalledWith('q1', event);
   });
 });

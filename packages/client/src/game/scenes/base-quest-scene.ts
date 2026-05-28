@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/player';
 import { KeyboardController } from '../input/keyboard-controller';
-import { preloadQuestAssets } from '../asset-loader';
+import { preloadQuestAssets, preloadMonsterAssets } from '../asset-loader';
 import { sceneRouter } from '../scene-router';
 import type { QuestSceneKey } from '../scene-registry';
 import type { AssetKey } from '../asset-loader';
@@ -39,6 +39,7 @@ export abstract class BaseQuestScene extends Phaser.Scene {
 
   preload(): void {
     preloadQuestAssets(this);
+    preloadMonsterAssets(this);
   }
 
   create(): void {

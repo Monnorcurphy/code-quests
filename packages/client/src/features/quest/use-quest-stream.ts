@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { connectQuestSocket } from '../../lib/quest-socket';
 import { useQuestStore } from '../../stores/quest-store';
+import { useEncounterStore } from '../../stores/encounter-store';
 import { sceneRouter } from '../../game/scene-router';
 import type { ConnectionStatus } from '../../lib/quest-socket';
 
@@ -28,6 +29,7 @@ export function useQuestStream(questId: string): QuestStreamResult {
         setParseError(null);
         const store = useQuestStore.getState();
         store.appendEvent(questId, event);
+        useEncounterStore.getState().handleAgentEvent(questId, event);
 
         if (event.type === 'scene_change') {
           store.setCurrentScene(questId, event.to);
