@@ -33,12 +33,18 @@ export const FailureSummaryRecommendationSchema = z.enum([
   'retry',
   'repost_with_clarification',
   'retire',
+  'break_into_smaller',
+  'level_up_first',
 ]);
 export type FailureSummaryRecommendation = z.infer<typeof FailureSummaryRecommendationSchema>;
 
 export const FailureSummarySchema = z.object({
-  reason: z.string().default(''),
   recommendation: FailureSummaryRecommendationSchema,
+  reason: z.string().default(''),
+  fatalEncounterId: z.string().optional(),
+  retries: z.number().int().nonnegative().optional(),
+  notes: z.string().optional(),
+  userFeedback: z.string().optional(),
 });
 export type FailureSummary = z.infer<typeof FailureSummarySchema>;
 
@@ -54,6 +60,8 @@ export const QuestStatusSchema = z.enum([
   'failed',
   'paused_input',
   'user_blocked',
+  'returned_to_town',
+  'retired',
 ]);
 
 export type QuestStatus = z.infer<typeof QuestStatusSchema>;

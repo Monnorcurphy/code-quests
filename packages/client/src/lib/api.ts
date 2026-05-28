@@ -43,8 +43,12 @@ const ReturnedQuestBaseSchema = z.object({
   adventurerId: z.string().nullable(),
   agentId: z.string().nullable(),
   failureSummary: z.object({
-    reason: z.string(),
-    recommendation: z.enum(['retry', 'repost_with_clarification', 'retire']),
+    recommendation: z.enum(['retry', 'repost_with_clarification', 'retire', 'break_into_smaller', 'level_up_first']),
+    reason: z.string().default(''),
+    fatalEncounterId: z.string().optional(),
+    retries: z.number().optional(),
+    notes: z.string().optional(),
+    userFeedback: z.string().optional(),
   }).nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -63,7 +67,14 @@ const ReturnedQuestsPageSchema = z.object({
 
 export type ReturnedAdventurer = { id: string; name: string; class: AdventurerClass };
 export type ReturnedAgent = { id: string; startedAt: string; endedAt: string | null; events: AgentEvent[] };
-export type ReturnedQuestFailureSummary = { reason: string; recommendation: FailureSummaryRecommendation };
+export type ReturnedQuestFailureSummary = {
+  reason: string;
+  fatalEncounterId?: string;
+  retries?: number;
+  notes?: string;
+  recommendation: FailureSummaryRecommendation;
+  userFeedback?: string;
+};
 export type ReturnedQuest = {
   id: string;
   epicId: string | null;

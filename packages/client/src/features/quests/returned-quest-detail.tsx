@@ -30,6 +30,7 @@ function formatEventText(event: AgentEvent): string {
     case 'monster_resolved': return `⚔ Encounter ${event.outcome}.`;
     case 'paused_input': return `⏸ Awaiting input: ${event.question}`;
     case 'resumed': return `▶ Resumed (${event.source === 'input_response' ? 'input received' : 'user unblocked'})`;
+    case 'quest_returned': return `🏰 Quest returned to town`;
   }
 }
 

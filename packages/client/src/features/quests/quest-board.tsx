@@ -11,6 +11,8 @@ const STATUS_LABELS: Record<QuestStatus, string> = {
   failed: 'Failed',
   paused_input: 'Awaiting Input',
   user_blocked: 'Blocked',
+  returned_to_town: 'Returned',
+  retired: 'Retired',
 };
 
 const STATUS_CLASS: Record<QuestStatus, string> = {
@@ -20,6 +22,8 @@ const STATUS_CLASS: Record<QuestStatus, string> = {
   failed: 'quest-badge quest-badge--failed',
   paused_input: 'quest-badge quest-badge--waiting',
   user_blocked: 'quest-badge quest-badge--blocked',
+  returned_to_town: 'quest-badge quest-badge--failed',
+  retired: 'quest-badge quest-badge--failed',
 };
 
 function AuditBadge({ quest }: { quest: Quest }) {
