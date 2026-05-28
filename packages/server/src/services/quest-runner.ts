@@ -123,6 +123,7 @@ export async function runQuest(
           }
           clearInputRequest(db, quest.id);
           collectedEvents.push(event);
+          persistEvents();
           publishEvent?.(quest.id, event);
           continue;
         }

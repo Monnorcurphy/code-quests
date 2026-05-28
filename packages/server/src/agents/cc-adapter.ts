@@ -207,8 +207,13 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
   const stdinStream = proc.stdin!;
   try {
     stdinStream.write(buildPrompt(input));
-    // Keep stdin open so respond() can write back when paused_input arrives.
-    // The subprocess will see EOF only after stdinStream.end() is called or it exits.
+    // Intentionally keep stdin open so respond() can write back during pause/resume.
+    // This assumes the claude subprocess processes stdin incrementally rather than waiting
+    // for EOF before starting (i.e., interactive mode). If claude --print requires EOF to
+    // begin processing, leaving stdin open will stall the subprocess. In that case, switch to
+    // an interactive session mode or a separate stdin pipe opened only after a paused_input
+    // marker is detected. TODO: verify against the real binary or add an integration test
+    // gated behind CODE_QUESTS_RUN_INTEGRATION_TESTS=1.
   } catch {
     // 'error' handler will fire and finalize; nothing to do here.
   }
@@ -280,12 +285,23 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
     },
     async respond(text: string): Promise<void> {
       if (settled) return;
+      let wrote = false;
       try {
         stdinStream.write(text + '\n');
-      } catch {
-        // stdin may be closed — best effort
+        wrote = true;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        process.stderr.write(`[cc-adapter] respond() write failed: ${msg}\n`);
       }
-      queue.push({ type: 'resumed', timestamp: new Date().toISOString(), source: 'input_response' });
+      if (wrote) {
+        queue.push({ type: 'resumed', timestamp: new Date().toISOString(), source: 'input_response' });
+      } else {
+        queue.push({
+          type: 'failed',
+          timestamp: new Date().toISOString(),
+          reason: 'Could not deliver response to agent (stdin closed)',
+        });
+      }
     },
     async awaitExit(): Promise<{ exitCode: number | null }> {
       return exitPromise;

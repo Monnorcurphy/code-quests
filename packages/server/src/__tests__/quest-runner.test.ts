@@ -1059,6 +1059,70 @@ describe('runQuest paused_input / resumed handling', () => {
     await done;
   });
 
+  it('persists resumed event to agents.events_json immediately (before completed arrives)', async () => {
+    insertAdventurer(db, 'adv-resume-persist');
+    insertQuest(db, 'q-resume-persist', 'adv-resume-persist');
+
+    let resolveRespond!: (text: string) => void;
+    const respondPromise = new Promise<string>((res) => { resolveRespond = res; });
+    // resolveComplete is called inside publishEvent once we have verified the DB state;
+    // it gates the generator so that 'completed' cannot fire before we checked.
+    let resolveComplete!: () => void;
+    const completePromise = new Promise<void>((res) => { resolveComplete = res; });
+    let resumedEventsSnapshot: AgentEvent[] | null = null;
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-resume-persist',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            yield { type: 'paused_input', timestamp: ts, question: 'Which approach?' };
+            await respondPromise;
+            yield { type: 'resumed', timestamp: ts, source: 'input_response' };
+            await completePromise;
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async respond(text: string) { resolveRespond(text); },
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-resume-persist');
+    const adventurer = parseAdventurer(db, 'adv-resume-persist');
+
+    const { agent, done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input') {
+          void getActiveHandle(questId)?.respond('use approach A');
+        }
+        if (event.type === 'resumed') {
+          // persistEvents() was called BEFORE publishEvent in the resumed branch,
+          // so events_json already has the resumed event at this point.
+          const agentRow = db.prepare('SELECT events_json FROM agents WHERE id = ?')
+            .get(agent.id) as { events_json: string | null };
+          if (agentRow?.events_json) {
+            resumedEventsSnapshot = JSON.parse(agentRow.events_json) as AgentEvent[];
+          }
+          resolveComplete();
+        }
+      },
+    });
+
+    await done;
+
+    // Snapshot was captured inside publishEvent for 'resumed', BEFORE 'completed' arrived.
+    expect(resumedEventsSnapshot).not.toBeNull();
+    expect(resumedEventsSnapshot!.some((e) => e.type === 'resumed')).toBe(true);
+
+    const finalRow = db.prepare('SELECT status FROM quests WHERE id = ?').get('q-resume-persist') as { status: string };
+    expect(finalRow.status).toBe('complete');
+  });
+
   it('cancel during paused_input ends the quest cleanly', async () => {
     insertAdventurer(db, 'adv-cancel-pause');
     insertQuest(db, 'q-cancel-pause', 'adv-cancel-pause');
