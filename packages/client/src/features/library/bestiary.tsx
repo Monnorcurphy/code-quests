@@ -4,7 +4,7 @@ import { api } from '../../lib/api';
 import BestiaryEmptyState from './empty-state';
 import MonsterDetail from './monster-detail';
 import { DifficultyStars } from './difficulty-stars';
-import type { Monster, MonsterType } from '@code-quests/shared';
+import type { Monster, MonsterType, MonsterScope } from '@code-quests/shared';
 
 type SortCol = 'name' | 'type' | 'difficulty' | 'encounters' | 'defeats' | 'escapes' | 'lastSeen';
 type SortDir = 'asc' | 'desc';
@@ -124,6 +124,7 @@ export default function Bestiary() {
   const [sortCol, setSortCol] = useState<SortCol>('lastSeen');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeScope, setActiveScope] = useState<MonsterScope>('project');
 
   const {
     data: monsters,
@@ -131,8 +132,8 @@ export default function Bestiary() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['monsters'],
-    queryFn: () => api.monsters.list({ scope: 'project' }),
+    queryKey: ['monsters', activeScope],
+    queryFn: () => api.monsters.list({ scope: activeScope }),
   });
 
   const { data: types = [] } = useQuery({
@@ -172,8 +173,37 @@ export default function Bestiary() {
     }
   }
 
+  const emptyLabel = activeScope === 'guild'
+    ? 'No guild Nemeses yet.'
+    : undefined;
+
   return (
     <div className="bestiary">
+      <div
+        role="tablist"
+        aria-label="Monster scope"
+        className="bestiary-scope-tabs"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeScope === 'project'}
+          className={`bestiary-scope-tab${activeScope === 'project' ? ' bestiary-scope-tab--active' : ''}`}
+          onClick={() => { setActiveScope('project'); setSelectedId(null); }}
+        >
+          Mine (Project)
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeScope === 'guild'}
+          className={`bestiary-scope-tab${activeScope === 'guild' ? ' bestiary-scope-tab--active' : ''}`}
+          onClick={() => { setActiveScope('guild'); setSelectedId(null); }}
+        >
+          Nemeses (Guild)
+        </button>
+      </div>
+
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {isLoading ? 'Loading bestiary…' : ''}
       </div>
@@ -189,7 +219,18 @@ export default function Bestiary() {
         </div>
       )}
 
-      {!isLoading && !isError && monsters?.length === 0 && <BestiaryEmptyState />}
+      {!isLoading && !isError && monsters?.length === 0 && (
+        emptyLabel
+          ? (
+            <div className="bestiary-empty" role="status">
+              <p className="bestiary-empty-message">{emptyLabel}</p>
+              <p className="bestiary-empty-hint">
+                Open a monster from the &quot;Mine&quot; tab and click &quot;Mark as Nemesis&quot; to promote it.
+              </p>
+            </div>
+          )
+          : <BestiaryEmptyState />
+      )}
 
       {!isLoading && !isError && monsters && monsters.length > 0 && (
         <div className="bestiary-table-wrap">

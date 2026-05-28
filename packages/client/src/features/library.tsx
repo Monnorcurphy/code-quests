@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
+import { api } from '../lib/api';
 import Bestiary from './library/bestiary';
 
 type LibraryTab = 'bestiary' | 'skills';
@@ -8,6 +10,12 @@ type LibraryTab = 'bestiary' | 'skills';
 export default function Library() {
   const setActiveModal = useTownStore((s) => s.setActiveModal);
   const panelRef = useFocusTrap(() => setActiveModal(null));
+
+  const { data: monsterCount } = useQuery({
+    queryKey: ['monsters-count'],
+    queryFn: () => api.monsters.list({ scope: 'project' }).then((m) => m.length),
+    staleTime: 30_000,
+  });
   const [activeTab, setActiveTab] = useState<LibraryTab>('bestiary');
 
   const focusedRef = useRef(false);
@@ -24,7 +32,14 @@ export default function Library() {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="library-title">
       <div ref={panelRef} className="modal-panel library-panel">
-        <h2 id="library-title" className="modal-title">Library</h2>
+        <div className="library-header">
+          <h2 id="library-title" className="modal-title">Library</h2>
+          {monsterCount !== undefined && monsterCount > 0 && (
+            <span className="library-bestiary-badge" aria-label={`Bestiary unlocked — ${monsterCount} monster${monsterCount === 1 ? '' : 's'} logged`}>
+              Bestiary unlocked — {monsterCount} monster{monsterCount === 1 ? '' : 's'} logged
+            </span>
+          )}
+        </div>
 
         <div role="tablist" aria-label="Library sections" className="library-tabs">
           <button

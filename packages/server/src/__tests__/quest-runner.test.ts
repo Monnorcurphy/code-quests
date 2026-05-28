@@ -11,7 +11,7 @@ import type { AgentEvent } from '@code-quests/shared';
 import { QuestSchema, AdventurerSchema } from '@code-quests/shared';
 import { openDb } from '../db/connection';
 import { runMigrations } from '../db/migrator';
-import { runQuest, PROGRESS_EVENTS_PER_SCENE } from '../services/quest-runner';
+import { runQuest, PROGRESS_EVENTS_PER_SCENE, LICH_REPEAT_THRESHOLD } from '../services/quest-runner';
 import { getQuestAdapter } from '../agents/select-adapter';
 import { offlineAdapter } from '../agents/offline-adapter';
 
@@ -753,5 +753,160 @@ describe('runQuest combat/encounter integration', () => {
 
     const eventsB = spyB.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
     expect(eventsB.filter((e) => e.type === 'monster_resolved')).toHaveLength(0);
+  });
+});
+
+describe('runQuest lich aggregator', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    runMigrations(db);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    db.close();
+  });
+
+  it(`spawns a lich after ${LICH_REPEAT_THRESHOLD} same-type encounters in one quest`, async () => {
+    insertAdventurer(db, 'adv-lich');
+    insertQuest(db, 'q-lich', 'adv-lich');
+
+    // Emit LICH_REPEAT_THRESHOLD combat events with imp_typecheck type
+    const ts = new Date().toISOString();
+    const impMsg = 'TS2345: type error found';
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-lich',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            for (let i = 0; i < LICH_REPEAT_THRESHOLD; i++) {
+              yield {
+                type: 'combat',
+                timestamp: ts,
+                monsterTypeId: 'imp_typecheck',
+                message: impMsg,
+              };
+            }
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-lich');
+    const adventurer = parseAdventurer(db, 'adv-lich');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const published = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+
+    // Should have LICH_REPEAT_THRESHOLD imp appeared events + 1 lich appeared
+    const appearedEvents = published.filter((e) => e.type === 'monster_appeared');
+    expect(appearedEvents.length).toBe(LICH_REPEAT_THRESHOLD + 1);
+
+    // Last appeared should be the lich
+    const lichAppeared = appearedEvents[appearedEvents.length - 1];
+    expect(lichAppeared.type).toBe('monster_appeared');
+    if (lichAppeared.type === 'monster_appeared') {
+      expect(lichAppeared.monsterTypeId).toBe('lich_repeated_failure');
+    }
+
+    // DB should have a lich encounter record for this quest
+    const lichEncounter = db
+      .prepare(
+        "SELECT me.* FROM monster_encounters me JOIN monsters m ON me.monster_id = m.id WHERE me.quest_id = ? AND m.type_id = 'lich_repeated_failure'",
+      )
+      .get('q-lich');
+    expect(lichEncounter).toBeDefined();
+  });
+
+  it('does not spawn a second lich for a second distinct type hitting the threshold', async () => {
+    insertAdventurer(db, 'adv-two-lich');
+    insertQuest(db, 'q-two-lich', 'adv-two-lich');
+
+    const ts = new Date().toISOString();
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-two-lich',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            // 3 imps + 3 goblins — two liches should appear
+            for (let i = 0; i < LICH_REPEAT_THRESHOLD; i++) {
+              yield { type: 'combat', timestamp: ts, monsterTypeId: 'imp_typecheck', message: 'typescript error' };
+            }
+            for (let i = 0; i < LICH_REPEAT_THRESHOLD; i++) {
+              yield { type: 'combat', timestamp: ts, monsterTypeId: 'goblin_linter', message: 'eslint error' };
+            }
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-two-lich');
+    const adventurer = parseAdventurer(db, 'adv-two-lich');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const published = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    const lichAppearedEvents = published.filter(
+      (e) => e.type === 'monster_appeared' && e.type === 'monster_appeared'
+        && (e as { monsterTypeId?: string }).monsterTypeId === 'lich_repeated_failure',
+    );
+    // Each distinct type hitting threshold spawns one lich
+    expect(lichAppearedEvents.length).toBe(2);
+  });
+
+  it('does not spawn lich for fewer than threshold same-type encounters', async () => {
+    insertAdventurer(db, 'adv-no-lich');
+    insertQuest(db, 'q-no-lich', 'adv-no-lich');
+
+    const ts = new Date().toISOString();
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-no-lich',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            // Only LICH_REPEAT_THRESHOLD - 1 encounters — no lich
+            for (let i = 0; i < LICH_REPEAT_THRESHOLD - 1; i++) {
+              yield { type: 'combat', timestamp: ts, monsterTypeId: 'imp_typecheck', message: 'typescript error' };
+            }
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-no-lich');
+    const adventurer = parseAdventurer(db, 'adv-no-lich');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const published = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    const lichAppearedEvents = published.filter(
+      (e) => e.type === 'monster_appeared'
+        && (e as { monsterTypeId?: string }).monsterTypeId === 'lich_repeated_failure',
+    );
+    expect(lichAppearedEvents).toHaveLength(0);
   });
 });

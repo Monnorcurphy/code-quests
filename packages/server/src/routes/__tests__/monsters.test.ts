@@ -211,6 +211,51 @@ describe('GET /monsters/:id/encounters', () => {
   });
 });
 
+describe('POST /monsters/:id/promote-nemesis', () => {
+  let db: Database.Database;
+  let app: express.Express;
+
+  beforeEach(() => { ({ app, db } = makeApp()); });
+  afterEach(() => { db.close(); });
+
+  it('promotes a project monster to guild scope', async () => {
+    seedMonster(db, { id: 'm-promo', scope: 'project' });
+    const res = await request(app).post('/monsters/m-promo/promote-nemesis').send({});
+    expect(res.status).toBe(200);
+    expect(res.body.scope).toBe('guild');
+    expect(res.body.projectId).toBeNull();
+  });
+
+  it('returns 404 for unknown monster', async () => {
+    const res = await request(app).post('/monsters/no-such/promote-nemesis').send({});
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 400 if already a guild nemesis', async () => {
+    seedMonster(db, { id: 'm-already-guild', scope: 'guild' });
+    const res = await request(app).post('/monsters/m-already-guild/promote-nemesis').send({});
+    expect(res.status).toBe(400);
+    expect(res.body.field).toBe('scope');
+  });
+
+  it('allows renaming the monster on promote', async () => {
+    seedMonster(db, { id: 'm-rename', name: 'Old Name', scope: 'project' });
+    const res = await request(app)
+      .post('/monsters/m-rename/promote-nemesis')
+      .send({ name: 'New Nemesis Name' });
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('New Nemesis Name');
+    expect(res.body.scope).toBe('guild');
+  });
+
+  it('keeps existing name if no name provided', async () => {
+    seedMonster(db, { id: 'm-keep-name', name: 'Keep Me', scope: 'project' });
+    const res = await request(app).post('/monsters/m-keep-name/promote-nemesis').send({});
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('Keep Me');
+  });
+});
+
 describe('GET /quests/:questId/encounters', () => {
   let db: Database.Database;
   let app: express.Express;

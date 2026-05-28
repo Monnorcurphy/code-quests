@@ -228,6 +228,51 @@ describe('Bestiary — loading state', () => {
   });
 });
 
+describe('Bestiary — scope filter tabs', () => {
+  it('shows Mine (Project) and Nemeses (Guild) tabs', async () => {
+    vi.mocked(api.monsters.list).mockResolvedValue([]);
+    renderBestiary();
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /mine.*project/i })).toBeDefined();
+      expect(screen.getByRole('tab', { name: /nemeses.*guild/i })).toBeDefined();
+    });
+  });
+
+  it('Mine tab is selected by default', async () => {
+    vi.mocked(api.monsters.list).mockResolvedValue([]);
+    renderBestiary();
+    await waitFor(() => {
+      const mineTab = screen.getByRole('tab', { name: /mine.*project/i });
+      expect(mineTab.getAttribute('aria-selected')).toBe('true');
+    });
+  });
+
+  it('switching to Nemeses tab queries for guild scope', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.monsters.list).mockResolvedValue([]);
+    renderBestiary();
+    await waitFor(() => screen.getByRole('tab', { name: /nemeses.*guild/i }));
+    await user.click(screen.getByRole('tab', { name: /nemeses.*guild/i }));
+    await waitFor(() => {
+      const guildTab = screen.getByRole('tab', { name: /nemeses.*guild/i });
+      expect(guildTab.getAttribute('aria-selected')).toBe('true');
+    });
+    // The api.monsters.list should have been called with scope: 'guild'
+    expect(vi.mocked(api.monsters.list)).toHaveBeenCalledWith({ scope: 'guild' });
+  });
+
+  it('shows guild empty state with hint when Nemeses tab is active and empty', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.monsters.list).mockResolvedValue([]);
+    renderBestiary();
+    await waitFor(() => screen.getByRole('tab', { name: /nemeses.*guild/i }));
+    await user.click(screen.getByRole('tab', { name: /nemeses.*guild/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/no guild nemeses yet/i)).toBeDefined();
+    });
+  });
+});
+
 describe('Bestiary — accessibility', () => {
   it('has no axe violations when empty', async () => {
     vi.mocked(api.monsters.list).mockResolvedValue([]);

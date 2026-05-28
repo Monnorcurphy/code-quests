@@ -235,5 +235,7 @@ export const api = {
       fetchJson(z.array(MonsterEncounterSchema), `/monsters/${monsterId}/encounters`),
     listQuestEncounters: (questId: string): Promise<MonsterEncounter[]> =>
       fetchJson(z.array(MonsterEncounterSchema), `/quests/${questId}/encounters`),
+    promoteNemesis: (id: string, name?: string): Promise<Monster> =>
+      postJson(MonsterSchema, `/monsters/${id}/promote-nemesis`, name !== undefined ? { name } : {}),
   },
 };
