@@ -1,13 +1,20 @@
 # Progress — Phase 6
 
-Previous task progress archived to metrics/progress-before-eldridge.md
+Previous task progress archived to metrics/progress-before-empress-of-ireland.md
 
-## Task eldridge — Phaser combat surface (monster sprite + HP bar + animations)
+## empress-of-ireland — Bestiary view in the Library
 
-- Created `packages/client/src/game/entities/monster-sprite.ts` — MonsterSprite wrapper (sprite, name label, difficulty stars, HP bar) with `setHp`, `playVictory`, `playDefeat`, `playEscape`. All animations gated by `prefers-reduced-motion`.
-- Created `packages/client/src/game/entities/__tests__/monster-sprite.test.ts` — unit tests covering HP bar scaling at 0/50/100%, reduced-motion code paths (no tweens), and animation callbacks.
-- Modified `packages/client/src/game/scenes/base-quest-scene.ts` — subscribes to encounter store in `create()` (using questId from game registry); spawns MonsterSprite on `monster_appeared`, updates HP on `combat`, plays outcome animation on `monster_resolved`, blocks edge-advance during active encounter.
-- Modified `packages/client/src/game/game-config.ts` + `phaser-mount.tsx` + `routes/quest.tsx` — threaded questId through game registry so Phaser scenes can subscribe to the correct quest's encounter state.
-- Modified `packages/client/src/features/quest/hud-overlay.tsx` — added accessible encounter panel (`role="region"`, `aria-live="polite"`) showing sprite, monster name, difficulty stars, and HP meter for screen-reader users.
-- Created `packages/client/src/features/quest/__tests__/hud-overlay-encounter.test.tsx` — 11 tests covering encounter panel appearance, star ratings, HP updates, clearQuest removal, and aria-live attribute.
-- All 493 tests pass. TypeScript clean. ESLint clean.
+**Status:** Complete
+
+- Created `packages/client/src/features/library/bestiary.tsx` — main bestiary table with TanStack Query, sortable columns, skeleton loading, empty/error states
+- Created `packages/client/src/features/library/monster-detail.tsx` — detail panel with encounter history, fetches quest titles per encounter
+- Created `packages/client/src/features/library/empty-state.tsx` — empty state with next-step hint
+- Created `packages/client/src/features/library/difficulty-stars.tsx` — shared `DifficultyStars` component with `aria-label="N of 5 stars"`
+- Created `packages/client/src/features/library/__tests__/bestiary.test.tsx` — 16 tests including axe-core accessibility checks; all pass
+- Modified `packages/client/src/features/library.tsx` — replaced quest context editor with Bestiary + Skills tab placeholder
+- Modified `packages/client/src/features/quest/use-quest-stream.ts` — invalidates `['monsters']` cache on `monster_appeared` event
+- Modified `packages/client/src/game/scenes/library-scene.ts` — added Ancient Tome interactive for keyboard navigation
+- Added CSS for library tabs, bestiary table, skeleton loading, outcome badges, monster detail panel
+- Added `jest-axe` + `@types/jest-axe` dev dependencies; configured in test-setup.ts
+- Updated `packages/client/src/__tests__/library.test.tsx` — replaced old context-editor tests with new tab/bestiary tests
+- All 508 client tests pass; typecheck and lint clean

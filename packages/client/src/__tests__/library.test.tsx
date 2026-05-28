@@ -2,10 +2,8 @@ import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { api } from '../lib/api';
 import Library from '../features/library';
 import { useTownStore } from '../stores/town-store';
-import type { Quest } from '@code-quests/shared';
 
 vi.mock('../lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/api')>();
@@ -13,36 +11,16 @@ vi.mock('../lib/api', async (importOriginal) => {
     ...actual,
     api: {
       ...actual.api,
-      quests: {
-        ...actual.api.quests,
+      monsters: {
+        list: vi.fn().mockResolvedValue([]),
+        listTypes: vi.fn().mockResolvedValue([]),
         get: vi.fn(),
-        patch: vi.fn(),
+        listEncounters: vi.fn(),
+        listQuestEncounters: vi.fn(),
       },
     },
   };
 });
-
-function makeQuest(overrides: Partial<Quest> = {}): Quest {
-  return {
-    id: 'q-library',
-    epicId: null,
-    title: 'Test Quest',
-    description: 'A test quest description',
-    acceptanceCriteria: ['AC one'],
-    edgeCases: [],
-    context: 'Some existing context',
-    status: 'idle',
-    adventurerId: null,
-    agentId: null,
-    equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
-    specAudit: null,
-    failureSummary: null,
-    currentScene: 'quest-forest' as const,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    ...overrides,
-  };
-}
 
 function renderLibrary() {
   const queryClient = new QueryClient({
@@ -57,98 +35,60 @@ function renderLibrary() {
 
 describe('Library', () => {
   beforeEach(() => {
-    useTownStore.setState({ selectedQuestId: 'q-library' });
-    vi.mocked(api.quests.get).mockReset();
-    vi.mocked(api.quests.patch).mockReset();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
     useTownStore.setState({ selectedQuestId: null });
-    vi.clearAllMocks();
   });
 
-  it('shows "no quest selected" message when selectedQuestId is null', () => {
-    useTownStore.setState({ selectedQuestId: null });
+  it('renders the Library title', () => {
     renderLibrary();
-    expect(screen.getByText(/no quest selected/i)).toBeDefined();
+    expect(screen.getByText('Library')).toBeDefined();
   });
 
-  it('renders loading state while fetching', async () => {
-    vi.mocked(api.quests.get).mockImplementation(() => new Promise(() => {}));
+  it('shows Bestiary and Skills tabs', () => {
     renderLibrary();
-    await waitFor(() => {
-      expect(screen.getByText(/loading quest/i)).toBeDefined();
-    });
+    expect(screen.getByRole('tab', { name: 'Bestiary' })).toBeDefined();
+    expect(screen.getByRole('tab', { name: 'Skills' })).toBeDefined();
   });
 
-  it('pre-populates textarea with existing context', async () => {
-    vi.mocked(api.quests.get).mockResolvedValue(makeQuest());
+  it('Bestiary tab is active by default', () => {
     renderLibrary();
-
-    await waitFor(() => {
-      const textarea = screen.getByRole('textbox', { name: /quest context/i }) as HTMLTextAreaElement;
-      expect(textarea.value).toBe('Some existing context');
-    });
+    const bestiaryTab = screen.getByRole('tab', { name: 'Bestiary' });
+    expect(bestiaryTab.getAttribute('aria-selected')).toBe('true');
   });
 
-  it('calls patch with updated context on save', async () => {
-    vi.mocked(api.quests.get).mockResolvedValue(makeQuest());
-    vi.mocked(api.quests.patch).mockResolvedValue(makeQuest({ context: 'Updated context text' }));
+  it('Skills tab shows placeholder text when clicked', async () => {
     const user = userEvent.setup();
     renderLibrary();
-
-    await waitFor(() => screen.getByRole('textbox', { name: /quest context/i }));
-    const textarea = screen.getByRole('textbox', { name: /quest context/i });
-    await user.clear(textarea);
-    await user.type(textarea, 'Updated context text');
-    await user.click(screen.getByRole('button', { name: /save context/i }));
-
+    await user.click(screen.getByRole('tab', { name: 'Skills' }));
     await waitFor(() => {
-      expect(vi.mocked(api.quests.patch)).toHaveBeenCalledWith(
-        'q-library',
-        expect.objectContaining({ context: 'Updated context text' }),
-      );
+      expect(screen.getByText(/skills catalogue coming in phase 10/i)).toBeDefined();
     });
   });
 
-  it('shows success message after save', async () => {
-    vi.mocked(api.quests.get).mockResolvedValue(makeQuest());
-    vi.mocked(api.quests.patch).mockResolvedValue(makeQuest());
+  it('switches active tab on click', async () => {
     const user = userEvent.setup();
     renderLibrary();
-
-    await waitFor(() => screen.getByRole('button', { name: /save context/i }));
-    await user.click(screen.getByRole('button', { name: /save context/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/context saved/i)).toBeDefined();
-    });
+    await user.click(screen.getByRole('tab', { name: 'Skills' }));
+    expect(screen.getByRole('tab', { name: 'Skills' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Bestiary' }).getAttribute('aria-selected')).toBe('false');
   });
 
-  it('shows persistent error on save failure', async () => {
-    vi.mocked(api.quests.get).mockResolvedValue(makeQuest());
-    vi.mocked(api.quests.patch).mockRejectedValue(new Error('Server error'));
-    const user = userEvent.setup();
-    renderLibrary();
-
-    await waitFor(() => screen.getByRole('button', { name: /save context/i }));
-    await user.click(screen.getByRole('button', { name: /save context/i }));
-
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toBeDefined();
-    });
-  });
-
-  it('"Back to War Room" button sets modal to draft', async () => {
+  it('Close button calls setActiveModal(null)', async () => {
     const mockSetActiveModal = vi.fn();
-    useTownStore.setState({ selectedQuestId: 'q-library', setActiveModal: mockSetActiveModal });
-    vi.mocked(api.quests.get).mockResolvedValue(makeQuest());
+    useTownStore.setState({ setActiveModal: mockSetActiveModal });
     const user = userEvent.setup();
     renderLibrary();
+    await user.click(screen.getByRole('button', { name: /close/i }));
+    expect(mockSetActiveModal).toHaveBeenCalledWith(null);
+  });
 
-    await waitFor(() => screen.getByRole('button', { name: /back to war room/i }));
-    await user.click(screen.getByRole('button', { name: /back to war room/i }));
-
-    expect(mockSetActiveModal).toHaveBeenCalledWith('draft');
+  it('shows the bestiary empty state when no monsters', async () => {
+    renderLibrary();
+    await waitFor(() => {
+      expect(screen.getByText(/no monsters encountered yet/i)).toBeDefined();
+    });
   });
 });
