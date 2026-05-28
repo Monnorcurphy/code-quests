@@ -4,6 +4,7 @@ import { KeyboardController } from '../input/keyboard-controller';
 import { preloadQuestAssets, preloadMonsterAssets } from '../asset-loader';
 import { sceneRouter } from '../scene-router';
 import { CombatLayer } from '../combat-layer';
+import { useQuestStore } from '../../stores/quest-store';
 import type { QuestSceneKey } from '../scene-registry';
 import type { AssetKey } from '../asset-loader';
 
@@ -16,6 +17,10 @@ const FADE_DURATION_MS = 300;
 const EDGE_THRESHOLD = 80;
 const MONSTER_SPAWN_X_OFFSET = 400;
 const MONSTER_SPAWN_Y_OFFSET = 32;
+const DIM_ALPHA = 0.5;
+const DIM_DEPTH = 1000;
+const REDUCED_OPACITY = '0.7';
+const FULL_OPACITY = '1';
 
 interface SceneInitData {
   spawnX?: number;
@@ -30,6 +35,10 @@ export abstract class BaseQuestScene extends Phaser.Scene {
   private _spawnX = DEFAULT_SPAWN_X;
   private _edgeTriggered = false;
   private _combatLayer: CombatLayer | null = null;
+  private _frozen = false;
+  private _dimOverlay: Phaser.GameObjects.Rectangle | null = null;
+  private _unsubscribeStore: (() => void) | null = null;
+  private _reducedMotion = false;
 
   abstract get sceneKey(): QuestSceneKey;
   abstract get backgroundAssetKey(): AssetKey;
@@ -47,7 +56,7 @@ export abstract class BaseQuestScene extends Phaser.Scene {
   }
 
   create(): void {
-    const reducedMotion =
+    this._reducedMotion =
       window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
 
     this.add.tileSprite(
@@ -67,7 +76,9 @@ export abstract class BaseQuestScene extends Phaser.Scene {
     );
 
     const sceneBounds = { min: 0, max: this.sceneWidth };
-    this.player = new Player(this, this._spawnX, PLAYER_Y, sceneBounds, { reducedMotion });
+    this.player = new Player(this, this._spawnX, PLAYER_Y, sceneBounds, {
+      reducedMotion: this._reducedMotion,
+    });
 
     this.controller = new KeyboardController(this);
     this.controller
@@ -75,7 +86,7 @@ export abstract class BaseQuestScene extends Phaser.Scene {
       .on('move-right', () => this.player.moveRight(this._delta))
       .on('stop', () => this.player.stop());
 
-    this.cameras.main.fadeIn(reducedMotion ? 0 : FADE_DURATION_MS);
+    this.cameras.main.fadeIn(this._reducedMotion ? 0 : FADE_DURATION_MS);
 
     const questId =
       (this.game?.registry?.get?.('questId') as string | null | undefined) ?? null;
@@ -84,10 +95,65 @@ export abstract class BaseQuestScene extends Phaser.Scene {
       const layer = new CombatLayer(this, questId, {
         monsterX: this.sceneWidth - MONSTER_SPAWN_X_OFFSET,
         monsterY: PLAYER_Y - MONSTER_SPAWN_Y_OFFSET,
-        reducedMotion,
+        reducedMotion: this._reducedMotion,
       });
       this._combatLayer = layer;
       this.events.once('shutdown', () => layer.destroy());
+
+      if (!this._reducedMotion) {
+        this._dimOverlay = this.add.rectangle(
+          this.sceneWidth / 2,
+          SCENE_HEIGHT / 2,
+          this.sceneWidth,
+          SCENE_HEIGHT,
+          0x000000,
+          DIM_ALPHA,
+        );
+        this._dimOverlay.setDepth(DIM_DEPTH);
+        this._dimOverlay.setVisible(false);
+      }
+
+      // Apply initial freeze state if the quest is already paused/blocked
+      const initialStatus = useQuestStore.getState().statusByQuest[questId];
+      this._applyFreezeState(
+        initialStatus === 'paused_input' || initialStatus === 'user_blocked',
+      );
+
+      this._unsubscribeStore = useQuestStore.subscribe((state) => {
+        const status = state.statusByQuest[questId];
+        this._applyFreezeState(status === 'paused_input' || status === 'user_blocked');
+      });
+      this.events.once('shutdown', () => {
+        this._unsubscribeStore?.();
+        this._unsubscribeStore = null;
+      });
+    }
+  }
+
+  private _applyFreezeState(shouldFreeze: boolean): void {
+    if (shouldFreeze === this._frozen) return;
+    this._frozen = shouldFreeze;
+
+    if (shouldFreeze) {
+      this.tweens?.pauseAll();
+      this.player?.pauseAnimations();
+      if (this._reducedMotion) {
+        if (this.game?.canvas) {
+          this.game.canvas.style.opacity = REDUCED_OPACITY;
+        }
+      } else {
+        this._dimOverlay?.setVisible(true);
+      }
+    } else {
+      this.tweens?.resumeAll();
+      this.player?.resumeAnimations();
+      if (this._reducedMotion) {
+        if (this.game?.canvas) {
+          this.game.canvas.style.opacity = FULL_OPACITY;
+        }
+      } else {
+        this._dimOverlay?.setVisible(false);
+      }
     }
   }
 

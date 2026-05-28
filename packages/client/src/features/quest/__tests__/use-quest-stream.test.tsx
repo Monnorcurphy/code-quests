@@ -34,6 +34,22 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
   };
 });
 
+const { mockQuestGet, mockListQuestEncounters } = vi.hoisted(() => ({
+  mockQuestGet: vi.fn<() => Promise<unknown>>(),
+  mockListQuestEncounters: vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]),
+}));
+
+vi.mock('../../../lib/api', () => ({
+  api: {
+    monsters: {
+      listQuestEncounters: mockListQuestEncounters,
+    },
+    quests: {
+      get: mockQuestGet,
+    },
+  },
+}));
+
 // Capture onEvent / onConnectionChange callbacks for each call
 type ConnectArgs = {
   onEvent: (event: AgentEvent) => void;
@@ -66,8 +82,30 @@ beforeEach(() => {
     entriesByQuest: {},
     currentSceneByQuest: {},
     statusByQuest: {},
+    inputRequestByQuest: {},
+    userBlockerByQuest: {},
   });
   mockHandleAgentEvent.mockClear();
+  mockQuestGet.mockResolvedValue({
+    id: 'q1',
+    status: 'user_blocked',
+    userBlocker: null,
+    inputRequest: null,
+    title: 'Test Quest',
+    description: '',
+    acceptanceCriteria: [],
+    edgeCases: [],
+    context: '',
+    epicId: null,
+    adventurerId: null,
+    agentId: null,
+    equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
+    specAudit: null,
+    failureSummary: null,
+    currentScene: 'quest-forest',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
 });
 
 afterEach(() => {
@@ -321,5 +359,235 @@ describe('useQuestStream', () => {
     });
 
     expect(mockHandleAgentEvent).toHaveBeenCalledWith('q1', event);
+  });
+
+  // ---------------------------------------------------------------------------
+  // paused_input event
+  // ---------------------------------------------------------------------------
+
+  it('sets inputRequest in store on paused_input event', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    const event: AgentEvent = {
+      type: 'paused_input',
+      timestamp: '2024-01-01T12:00:00.000Z',
+      question: 'Which API key should I use?',
+      context: 'Deploying to staging',
+      adventureFraming: 'The oracle speaks...',
+    };
+
+    act(() => {
+      mockConnects[0].onEvent(event);
+    });
+
+    const stored = useQuestStore.getState().inputRequestByQuest['q1'];
+    expect(stored).not.toBeNull();
+    expect(stored?.question).toBe('Which API key should I use?');
+    expect(stored?.context).toBe('Deploying to staging');
+    expect(stored?.adventureFraming).toBe('The oracle speaks...');
+    expect(stored?.awaitingSince).toBe('2024-01-01T12:00:00.000Z');
+  });
+
+  it('sets inputRequest without optional fields on paused_input event', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    const event: AgentEvent = {
+      type: 'paused_input',
+      timestamp: '2024-01-01T12:00:00.000Z',
+      question: 'Proceed?',
+    };
+
+    act(() => {
+      mockConnects[0].onEvent(event);
+    });
+
+    const stored = useQuestStore.getState().inputRequestByQuest['q1'];
+    expect(stored?.question).toBe('Proceed?');
+    expect(stored?.awaitingSince).toBe('2024-01-01T12:00:00.000Z');
+    expect(stored?.context).toBeUndefined();
+    expect(stored?.adventureFraming).toBeUndefined();
+  });
+
+  // ---------------------------------------------------------------------------
+  // resumed event
+  // ---------------------------------------------------------------------------
+
+  it('clears inputRequest and userBlocker on resumed event', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    // First set some state
+    useQuestStore.getState().setInputRequest('q1', {
+      question: 'Proceed?',
+      awaitingSince: '2024-01-01T12:00:00.000Z',
+    });
+    useQuestStore.getState().setUserBlocker('q1', {
+      rawDescription: 'Blocked',
+      markedAt: '2024-01-01T12:00:00.000Z',
+    });
+
+    act(() => {
+      mockConnects[0].onEvent({
+        type: 'resumed',
+        timestamp: new Date().toISOString(),
+        source: 'input_response',
+      });
+    });
+
+    expect(useQuestStore.getState().inputRequestByQuest['q1']).toBeNull();
+    expect(useQuestStore.getState().userBlockerByQuest['q1']).toBeNull();
+  });
+
+  it('resumed with source=user_unblock clears both fields', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    useQuestStore.getState().setUserBlocker('q1', {
+      rawDescription: 'Blocked by external dep',
+      markedAt: '2024-01-01T12:00:00.000Z',
+    });
+
+    act(() => {
+      mockConnects[0].onEvent({
+        type: 'resumed',
+        timestamp: new Date().toISOString(),
+        source: 'user_unblock',
+      });
+    });
+
+    expect(useQuestStore.getState().userBlockerByQuest['q1']).toBeNull();
+    expect(useQuestStore.getState().inputRequestByQuest['q1']).toBeNull();
+  });
+
+  // ---------------------------------------------------------------------------
+  // status_change → user_blocked
+  // ---------------------------------------------------------------------------
+
+  it('refetches quest and sets userBlocker on status_change to user_blocked', async () => {
+    const blocker = {
+      rawDescription: 'Waiting for access credentials',
+      markedAt: '2024-01-01T12:00:00.000Z',
+    };
+    mockQuestGet.mockResolvedValue({
+      id: 'q1',
+      status: 'user_blocked',
+      userBlocker: blocker,
+      inputRequest: null,
+      title: 'Test Quest',
+      description: '',
+      acceptanceCriteria: [],
+      edgeCases: [],
+      context: '',
+      epicId: null,
+      adventurerId: null,
+      agentId: null,
+      equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
+      specAudit: null,
+      failureSummary: null,
+      currentScene: 'quest-forest',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    renderHook(() => useQuestStream('q1'));
+
+    await act(async () => {
+      mockConnects[0].onEvent({
+        type: 'status_change',
+        timestamp: new Date().toISOString(),
+        from: 'active',
+        to: 'user_blocked',
+      });
+      // Let promises settle
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['quest', 'q1'] });
+    expect(useQuestStore.getState().userBlockerByQuest['q1']).toEqual(blocker);
+  });
+
+  it('sets status in store on status_change to user_blocked', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    act(() => {
+      mockConnects[0].onEvent({
+        type: 'status_change',
+        timestamp: new Date().toISOString(),
+        from: 'active',
+        to: 'user_blocked',
+      });
+    });
+
+    expect(useQuestStore.getState().statusByQuest['q1']).toBe('user_blocked');
+  });
+
+  it('silently ignores API error when refetching quest on user_blocked', async () => {
+    mockQuestGet.mockRejectedValue(new Error('Network error'));
+
+    renderHook(() => useQuestStream('q1'));
+
+    await act(async () => {
+      mockConnects[0].onEvent({
+        type: 'status_change',
+        timestamp: new Date().toISOString(),
+        from: 'active',
+        to: 'user_blocked',
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Should not throw; userBlocker was never set (API error, so stays undefined/null)
+    expect(useQuestStore.getState().userBlockerByQuest['q1'] ?? null).toBeNull();
+  });
+
+  // ---------------------------------------------------------------------------
+  // status_change → active
+  // ---------------------------------------------------------------------------
+
+  it('clears inputRequest and userBlocker on status_change to active', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    useQuestStore.getState().setInputRequest('q1', {
+      question: 'Proceed?',
+      awaitingSince: '2024-01-01T12:00:00.000Z',
+    });
+    useQuestStore.getState().setUserBlocker('q1', {
+      rawDescription: 'Blocked',
+      markedAt: '2024-01-01T12:00:00.000Z',
+    });
+
+    act(() => {
+      mockConnects[0].onEvent({
+        type: 'status_change',
+        timestamp: new Date().toISOString(),
+        from: 'paused_input',
+        to: 'active',
+      });
+    });
+
+    expect(useQuestStore.getState().inputRequestByQuest['q1']).toBeNull();
+    expect(useQuestStore.getState().userBlockerByQuest['q1']).toBeNull();
+    expect(useQuestStore.getState().statusByQuest['q1']).toBe('active');
+  });
+
+  it('does not clear modal state on status_change to non-active statuses', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    useQuestStore.getState().setInputRequest('q1', {
+      question: 'Proceed?',
+      awaitingSince: '2024-01-01T12:00:00.000Z',
+    });
+
+    act(() => {
+      mockConnects[0].onEvent({
+        type: 'status_change',
+        timestamp: new Date().toISOString(),
+        from: 'active',
+        to: 'complete',
+      });
+    });
+
+    // inputRequest should remain (only cleared on active or resumed)
+    expect(useQuestStore.getState().inputRequestByQuest['q1']).not.toBeNull();
   });
 });
