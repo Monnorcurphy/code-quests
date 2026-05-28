@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { AudioSettings } from './audio-settings';
+import Credits from '../features/credits';
 
 const STORAGE_KEY = 'code-quests:reduced-motion';
 
@@ -28,6 +29,7 @@ function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [reducedMotion, setReducedMotion] = useState(
     () => localStorage.getItem(STORAGE_KEY) === 'true',
   );
+  const [creditsOpen, setCreditsOpen] = useState(false);
   const panelRef = useFocusTrap(onClose);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -50,34 +52,47 @@ function SettingsPanel({ onClose }: SettingsPanelProps) {
       style={{ zIndex: 200 }}
     >
       <div ref={panelRef} className="modal-panel settings-panel">
-        <h2 id="settings-title" className="modal-title">
-          Settings
-        </h2>
-        <div className="settings-row">
-          <div className="settings-row-text">
-            <span className="settings-row-label">Reduce motion</span>
-            <span className="settings-row-hint">Disables scene fade transitions</span>
-          </div>
-          <label className="settings-toggle-wrap" htmlFor="reduced-motion-toggle">
-            <input
-              id="reduced-motion-toggle"
-              type="checkbox"
-              className="settings-toggle-input"
-              checked={reducedMotion}
-              onChange={handleToggle}
-              aria-label="Reduce motion"
-            />
-            <span className="settings-toggle-track" aria-hidden="true">
-              {reducedMotion ? 'On' : 'Off'}
-            </span>
-          </label>
-        </div>
-        <AudioSettings />
-        <div className="form-actions">
-          <button ref={closeRef} className="btn-secondary" onClick={onClose}>
-            Close
-          </button>
-        </div>
+        {creditsOpen ? (
+          <Credits onBack={() => setCreditsOpen(false)} />
+        ) : (
+          <>
+            <h2 id="settings-title" className="modal-title">
+              Settings
+            </h2>
+            <div className="settings-row">
+              <div className="settings-row-text">
+                <span className="settings-row-label">Reduce motion</span>
+                <span className="settings-row-hint">Disables scene fade transitions</span>
+              </div>
+              <label className="settings-toggle-wrap" htmlFor="reduced-motion-toggle">
+                <input
+                  id="reduced-motion-toggle"
+                  type="checkbox"
+                  className="settings-toggle-input"
+                  checked={reducedMotion}
+                  onChange={handleToggle}
+                  aria-label="Reduce motion"
+                />
+                <span className="settings-toggle-track" aria-hidden="true">
+                  {reducedMotion ? 'On' : 'Off'}
+                </span>
+              </label>
+            </div>
+            <AudioSettings />
+            <div className="form-actions" style={{ justifyContent: 'space-between' }}>
+              <button
+                className="btn-secondary"
+                onClick={() => setCreditsOpen(true)}
+                data-testid="open-credits-btn"
+              >
+                Credits
+              </button>
+              <button ref={closeRef} className="btn-secondary" onClick={onClose}>
+                Close
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

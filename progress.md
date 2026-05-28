@@ -1,21 +1,20 @@
 # Progress — Phase 8
 
-Previous task progress archived to metrics/progress-before-elnath.md
+Previous task progress archived to metrics/progress-before-gacrux.md
 
-## Task elnath — Visual cues: silent-mode parity for every audio event
+## gacrux — Audio capstone (2026-05-28)
 
 **Status:** Done
 
 **What was built:**
-- `audio/audio-cue-bus.ts` — pub-sub singleton; `dispatchCue(event)` / `subscribeCue(listener)` used by controller and components
-- `audio-controller.ts` updated — calls `dispatchCue` for every event it plays (loop + one-shot)
-- `audio/visual-cues/scene-mood-indicator.tsx` — fixed bottom-left badge showing current loop mood (Town · Calm / On the Road / In Combat / Boss Fight); animates on change, instant swap under `prefers-reduced-motion`
-- `audio/visual-cues/pause-bell-flash.tsx` — parchment-gold screen-edge overlay on PAUSE_BELL; 300ms animated fade-out without reduced motion; 1500ms static ring with reduced motion
-- `audio/visual-cues/stinger-toast.tsx` — top-center banner for VICTORY_STINGER / QUEST_COMPLETE (auto-dismiss 3s) and QUEST_FAILED (persists, manual dismiss button)
-- `audio/visual-cues/aria-announcer.tsx` — `aria-live="polite"` sr-only region; every AudioEvent maps to a human-readable announcement
-- `audio/visual-cues/__tests__/visual-cues.test.tsx` — 38 tests covering all 8 events, prefers-reduced-motion, fake-timer auto-dismiss, QUEST_FAILED persistence, and dismiss button
-- `lib/use-reduced-motion.ts` — shared hook reading `matchMedia` + `data-reduced-motion` attribute
-- `components/app-shell.tsx` — wired all 4 components so they render on every route
-- `styles/features.css` — CSS for scene-mood-indicator, pause-bell-flash, and stinger-toast with `prefers-reduced-motion` opt-out
+- `packages/client/src/audio/audio-controller-mount.tsx` — React component that wires `createAudioController` to the active `AudioBackend` from context. Includes a `makeSceneBridge` adapter that detects `/quest/` routes and synthesizes a quest scene key for the audio controller's scene store, enabling ROAD audio on quest routes.
+- `packages/client/src/audio/credits-data.ts` — Hand-mirrored audio credits constants (mirrors `assets/CREDITS.md` Phase 8 section).
+- `packages/client/src/features/credits.tsx` — Credits screen component with a table of all 8 audio files (file, author, license). Reachable from Settings → Credits button.
+- `packages/client/src/app.tsx` — Updated to mount `<AudioControllerMount />` so the controller runs for all routes.
+- `packages/client/src/components/settings-button.tsx` — Added Credits button and sub-panel to the settings modal.
+- `packages/client/src/audio/audio-cue-bus.ts` — Added `window.__audioLog__` test hook (appends dispatched events for E2E inspection).
+- `packages/client/tests/e2e/phase-8-audio-capstone.spec.ts` — Playwright E2E: boot, mood indicator, quest route audio transition, settings controls, credits screen, a11y on all surfaces.
+- `README.md` — Added Phase 8 Audio section with controls reference, troubleshooting, and updated phase roadmap.
+- `specs/done/phase-8-walkthrough.md` — Human walkthrough (8 sections from boot to credits).
 
-**Tests:** 818 passed (55 files). Typecheck: clean. Lint: clean.
+**Verification:** `pnpm typecheck` ✓ | `pnpm lint` ✓ | `pnpm test` 820/820 ✓ | `pnpm build` ✓
