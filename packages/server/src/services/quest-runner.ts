@@ -116,6 +116,15 @@ export async function runQuest(
                 adventurer.name,
                 capturedEvent.context,
               );
+              // Gate: discard framing if the quest already moved past paused_input.
+              // Re-read the DB so we don't overwrite NULL (cleared by resumed) or a new cycle.
+              const currentRow = db
+                .prepare('SELECT input_request_json FROM quests WHERE id = ?')
+                .get(quest.id) as { input_request_json: string | null } | undefined;
+              if (!currentRow?.input_request_json) return;
+              const currentRequest = JSON.parse(currentRow.input_request_json) as { awaitingSince?: string };
+              if (currentRequest.awaitingSince !== capturedEvent.timestamp) return;
+
               const updatedRequest: InputRequest = {
                 question: capturedEvent.question,
                 context: capturedEvent.context,
@@ -130,9 +139,14 @@ export async function runQuest(
                 context: capturedEvent.context,
                 adventureFraming,
               };
+              collectedEvents.push(framingEvent);
+              persistEvents();
               publishEvent?.(quest.id, framingEvent);
-            } catch {
-              // Framing is best-effort; errors are silently ignored
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              process.stderr.write(
+                `[quest-runner] framing update error for quest ${quest.id}: ${msg}\n`,
+              );
             }
           })();
 
