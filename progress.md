@@ -1,14 +1,11 @@
 # Progress — Phase 7
 
-Previous task progress archived to metrics/progress-before-electrical-storm.md
+Previous task progress archived to metrics/progress-before-extratropical-cyclone.md
 
-## electrical-storm — REST + WebSocket surface for pause/respond/block/unblock
+## extratropical-cyclone — Client store + Phaser scene freeze
 
-**Status:** Done
-
-- Added `POST /api/quests/:id/respond-input` — validates body (min 1, max 4000), 409 if not paused_input, 410 if no active handle, calls `handle.respond(text)`, returns current quest
-- Added `POST /api/quests/:id/block` — validates body (min 1, max 1000), 409 if not active/paused_input, transitions to user_blocked, persists userBlocker, cancels active agent handle, publishes status_change, kicks off async frameUserBlocker
-- Added `POST /api/quests/:id/unblock` — 409 if not user_blocked, sets unblockedAt, transitions to active, re-spawns agent via runQuest, publishes status_change
-- quest-channel.ts already forwards all AgentEvent types generically — no changes needed
-- 21 new integration tests covering 404/409/410 paths, full pause→respond cycle, block with handle cancellation, unblock with agent spawn, status_change events via channel, full block→unblock cycle
-- All 373 tests pass, typecheck clean, lint clean
+- Extended `quest-store.ts` with `inputRequestByQuest` and `userBlockerByQuest` maps plus four new actions: `setInputRequest`, `clearInputRequest`, `setUserBlocker`, `clearUserBlocker`. Updated `reset()` to clear these fields.
+- Extended `use-quest-stream.ts`: `paused_input` event → `setInputRequest`; `resumed` event → clears both; `status_change` to `user_blocked` → invalidates query cache and refetches quest REST to populate `userBlocker`; `status_change` to `active` → clears both modal states.
+- Extended `base-quest-scene.ts`: subscribes to quest store in `create()`, freezes scene on `paused_input`/`user_blocked` (`tweens.pauseAll()`, `player.pauseAnimations()`, dim overlay or canvas opacity 0.7 for reduced motion), resumes on `active`. Applies initial freeze state immediately on mount. Unsubscribes on `shutdown`.
+- Added `pauseAnimations()` / `resumeAnimations()` to `Player`.
+- All 587 client tests pass; typecheck and lint clean.

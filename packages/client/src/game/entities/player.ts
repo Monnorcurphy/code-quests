@@ -129,4 +129,12 @@ export class Player {
       this._playAnim('player-idle');
     }
   }
+
+  pauseAnimations(): void {
+    this.sprite.anims.pause();
+  }
+
+  resumeAnimations(): void {
+    this.sprite.anims.resume();
+  }
 }

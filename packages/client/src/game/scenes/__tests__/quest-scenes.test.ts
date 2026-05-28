@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('phaser', () => ({
   default: {
@@ -47,10 +47,33 @@ vi.mock('../../scene-registry', () => ({
   registerScene: vi.fn(),
 }));
 
+vi.mock('../../combat-layer', () => ({
+  CombatLayer: vi.fn().mockImplementation(() => ({
+    encounterActive: false,
+    destroy: vi.fn(),
+  })),
+}));
+
 import { sceneRouter } from '../../scene-router';
+import { useQuestStore } from '../../../stores/quest-store';
 
 function makeSprite() {
-  return { setFlipX: vi.fn(), play: vi.fn(), x: 0 };
+  return {
+    setFlipX: vi.fn(),
+    play: vi.fn(),
+    x: 0,
+    anims: {
+      pause: vi.fn(),
+      resume: vi.fn(),
+    },
+  };
+}
+
+function makeDimOverlay() {
+  return {
+    setDepth: vi.fn().mockReturnThis(),
+    setVisible: vi.fn(),
+  };
 }
 
 function attachMockContext(scene: object) {
@@ -65,6 +88,7 @@ function attachMockContext(scene: object) {
     add: {
       tileSprite: vi.fn(),
       sprite: vi.fn(() => makeSprite()),
+      rectangle: vi.fn(() => makeDimOverlay()),
     },
     anims: {
       exists: vi.fn(() => false),
@@ -88,6 +112,10 @@ function attachMockContext(scene: object) {
     events: {
       once: vi.fn(),
       on: vi.fn(),
+    },
+    tweens: {
+      pauseAll: vi.fn(),
+      resumeAll: vi.fn(),
     },
   };
   Object.assign(scene, ctx);
@@ -125,16 +153,10 @@ describe('QuestForestScene', () => {
   });
 
   it('create() uses fade duration 0 when prefers-reduced-motion is set', () => {
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: vi.fn().mockReturnValue({ matches: true }),
-    });
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
     scene.create();
     expect(scene.cameras.main.fadeIn).toHaveBeenCalledWith(0);
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: undefined,
-    });
+    vi.unstubAllGlobals();
   });
 
   it('reaching right edge emits requestSceneAdvance to quest-cave', () => {
@@ -280,5 +302,140 @@ describe('nextSceneKey chain', () => {
     expect(cave.nextSceneKey).toBe('quest-dungeon');
     expect(dungeon.nextSceneKey).toBe('quest-boss-room');
     expect(boss.nextSceneKey).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Freeze behavior (paused_input / user_blocked)
+// ---------------------------------------------------------------------------
+
+describe('BaseQuestScene freeze behavior', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let scene: any;
+  let canvasStyle: { opacity: string };
+
+  function attachMockContextWithGame(s: object) {
+    canvasStyle = { opacity: '1' };
+    const ctx = attachMockContext(s);
+    Object.assign(s, {
+      game: {
+        registry: {
+          get: vi.fn().mockReturnValue('q1'),
+        },
+        canvas: { style: canvasStyle },
+      },
+    });
+    return ctx;
+  }
+
+  beforeEach(async () => {
+    useQuestStore.setState({
+      _nextId: 0,
+      entriesByQuest: {},
+      currentSceneByQuest: {},
+      statusByQuest: {},
+      inputRequestByQuest: {},
+      userBlockerByQuest: {},
+    });
+    const { QuestForestScene } = await import('../quest-forest-scene');
+    scene = new QuestForestScene();
+    attachMockContextWithGame(scene);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    // Clean up the store subscription registered by scene.create()
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
+    (scene as any)._unsubscribeStore?.();
+  });
+
+  it('calls tweens.pauseAll when status changes to paused_input', () => {
+    scene.create();
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    expect(scene.tweens.pauseAll).toHaveBeenCalled();
+  });
+
+  it('calls tweens.pauseAll when status changes to user_blocked', () => {
+    scene.create();
+    useQuestStore.getState().setStatus('q1', 'user_blocked');
+    expect(scene.tweens.pauseAll).toHaveBeenCalled();
+  });
+
+  it('calls tweens.resumeAll when status returns to active', () => {
+    scene.create();
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    useQuestStore.getState().setStatus('q1', 'active');
+    expect(scene.tweens.resumeAll).toHaveBeenCalled();
+  });
+
+  it('shows dim overlay on freeze (non-reduced-motion path)', () => {
+    scene.create();
+    const overlay = scene._dimOverlay;
+    expect(overlay).not.toBeNull();
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    expect(overlay.setVisible).toHaveBeenCalledWith(true);
+  });
+
+  it('hides dim overlay on resume (non-reduced-motion path)', () => {
+    scene.create();
+    const overlay = scene._dimOverlay;
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    useQuestStore.getState().setStatus('q1', 'active');
+    expect(overlay.setVisible).toHaveBeenLastCalledWith(false);
+  });
+
+  it('does not crash if tweens has no active tweens (no-op pauseAll)', () => {
+    scene.create();
+    expect(() => {
+      useQuestStore.getState().setStatus('q1', 'paused_input');
+    }).not.toThrow();
+  });
+
+  it('applies initial freeze state immediately if quest is already paused when scene creates', () => {
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    scene.create();
+    expect(scene.tweens.pauseAll).toHaveBeenCalled();
+  });
+
+  it('does not double-freeze if status is set to paused_input twice', () => {
+    scene.create();
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    const callCount = scene.tweens.pauseAll.mock.calls.length;
+    // Setting same status again should not trigger another pauseAll
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    expect(scene.tweens.pauseAll.mock.calls.length).toBe(callCount);
+  });
+
+  it('does not move player when update fires during freeze', () => {
+    scene.create();
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    const beforeX = scene.player.getX();
+    scene.update(0, 16);
+    expect(scene.player.getX()).toBe(beforeX);
+  });
+
+  it('does not trigger scene advance when player is at edge during freeze', () => {
+    scene.create();
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    scene.player.setX(2320);
+    scene.update(0, 16);
+    expect(sceneRouter.requestSceneAdvance).not.toHaveBeenCalled();
+  });
+
+  it('reduced-motion: sets canvas opacity to 0.7 on freeze instead of overlay', () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
+    scene.create();
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    expect(canvasStyle.opacity).toBe('0.7');
+    // No dim overlay created in reduced-motion mode
+    expect(scene._dimOverlay).toBeNull();
+  });
+
+  it('reduced-motion: restores canvas opacity to 1 on resume', () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
+    scene.create();
+    useQuestStore.getState().setStatus('q1', 'paused_input');
+    useQuestStore.getState().setStatus('q1', 'active');
+    expect(canvasStyle.opacity).toBe('1');
   });
 });
