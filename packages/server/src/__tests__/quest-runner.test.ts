@@ -1178,3 +1178,94 @@ describe('runQuest paused_input / resumed handling', () => {
     expect(['failed', 'paused_input']).toContain(row.status);
   });
 });
+
+describe('runQuest adventure framing integration', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    runMigrations(db);
+    vi.mocked(getQuestAdapter).mockReturnValue(offlineAdapter);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    db.close();
+  });
+
+  it('publishes a follow-up paused_input event with adventureFraming after framing completes', async () => {
+    insertAdventurer(db, 'adv-frame');
+    insertQuest(db, 'q-frame', 'adv-frame');
+
+    const quest = parseQuest(db, 'q-frame');
+    const adventurer = parseAdventurer(db, 'adv-frame');
+
+    let resolveFramingReceived!: () => void;
+    const framingReceived = new Promise<void>((res) => { resolveFramingReceived = res; });
+    let capturedFraming: string | undefined;
+    let capturedDbJson: string | null = null;
+
+    const { done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input') {
+          if (!event.adventureFraming) {
+            // First event — respond immediately so quest can proceed
+            void getActiveHandle(questId)?.respond('test response');
+          } else {
+            // Follow-up event with framing
+            capturedFraming = event.adventureFraming;
+            // DB should be updated at this point
+            const row = db.prepare('SELECT input_request_json FROM quests WHERE id = ?').get(questId) as {
+              input_request_json: string | null;
+            };
+            capturedDbJson = row.input_request_json;
+            resolveFramingReceived();
+          }
+        }
+      },
+    });
+
+    await Promise.all([done, framingReceived]);
+
+    // Framing event was published
+    expect(capturedFraming).toBeDefined();
+    // Fallback framing contains adventurer name
+    expect(capturedFraming).toContain('Hero adv-frame');
+    // DB was updated with adventureFraming at the time the event was published
+    expect(capturedDbJson).not.toBeNull();
+    const parsed = JSON.parse(capturedDbJson!) as { adventureFraming?: string };
+    expect(parsed.adventureFraming).toBe(capturedFraming);
+  });
+
+  it('first paused_input event has no adventureFraming (non-blocking)', async () => {
+    insertAdventurer(db, 'adv-frame-nb');
+    insertQuest(db, 'q-frame-nb', 'adv-frame-nb');
+
+    const quest = parseQuest(db, 'q-frame-nb');
+    const adventurer = parseAdventurer(db, 'adv-frame-nb');
+
+    let firstPausedInputHadFraming = true;
+    let resolveFramingReceived!: () => void;
+    const framingReceived = new Promise<void>((res) => { resolveFramingReceived = res; });
+
+    const { done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input') {
+          if (!event.adventureFraming) {
+            firstPausedInputHadFraming = false;
+            void getActiveHandle(questId)?.respond('test response');
+          } else {
+            resolveFramingReceived();
+          }
+        }
+      },
+    });
+
+    await Promise.all([done, framingReceived]);
+
+    // The immediate paused_input event must NOT have adventureFraming
+    expect(firstPausedInputHadFraming).toBe(false);
+  });
+});

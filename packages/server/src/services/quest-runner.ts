@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import type { AgentEvent, Quest, Adventurer, Agent } from '@code-quests/shared';
+import type { AgentEvent, Quest, Adventurer, Agent, InputRequest } from '@code-quests/shared';
 import type { AgentHandle } from '../agents/adapter';
 import { createAgent, endAgent } from './agents-service';
 import { getQuestAdapter } from '../agents/select-adapter';
@@ -8,6 +8,7 @@ import { advanceQuestScene } from './quest-scene-progression';
 import { classifyCombatEvent, recordEncounter, resolveEncounter } from './monster-detection';
 import { getMonsterType } from './monster-types';
 import { setInputRequest, clearInputRequest } from '../db/quest-repository';
+import { frameInputRequest } from './adventure-framing';
 
 export const PROGRESS_EVENTS_PER_SCENE = 3;
 export const LICH_REPEAT_THRESHOLD = 3;
@@ -104,6 +105,37 @@ export async function runQuest(
           collectedEvents.push(event);
           publishEvent?.(quest.id, event);
           persistEvents();
+
+          // Async framing — non-blocking. Parchment modal renders raw question immediately;
+          // framing follow-up event updates it once the haiku call completes.
+          const capturedEvent = event;
+          void (async () => {
+            try {
+              const adventureFraming = await frameInputRequest(
+                capturedEvent.question,
+                adventurer.name,
+                capturedEvent.context,
+              );
+              const updatedRequest: InputRequest = {
+                question: capturedEvent.question,
+                context: capturedEvent.context,
+                awaitingSince: capturedEvent.timestamp,
+                adventureFraming,
+              };
+              setInputRequest(db, quest.id, updatedRequest);
+              const framingEvent: AgentEvent = {
+                type: 'paused_input',
+                timestamp: new Date().toISOString(),
+                question: capturedEvent.question,
+                context: capturedEvent.context,
+                adventureFraming,
+              };
+              publishEvent?.(quest.id, framingEvent);
+            } catch {
+              // Framing is best-effort; errors are silently ignored
+            }
+          })();
+
           continue;
         }
 

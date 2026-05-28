@@ -73,6 +73,7 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
     timestamp: z.string(),
     question: z.string().min(1),
     context: z.string().optional(),
+    adventureFraming: z.string().optional(),
   }),
   z.object({
     type: z.literal('resumed'),
