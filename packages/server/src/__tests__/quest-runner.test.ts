@@ -11,7 +11,7 @@ import type { AgentEvent } from '@code-quests/shared';
 import { QuestSchema, AdventurerSchema } from '@code-quests/shared';
 import { openDb } from '../db/connection';
 import { runMigrations } from '../db/migrator';
-import { runQuest, PROGRESS_EVENTS_PER_SCENE, LICH_REPEAT_THRESHOLD } from '../services/quest-runner';
+import { runQuest, PROGRESS_EVENTS_PER_SCENE, LICH_REPEAT_THRESHOLD, getActiveHandle } from '../services/quest-runner';
 import { getQuestAdapter } from '../agents/select-adapter';
 import { offlineAdapter } from '../agents/offline-adapter';
 
@@ -124,7 +124,12 @@ describe('runQuest (offline adapter)', () => {
     const receivedEvents: AgentEvent[] = [];
     const { agent, done } = await runQuest(quest, adventurer, {
       db,
-      publishEvent: (_questId, event) => { receivedEvents.push(event); },
+      publishEvent: (questId, event) => {
+        receivedEvents.push(event);
+        if (event.type === 'paused_input') {
+          void getActiveHandle(questId)?.respond('test response');
+        }
+      },
     });
 
     expect(agent.id).toBeTruthy();
@@ -184,7 +189,14 @@ describe('runQuest (offline adapter)', () => {
       scars: JSON.parse(advRow['scars_json'] as string),
     });
 
-    const { agent, done } = await runQuest(quest, adventurer, { db });
+    const { agent, done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input') {
+          void getActiveHandle(questId)?.respond('test response');
+        }
+      },
+    });
     await done;
 
     const questAfter = db.prepare('SELECT agent_id FROM quests WHERE id = ?').get('q-2') as { agent_id: string | null };
@@ -226,7 +238,11 @@ describe('runQuest (offline adapter)', () => {
       scars: JSON.parse(advRow['scars_json'] as string),
     });
 
-    const publishSpy = vi.fn();
+    const publishSpy = vi.fn((questId: string, event: AgentEvent) => {
+      if (event.type === 'paused_input') {
+        void getActiveHandle(questId)?.respond('test response');
+      }
+    });
     const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
     await done;
 
@@ -265,6 +281,7 @@ describe('runQuest error recovery (bug regression)', () => {
             throw new Error('EPIPE: stream broke');
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: null }; },
         };
       },
@@ -313,6 +330,7 @@ describe('runQuest error recovery (bug regression)', () => {
             yield { type: 'failed', timestamp: new Date().toISOString(), reason: 'agent failed' };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: null }; },
         };
       },
@@ -372,6 +390,7 @@ describe('runQuest scene progression heuristic', () => {
             yield { type: 'completed', timestamp: ts };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 0 }; },
         };
       },
@@ -414,6 +433,7 @@ describe('runQuest scene progression heuristic', () => {
             yield { type: 'completed', timestamp: ts };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 0 }; },
         };
       },
@@ -451,6 +471,7 @@ describe('runQuest scene progression heuristic', () => {
             yield { type: 'completed', timestamp: new Date().toISOString() };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 0 }; },
         };
       },
@@ -499,6 +520,7 @@ describe('runQuest scene progression heuristic', () => {
             yield { type: 'completed', timestamp: ts };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 0 }; },
         };
       },
@@ -550,6 +572,7 @@ describe('runQuest scene progression heuristic', () => {
             yield { type: 'completed', timestamp: new Date().toISOString() };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 0 }; },
         };
       },
@@ -599,6 +622,7 @@ describe('runQuest combat/encounter integration', () => {
             yield { type: 'completed', timestamp: ts };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 0 }; },
         };
       },
@@ -662,6 +686,7 @@ describe('runQuest combat/encounter integration', () => {
             yield { type: 'failed', timestamp: ts, reason: 'could not fix errors' };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 1 }; },
         };
       },
@@ -719,6 +744,7 @@ describe('runQuest combat/encounter integration', () => {
             yield { type: 'completed', timestamp: ts };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 0 }; },
         };
       },
@@ -741,6 +767,7 @@ describe('runQuest combat/encounter integration', () => {
             yield { type: 'completed', timestamp: ts };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 0 }; },
         };
       },
@@ -794,6 +821,7 @@ describe('runQuest lich aggregator', () => {
             yield { type: 'completed', timestamp: ts };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 0 }; },
         };
       },
@@ -850,6 +878,7 @@ describe('runQuest lich aggregator', () => {
             yield { type: 'completed', timestamp: ts };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 0 }; },
         };
       },
@@ -890,6 +919,7 @@ describe('runQuest lich aggregator', () => {
             yield { type: 'completed', timestamp: ts };
           },
           async cancel() {},
+          async respond() {},
           async awaitExit() { return { exitCode: 0 }; },
         };
       },
@@ -908,5 +938,364 @@ describe('runQuest lich aggregator', () => {
         && (e as { monsterTypeId?: string }).monsterTypeId === 'lich_repeated_failure',
     );
     expect(lichAppearedEvents).toHaveLength(0);
+  });
+});
+
+describe('runQuest paused_input / resumed handling', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    runMigrations(db);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    db.close();
+  });
+
+  it('transitions quest to paused_input and sets input_request_json on paused_input event', async () => {
+    insertAdventurer(db, 'adv-pause');
+    insertQuest(db, 'q-pause', 'adv-pause');
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-pause',
+      async spawn() {
+        let resolveRespond!: (text: string) => void;
+        const respondPromise = new Promise<string>((res) => { resolveRespond = res; });
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            yield { type: 'progress', timestamp: ts, message: 'Starting' };
+            yield { type: 'paused_input', timestamp: ts, question: 'Which approach?' };
+            await respondPromise;
+            yield { type: 'resumed', timestamp: ts, source: 'input_response' };
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async respond(text: string) { resolveRespond(text); },
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-pause');
+    const adventurer = parseAdventurer(db, 'adv-pause');
+
+    const publishedEvents: AgentEvent[] = [];
+    const { done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        publishedEvents.push(event);
+        if (event.type === 'paused_input') {
+          void getActiveHandle(questId)?.respond('use approach A');
+        }
+      },
+    });
+
+    await done;
+
+    const finalRow = db.prepare('SELECT status FROM quests WHERE id = ?').get('q-pause') as { status: string };
+    expect(finalRow.status).toBe('complete');
+
+    const types = publishedEvents.map((e) => e.type);
+    expect(types).toContain('paused_input');
+    expect(types).toContain('resumed');
+    expect(types).toContain('status_change');
+  });
+
+  it('populates input_request_json when paused_input event arrives', async () => {
+    insertAdventurer(db, 'adv-irq');
+    insertQuest(db, 'q-irq', 'adv-irq');
+
+    let resolveRespond!: (text: string) => void;
+    const respondPromise = new Promise<string>((res) => { resolveRespond = res; });
+    let pausedInputPublished = false;
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-irq',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            yield { type: 'paused_input', timestamp: ts, question: 'Need API key?', context: 'Missing env var' };
+            await respondPromise;
+            yield { type: 'resumed', timestamp: ts, source: 'input_response' };
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async respond(text: string) { resolveRespond(text); },
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-irq');
+    const adventurer = parseAdventurer(db, 'adv-irq');
+
+    const { done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input' && !pausedInputPublished) {
+          pausedInputPublished = true;
+          // Check DB immediately after publish
+          const row = db.prepare('SELECT status, input_request_json FROM quests WHERE id = ?').get(questId) as {
+            status: string;
+            input_request_json: string | null;
+          };
+          expect(row.status).toBe('paused_input');
+          expect(row.input_request_json).not.toBeNull();
+          const parsed = JSON.parse(row.input_request_json!) as { question: string; context?: string };
+          expect(parsed.question).toBe('Need API key?');
+          expect(parsed.context).toBe('Missing env var');
+          // Respond
+          resolveRespond('yes, set API_KEY=test');
+        }
+      },
+    });
+
+    await done;
+  });
+
+  it('persists resumed event to agents.events_json immediately (before completed arrives)', async () => {
+    insertAdventurer(db, 'adv-resume-persist');
+    insertQuest(db, 'q-resume-persist', 'adv-resume-persist');
+
+    let resolveRespond!: (text: string) => void;
+    const respondPromise = new Promise<string>((res) => { resolveRespond = res; });
+    // resolveComplete is called inside publishEvent once we have verified the DB state;
+    // it gates the generator so that 'completed' cannot fire before we checked.
+    let resolveComplete!: () => void;
+    const completePromise = new Promise<void>((res) => { resolveComplete = res; });
+    let resumedEventsSnapshot: AgentEvent[] | null = null;
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-resume-persist',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            yield { type: 'paused_input', timestamp: ts, question: 'Which approach?' };
+            await respondPromise;
+            yield { type: 'resumed', timestamp: ts, source: 'input_response' };
+            await completePromise;
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async respond(text: string) { resolveRespond(text); },
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-resume-persist');
+    const adventurer = parseAdventurer(db, 'adv-resume-persist');
+
+    const { agent, done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input') {
+          void getActiveHandle(questId)?.respond('use approach A');
+        }
+        if (event.type === 'resumed') {
+          // persistEvents() was called BEFORE publishEvent in the resumed branch,
+          // so events_json already has the resumed event at this point.
+          const agentRow = db.prepare('SELECT events_json FROM agents WHERE id = ?')
+            .get(agent.id) as { events_json: string | null };
+          if (agentRow?.events_json) {
+            resumedEventsSnapshot = JSON.parse(agentRow.events_json) as AgentEvent[];
+          }
+          resolveComplete();
+        }
+      },
+    });
+
+    await done;
+
+    // Snapshot was captured inside publishEvent for 'resumed', BEFORE 'completed' arrived.
+    expect(resumedEventsSnapshot).not.toBeNull();
+    expect(resumedEventsSnapshot!.some((e) => e.type === 'resumed')).toBe(true);
+
+    const finalRow = db.prepare('SELECT status FROM quests WHERE id = ?').get('q-resume-persist') as { status: string };
+    expect(finalRow.status).toBe('complete');
+  });
+
+  it('cancel during paused_input ends the quest cleanly', async () => {
+    insertAdventurer(db, 'adv-cancel-pause');
+    insertQuest(db, 'q-cancel-pause', 'adv-cancel-pause');
+
+    let resolveRespond!: (text: string) => void;
+    const respondPromise = new Promise<string>((res) => { resolveRespond = res; });
+    let settled = false;
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-cancel-pause',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            yield { type: 'paused_input', timestamp: ts, question: 'Waiting...' };
+            await respondPromise;
+            if (settled) return;
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {
+            settled = true;
+            resolveRespond('__cancel__');
+          },
+          async respond(text: string) { resolveRespond(text); },
+          async awaitExit() { return { exitCode: null }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-cancel-pause');
+    const adventurer = parseAdventurer(db, 'adv-cancel-pause');
+
+    const { done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input') {
+          // Simulate cancel instead of respond
+          const handle = getActiveHandle(questId);
+          void handle?.cancel('user cancelled');
+          // Also update DB to failed as cancel route would do
+          const ts = new Date().toISOString();
+          db.prepare(
+            "UPDATE quests SET status = 'failed', failure_summary_json = ?, updated_at = ? WHERE id = ? AND status = 'paused_input'",
+          ).run(JSON.stringify({ reason: 'User cancelled', recommendation: 'retire' }), ts, questId);
+        }
+      },
+    });
+
+    await done;
+
+    const row = db.prepare('SELECT status FROM quests WHERE id = ?').get('q-cancel-pause') as { status: string };
+    expect(['failed', 'paused_input']).toContain(row.status);
+  });
+});
+
+describe('runQuest adventure framing integration', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    runMigrations(db);
+    vi.mocked(getQuestAdapter).mockReturnValue(offlineAdapter);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    db.close();
+  });
+
+  it('publishes a follow-up paused_input event with adventureFraming after framing completes', async () => {
+    insertAdventurer(db, 'adv-frame');
+    insertQuest(db, 'q-frame', 'adv-frame');
+
+    const quest = parseQuest(db, 'q-frame');
+    const adventurer = parseAdventurer(db, 'adv-frame');
+
+    let resolveFramingReceived!: () => void;
+    const framingReceived = new Promise<void>((res) => { resolveFramingReceived = res; });
+    let capturedFraming: string | undefined;
+    let capturedDbJson: string | null = null;
+
+    const { done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input') {
+          if (event.adventureFraming) {
+            // Follow-up event with framing — capture data, then respond so quest can proceed
+            capturedFraming = event.adventureFraming;
+            const row = db.prepare('SELECT input_request_json FROM quests WHERE id = ?').get(questId) as {
+              input_request_json: string | null;
+            };
+            capturedDbJson = row.input_request_json;
+            resolveFramingReceived();
+            void getActiveHandle(questId)?.respond('test response');
+          }
+          // Do NOT respond on the first paused_input (no framing) — wait for framing first
+        }
+      },
+    });
+
+    await Promise.all([done, framingReceived]);
+
+    // Framing event was published
+    expect(capturedFraming).toBeDefined();
+    // Fallback framing contains adventurer name
+    expect(capturedFraming).toContain('Hero adv-frame');
+    // DB was updated with adventureFraming at the time the event was published
+    expect(capturedDbJson).not.toBeNull();
+    const parsed = JSON.parse(capturedDbJson!) as { adventureFraming?: string };
+    expect(parsed.adventureFraming).toBe(capturedFraming);
+  });
+
+  it('first paused_input event has no adventureFraming (non-blocking)', async () => {
+    insertAdventurer(db, 'adv-frame-nb');
+    insertQuest(db, 'q-frame-nb', 'adv-frame-nb');
+
+    const quest = parseQuest(db, 'q-frame-nb');
+    const adventurer = parseAdventurer(db, 'adv-frame-nb');
+
+    let firstPausedInputHadFraming = true;
+
+    const { done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input' && !event.adventureFraming) {
+          firstPausedInputHadFraming = false;
+          void getActiveHandle(questId)?.respond('test response');
+        }
+      },
+    });
+
+    await done;
+
+    // The immediate paused_input event must NOT have adventureFraming
+    expect(firstPausedInputHadFraming).toBe(false);
+  });
+
+  it('does not publish framing event or corrupt DB when agent responds before framing resolves', async () => {
+    insertAdventurer(db, 'adv-frame-race');
+    insertQuest(db, 'q-frame-race', 'adv-frame-race');
+
+    const quest = parseQuest(db, 'q-frame-race');
+    const adventurer = parseAdventurer(db, 'adv-frame-race');
+
+    let spuriousFramingAfterResumed = false;
+    let resumedSeen = false;
+
+    const { done } = await runQuest(quest, adventurer, {
+      db,
+      publishEvent: (questId, event) => {
+        if (event.type === 'paused_input' && !event.adventureFraming) {
+          // Respond immediately — simulate the race: user answers before framing resolves
+          void getActiveHandle(questId)?.respond('fast response');
+        }
+        if (event.type === 'resumed') {
+          resumedSeen = true;
+        }
+        if (event.type === 'paused_input' && event.adventureFraming && resumedSeen) {
+          // Framing event published AFTER resumed — this is the stale-write bug
+          spuriousFramingAfterResumed = true;
+        }
+      },
+    });
+
+    await done;
+
+    // No spurious framing event published after resumed
+    expect(spuriousFramingAfterResumed).toBe(false);
+    // DB must be NULL — cleared by resumed and NOT overwritten by stale framing
+    const row = db.prepare('SELECT input_request_json FROM quests WHERE id = ?').get('q-frame-race') as {
+      input_request_json: string | null;
+    };
+    expect(row.input_request_json).toBeNull();
   });
 });

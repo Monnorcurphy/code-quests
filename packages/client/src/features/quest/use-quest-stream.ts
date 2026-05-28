@@ -88,8 +88,29 @@ export function useQuestStream(questId: string): QuestStreamResult {
           sceneRouter.goToScene(event.to);
         }
 
+        if (event.type === 'paused_input') {
+          store.setInputRequest(questId, {
+            question: event.question,
+            context: event.context,
+            awaitingSince: event.timestamp,
+            adventureFraming: event.adventureFraming,
+          });
+        }
+
+        if (event.type === 'resumed') {
+          store.clearInputRequest(questId);
+          store.clearUserBlocker(questId);
+        }
+
         if (event.type === 'status_change') {
           store.setStatus(questId, event.to);
+
+          if (event.to === 'user_blocked') {
+            void queryClientRef.current.invalidateQueries({ queryKey: ['quest', questId] });
+          } else if (event.to === 'active') {
+            store.clearInputRequest(questId);
+            store.clearUserBlocker(questId);
+          }
         }
 
         if (event.type === 'monster_appeared') {

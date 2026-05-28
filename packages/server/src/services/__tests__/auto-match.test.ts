@@ -42,6 +42,8 @@ function makeQuest(overrides: Partial<Quest> = {}): Quest {
     equipment: overrides.equipment ?? { skillIds: [], toolIds: [], mcpServerIds: [] },
     specAudit: null,
     failureSummary: null,
+    inputRequest: null,
+    userBlocker: null,
     currentScene: 'quest-forest',
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',

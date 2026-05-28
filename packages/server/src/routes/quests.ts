@@ -12,6 +12,7 @@ import {
   AgentSchema,
   FailureSummarySchema,
   FailureSummaryRecommendationSchema,
+  UserBlockerSchema,
 } from '@code-quests/shared';
 import type { AgentEvent } from '@code-quests/shared';
 import { validate } from '../middleware/validate';
@@ -22,6 +23,16 @@ import { runQuest, getActiveHandle } from '../services/quest-runner';
 import { transitionQuestStatus, InvalidTransitionError } from '../services/quest-status';
 import { findAgentByQuest, endAgent } from '../services/agents-service';
 import { advanceQuestScene } from '../services/quest-scene-progression';
+import { setUserBlocker, getUserBlocker } from '../db/quest-repository';
+import { frameUserBlocker } from '../services/adventure-framing';
+
+const RespondInputBodySchema = z.object({
+  text: z.string().min(1).max(4000),
+});
+
+const BlockQuestBodySchema = z.object({
+  description: z.string().min(1).max(1000),
+});
 
 const CreateQuestSchema = z.object({
   title: z.string().min(1),
@@ -56,6 +67,8 @@ type QuestRow = {
   equipment_json: string;
   spec_audit_json: string | null;
   failure_summary_json: string | null;
+  input_request_json: string | null;
+  user_blocker_json: string | null;
   current_scene: string;
   created_at: string;
   updated_at: string;
@@ -77,6 +90,8 @@ function rowToApi(row: QuestRow) {
     equipment: JSON.parse(row.equipment_json) as Record<string, unknown>,
     specAudit: row.spec_audit_json ? JSON.parse(row.spec_audit_json) : null,
     failureSummary: row.failure_summary_json ? JSON.parse(row.failure_summary_json) : null,
+    inputRequest: row.input_request_json ? JSON.parse(row.input_request_json) : null,
+    userBlocker: row.user_blocker_json ? JSON.parse(row.user_blocker_json) : null,
     currentScene: row.current_scene,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -607,6 +622,175 @@ export function createQuestsRouter(
     }
 
     res.json({ currentScene: transition.to, advanced: true });
+  });
+
+  router.post('/:id/respond-input', validate(RespondInputBodySchema), (req, res) => {
+    const row = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow | undefined;
+    if (!row) {
+      res.status(404).json({ error: 'Quest not found' });
+      return;
+    }
+    if (row.status !== 'paused_input') {
+      res.status(409).json({ error: 'Quest is not awaiting input' });
+      return;
+    }
+    const handle = getActiveHandle(req.params.id);
+    if (!handle) {
+      res.status(410).json({ error: 'Agent is no longer active — quest is stale' });
+      return;
+    }
+    const body = req.body as { text: string };
+    void (async () => {
+      try {
+        await handle.respond(body.text);
+        // Return current state; actual status transition + clearInputRequest happen in quest-runner
+        // when the adapter emits the resumed event.
+        const updated = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
+        res.json(rowToApi(updated));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        process.stderr.write(`[quests] POST /quests/:id/respond-input failed: ${msg}\n`);
+        res.status(500).json({ error: 'Failed to respond to input request' });
+      }
+    })();
+  });
+
+  router.post('/:id/block', validate(BlockQuestBodySchema), (req, res) => {
+    const row = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow | undefined;
+    if (!row) {
+      res.status(404).json({ error: 'Quest not found' });
+      return;
+    }
+    if (row.status !== 'active' && row.status !== 'paused_input') {
+      res.status(409).json({ error: 'Quest must be active or awaiting input to block' });
+      return;
+    }
+    const body = req.body as { description: string };
+    try {
+      const now = new Date().toISOString();
+      transitionQuestStatus(db, req.params.id, row.status, 'user_blocked');
+      setUserBlocker(db, req.params.id, { rawDescription: body.description, markedAt: now });
+
+      // Cancel the active agent so it stops working while the user gathers external information.
+      // The agent is reborn when the user unblocks via the unblock route, which calls runQuest again.
+      const handle = getActiveHandle(req.params.id);
+      if (handle) {
+        void handle.cancel('user_blocked');
+      }
+
+      const channel = getChannel();
+      if (channel) {
+        channel.publishQuestEvent(req.params.id, {
+          type: 'status_change',
+          timestamp: now,
+          from: row.status as 'active' | 'paused_input',
+          to: 'user_blocked',
+        });
+      }
+
+      const updatedRow = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
+      const adventurerId = updatedRow.adventurer_id;
+
+      // Async framing — same fire-and-forget pattern as adventure-framing in quest-runner.
+      // The raw description renders immediately; framing updates the DB once the haiku call resolves.
+      if (adventurerId) {
+        const capturedDescription = body.description;
+        const capturedAdventurerId = adventurerId;
+        const capturedNow = now;
+        void (async () => {
+          try {
+            const adventurer = loadAdventurerRow(db, capturedAdventurerId);
+            if (!adventurer) return;
+            const adventureFraming = await frameUserBlocker(capturedDescription, adventurer.name);
+            // Gate: discard framing if the quest moved past user_blocked (e.g. user unblocked).
+            const currentBlocker = getUserBlocker(db, req.params.id);
+            if (!currentBlocker || currentBlocker.markedAt !== capturedNow) return;
+            if (currentBlocker.unblockedAt) return;
+            setUserBlocker(db, req.params.id, {
+              ...currentBlocker,
+              adventureFraming,
+            });
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            process.stderr.write(`[quests] framing update error for quest ${req.params.id}: ${msg}\n`);
+          }
+        })();
+      }
+
+      res.json(rowToApi(updatedRow));
+    } catch (err) {
+      if (err instanceof InvalidTransitionError) {
+        res.status(409).json({ error: err.message });
+        return;
+      }
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[quests] POST /quests/:id/block failed: ${msg}\n`);
+      res.status(500).json({ error: 'Failed to block quest' });
+    }
+  });
+
+  router.post('/:id/unblock', (req, res) => {
+    const row = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow | undefined;
+    if (!row) {
+      res.status(404).json({ error: 'Quest not found' });
+      return;
+    }
+    if (row.status !== 'user_blocked') {
+      res.status(409).json({ error: 'Quest is not blocked' });
+      return;
+    }
+    void (async () => {
+      try {
+        const now = new Date().toISOString();
+        if (!row.user_blocker_json) {
+          res.status(500).json({ error: 'Quest is blocked but has no blocker record' });
+          return;
+        }
+        const existingBlocker = UserBlockerSchema.parse(JSON.parse(row.user_blocker_json));
+        setUserBlocker(db, req.params.id, { ...existingBlocker, unblockedAt: now });
+        transitionQuestStatus(db, req.params.id, 'user_blocked', 'active');
+
+        const channel = getChannel();
+        if (channel) {
+          channel.publishQuestEvent(req.params.id, {
+            type: 'status_change',
+            timestamp: now,
+            from: 'user_blocked',
+            to: 'active',
+          });
+        }
+
+        const updatedRow = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
+        const quest = QuestSchema.parse(rowToApi(updatedRow));
+        const adventurerId = quest.adventurerId;
+        if (!adventurerId) {
+          res.status(409).json({ error: 'Quest has no adventurer assigned — cannot respawn agent' });
+          return;
+        }
+        const adventurer = loadAdventurerRow(db, adventurerId);
+        if (!adventurer) {
+          res.status(500).json({ error: 'Failed to load adventurer for respawn' });
+          return;
+        }
+
+        const { done } = await runQuest(quest, adventurer, {
+          db,
+          publishEvent: channel ? (questId, evt) => channel.publishQuestEvent(questId, evt) : undefined,
+        });
+        void done;
+
+        const finalRow = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow;
+        res.json(rowToApi(finalRow));
+      } catch (err) {
+        if (err instanceof InvalidTransitionError) {
+          res.status(409).json({ error: err.message });
+          return;
+        }
+        const msg = err instanceof Error ? err.message : String(err);
+        process.stderr.write(`[quests] POST /quests/:id/unblock failed: ${msg}\n`);
+        res.status(500).json({ error: 'Failed to unblock quest' });
+      }
+    })();
   });
 
   router.delete('/:id', (req, res) => {

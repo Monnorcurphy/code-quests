@@ -22,7 +22,13 @@ vi.mock('../../../lib/api', async (importOriginal) => {
 
 vi.mock('../../../stores/quest-store', () => ({
   useQuestStore: vi.fn((selector: (s: object) => unknown) =>
-    selector({ statusByQuest: {}, currentSceneByQuest: {}, entriesByQuest: {} }),
+    selector({
+      statusByQuest: {},
+      currentSceneByQuest: {},
+      entriesByQuest: {},
+      inputRequestByQuest: {},
+      userBlockerByQuest: {},
+    }),
   ),
 }));
 
@@ -41,6 +47,8 @@ function makeQuest(overrides: Partial<Quest> = {}): Quest {
     equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
     specAudit: null,
     failureSummary: null,
+    inputRequest: null,
+    userBlocker: null,
     currentScene: 'quest-forest' as const,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

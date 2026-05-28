@@ -2,6 +2,24 @@ import { z } from 'zod';
 import { EquipmentSchema } from './equipment';
 import { SpecAuditSchema } from './spec-audit';
 
+export const InputRequestSchema = z.object({
+  question: z.string().min(1),
+  context: z.string().optional(),
+  awaitingSince: z.string(),
+  adventureFraming: z.string().optional(),
+});
+
+export type InputRequest = z.infer<typeof InputRequestSchema>;
+
+export const UserBlockerSchema = z.object({
+  rawDescription: z.string().min(1),
+  adventureFraming: z.string().optional(),
+  markedAt: z.string(),
+  unblockedAt: z.string().optional(),
+});
+
+export type UserBlocker = z.infer<typeof UserBlockerSchema>;
+
 export const QuestSceneKeySchema = z.enum([
   'quest-forest',
   'quest-cave',
@@ -55,6 +73,8 @@ export const QuestSchema = z.object({
   specAudit: SpecAuditSchema.nullable().default(null),
   failureSummary: FailureSummarySchema.nullable().default(null),
   currentScene: QuestSceneKeySchema.default('quest-forest'),
+  inputRequest: InputRequestSchema.nullable().default(null),
+  userBlocker: UserBlockerSchema.nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
