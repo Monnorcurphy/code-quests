@@ -9,6 +9,7 @@ import { createQuestsRouter } from './routes/quests';
 import { createSkillsRouter } from './routes/skills';
 import { createToolsRouter } from './routes/tools';
 import { createMCPServersRouter } from './routes/mcp-servers';
+import { createTestEmitRouter } from './routes/test-emit';
 import { errorHandler } from './middleware/errors';
 import { attachQuestChannel, QuestChannel } from './realtime/quest-channel';
 
@@ -22,6 +23,9 @@ export function createApp(db: Database.Database) {
   app.use('/skills', createSkillsRouter(db));
   app.use('/tools', createToolsRouter(db));
   app.use('/mcp-servers', createMCPServersRouter(db));
+  if (process.env.NODE_ENV === 'test') {
+    app.use('/test', createTestEmitRouter(() => _questChannel));
+  }
   app.use(errorHandler);
   return app;
 }

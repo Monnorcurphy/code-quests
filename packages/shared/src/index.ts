@@ -1,5 +1,5 @@
-export { QuestStatusSchema, QuestSchema, EpicSchema, AC_MAX_LENGTH, AC_MAX_COUNT, QuestAcItemSchema, QuestAcListSchema, FailureSummarySchema, FailureSummaryRecommendationSchema } from './quest';
-export type { QuestStatus, Quest, Epic, FailureSummary, FailureSummaryRecommendation } from './quest';
+export { QuestStatusSchema, QuestSceneKeySchema, QuestSchema, EpicSchema, AC_MAX_LENGTH, AC_MAX_COUNT, QuestAcItemSchema, QuestAcListSchema, FailureSummarySchema, FailureSummaryRecommendationSchema } from './quest';
+export type { QuestStatus, QuestSceneKey, Quest, Epic, FailureSummary, FailureSummaryRecommendation } from './quest';
 
 export { AdventurerClassSchema, AdventurerSchema } from './adventurer';
 export type { AdventurerClass, Adventurer } from './adventurer';

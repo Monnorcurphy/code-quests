@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import QuestBoard from '../features/quests/quest-board';
 import { api } from '../lib/api';
@@ -34,6 +35,7 @@ const makeQuest = (overrides: Partial<Quest> = {}): Quest => ({
   equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
   specAudit: null,
   failureSummary: null,
+  currentScene: 'quest-forest' as const,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   ...overrides,
@@ -44,9 +46,11 @@ function renderBoard() {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <QuestBoard />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <QuestBoard />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 

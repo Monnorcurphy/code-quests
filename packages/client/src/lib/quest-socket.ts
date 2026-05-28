@@ -6,6 +6,10 @@ const BACKOFF_BASE_MS = 500;
 const BACKOFF_MAX_MS = 10_000;
 const BACKOFF_FACTOR = 2;
 
+// connectQuestSocket uses 1s / 30s per spec
+const CONNECT_BACKOFF_BASE_MS = 1_000;
+const CONNECT_BACKOFF_MAX_MS = 30_000;
+
 function wsUrl(): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${proto}//${window.location.host}/realtime`;
@@ -85,5 +89,97 @@ export function subscribe(
       s.close();
       s = null;
     }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// connectQuestSocket — status-aware API used by useQuestStream
+// ---------------------------------------------------------------------------
+
+export type ConnectionStatus = 'connecting' | 'connected' | 'closed';
+
+export interface ConnectOptions {
+  onEvent: (event: AgentEvent) => void;
+  onConnectionChange?: (status: ConnectionStatus) => void;
+  onParseError?: (message: string) => void;
+}
+
+export interface QuestSocketHandle {
+  close(): void;
+}
+
+export function connectQuestSocket(questId: string, opts: ConnectOptions): QuestSocketHandle {
+  let disposed = false;
+  let ws: WebSocket | null = null;
+  let backoff = CONNECT_BACKOFF_BASE_MS;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function connect(): void {
+    if (disposed) return;
+    const sock = new WebSocket(wsUrl());
+    ws = sock;
+
+    sock.addEventListener('open', () => {
+      backoff = CONNECT_BACKOFF_BASE_MS;
+      sock.send(JSON.stringify({ type: 'subscribe', questId }));
+      opts.onConnectionChange?.('connected');
+    });
+
+    sock.addEventListener('message', (evt: MessageEvent) => {
+      let raw: unknown;
+      try {
+        raw = JSON.parse(evt.data as string);
+      } catch {
+        opts.onParseError?.('Malformed WebSocket frame (not JSON)');
+        return;
+      }
+      const result = AgentEventSchema.safeParse(raw);
+      if (!result.success) {
+        opts.onParseError?.('Malformed AgentEvent payload');
+        return;
+      }
+      opts.onEvent(result.data);
+    });
+
+    sock.addEventListener('close', () => {
+      if (ws === sock) ws = null;
+      if (!disposed) {
+        opts.onConnectionChange?.('connecting');
+        scheduleReconnect();
+      }
+    });
+
+    sock.addEventListener('error', () => {
+      // always followed by close; reconnect handled there
+    });
+  }
+
+  function scheduleReconnect(): void {
+    const delay = backoff;
+    backoff = Math.min(backoff * BACKOFF_FACTOR, CONNECT_BACKOFF_MAX_MS);
+    logger.warn(`reconnecting in ${delay}ms`);
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      connect();
+    }, delay);
+  }
+
+  opts.onConnectionChange?.('connecting');
+  connect();
+
+  return {
+    close(): void {
+      disposed = true;
+      if (retryTimer !== null) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      if (ws !== null) {
+        ws.send(JSON.stringify({ type: 'unsubscribe', questId }));
+        ws.close();
+        ws = null;
+      }
+      opts.onConnectionChange?.('closed');
+    },
   };
 }

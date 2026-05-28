@@ -35,6 +35,7 @@ function makeCancelledQuest(): Quest {
     equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
     specAudit: null,
     failureSummary: { reason: 'User cancelled', recommendation: 'retire' },
+    currentScene: 'quest-forest' as const,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

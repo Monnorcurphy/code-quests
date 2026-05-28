@@ -10,6 +10,10 @@ import './scenes/tavern-scene';
 import './scenes/armory-scene';
 import './scenes/guild-hall-scene';
 import './scenes/hall-of-returns-scene';
+import './scenes/quest-forest-scene';
+import './scenes/quest-cave-scene';
+import './scenes/quest-dungeon-scene';
+import './scenes/quest-boss-room-scene';
 
 export function getGameConfig(
   parent: HTMLElement,

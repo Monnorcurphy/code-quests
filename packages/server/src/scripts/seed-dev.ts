@@ -2,6 +2,11 @@ import { openDb } from '../db/connection';
 import { runMigrations } from '../db/migrator';
 
 function seed() {
+  if (process.env.NODE_ENV === 'production') {
+    process.stderr.write('seed-dev.ts must not run in production\n');
+    process.exit(1);
+  }
+
   const db = openDb();
   runMigrations(db);
 
@@ -176,6 +181,69 @@ function seed() {
 
       process.stdout.write(`Created completed quest: ${completedTitle} (${completedQuestId})\n`);
     }
+  }
+
+  // Phase 5 demo quest — active quest mid-expedition in quest-cave for capstone E2E demo
+  const phase5Title = 'Phase 5 Demo: Cave Expedition';
+  const adventurer = db
+    .prepare("SELECT id FROM adventurers WHERE name = 'Brielle the Bold'")
+    .get() as { id: string } | undefined;
+
+  if (adventurer) {
+    const existingPhase5 = db
+      .prepare('SELECT id FROM quests WHERE title = ?')
+      .get(phase5Title) as { id: string } | undefined;
+
+    let activeQuestId: string;
+    if (existingPhase5) {
+      activeQuestId = existingPhase5.id;
+      db.prepare(
+        "UPDATE quests SET status = 'active', current_scene = 'quest-cave', adventurer_id = ?, updated_at = ? WHERE id = ?",
+      ).run(adventurer.id, now, activeQuestId);
+      // End any lingering active agents before creating a fresh one
+      db.prepare(
+        "UPDATE agents SET ended_at = ?, exit_code = 0 WHERE quest_id = ? AND ended_at IS NULL",
+      ).run(now, activeQuestId);
+      process.stdout.write(`Reset Phase 5 demo quest to cave scene: ${phase5Title}\n`);
+    } else {
+      activeQuestId = crypto.randomUUID();
+      db.prepare(
+        `INSERT INTO quests (id, epic_id, title, description, acceptance_criteria_json,
+          edge_cases_json, context, status, adventurer_id, equipment_json, current_scene,
+          created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        activeQuestId,
+        epicId,
+        phase5Title,
+        'A Phase 5 demonstration quest mid-expedition through the Cave of Null Pointers.',
+        JSON.stringify(['Navigate all four quest scenes', 'Return to town safely']),
+        JSON.stringify(['Encounter a null pointer at the cave entrance']),
+        'Phase 5 capstone demo. Current scene: quest-cave.',
+        'active',
+        adventurer.id,
+        JSON.stringify({ skillIds: [], toolIds: [], mcpServerIds: [] }),
+        'quest-cave',
+        now,
+        now,
+      );
+      process.stdout.write(`Created Phase 5 demo quest: ${phase5Title} (${activeQuestId})\n`);
+    }
+
+    // Always create a fresh active agent so advance-scene can proceed
+    const demoAgentId = crypto.randomUUID();
+    db.prepare(
+      'INSERT INTO agents (id, adventurer_id, quest_id, started_at, events_json) VALUES (?, ?, ?, ?, ?)',
+    ).run(
+      demoAgentId,
+      adventurer.id,
+      activeQuestId,
+      now,
+      JSON.stringify([
+        { type: 'progress', timestamp: now, message: 'Delving deeper into the cave...' },
+      ]),
+    );
+    process.stdout.write(`Created active agent for Phase 5 demo quest (${demoAgentId})\n`);
   }
 
   process.stdout.write('Seed complete.\n');

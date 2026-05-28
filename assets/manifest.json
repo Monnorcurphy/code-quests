@@ -160,6 +160,118 @@
       "source": "https://0x72.itch.io/dungeontileset-ii",
       "packVersion": "1.6.4",
       "attribution": "Dungeon Tileset II by 0x72 — https://0x72.itch.io/dungeontileset-ii — CC-BY 4.0"
+    },
+    {
+      "file": "quest/bg-forest.png",
+      "pack": "Kenney Nature Platformer",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/nature-platformer",
+      "packVersion": null,
+      "attribution": null
+    },
+    {
+      "file": "quest/ground-forest.png",
+      "pack": "Kenney Nature Platformer",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/nature-platformer",
+      "packVersion": null,
+      "attribution": null
+    },
+    {
+      "file": "quest/prop-forest-tree.png",
+      "pack": "Kenney Nature Platformer",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/nature-platformer",
+      "packVersion": null,
+      "attribution": null
+    },
+    {
+      "file": "quest/bg-cave.png",
+      "pack": "Kenney Tiny Dungeon",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-dungeon",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "quest/bg-dungeon.png",
+      "pack": "Kenney Tiny Dungeon",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-dungeon",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "quest/ground-cave.png",
+      "pack": "Kenney Tiny Dungeon",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-dungeon",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "quest/ground-dungeon.png",
+      "pack": "Kenney Tiny Dungeon",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-dungeon",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "quest/prop-cave-rock.png",
+      "pack": "Kenney Tiny Dungeon",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-dungeon",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "quest/prop-dungeon-pillar.png",
+      "pack": "Kenney Tiny Dungeon",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/tiny-dungeon",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "quest/bg-boss-room.png",
+      "pack": "Dungeon Tileset II",
+      "license": "CC-BY-4.0",
+      "source": "https://0x72.itch.io/dungeontileset-ii",
+      "packVersion": "1.6.4",
+      "attribution": "Dungeon Tileset II by 0x72 — https://0x72.itch.io/dungeontileset-ii — CC-BY 4.0"
+    },
+    {
+      "file": "quest/ground-boss.png",
+      "pack": "Dungeon Tileset II",
+      "license": "CC-BY-4.0",
+      "source": "https://0x72.itch.io/dungeontileset-ii",
+      "packVersion": "1.6.4",
+      "attribution": "Dungeon Tileset II by 0x72 — https://0x72.itch.io/dungeontileset-ii — CC-BY 4.0"
+    },
+    {
+      "file": "quest/prop-boss-throne.png",
+      "pack": "Dungeon Tileset II",
+      "license": "CC-BY-4.0",
+      "source": "https://0x72.itch.io/dungeontileset-ii",
+      "packVersion": "1.6.4",
+      "attribution": "Dungeon Tileset II by 0x72 — https://0x72.itch.io/dungeontileset-ii — CC-BY 4.0"
+    },
+    {
+      "file": "quest/silhouette-monster-small.png",
+      "pack": "Kenney 1-Bit Pack",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/1-bit-pack",
+      "packVersion": "1.0",
+      "attribution": null
+    },
+    {
+      "file": "quest/silhouette-monster-large.png",
+      "pack": "Kenney 1-Bit Pack",
+      "license": "CC0",
+      "source": "https://kenney.nl/assets/1-bit-pack",
+      "packVersion": "1.0",
+      "attribution": null
     }
   ]
 }

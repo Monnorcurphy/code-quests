@@ -27,7 +27,29 @@ export const ASSET_KEYS = {
   DUNGEON_TILESET: 'dungeon/tileset',
 } as const;
 
-export type AssetKey = (typeof ASSET_KEYS)[keyof typeof ASSET_KEYS];
+// Phase 5 quest scene assets — loaded only for quest scenes, not town scenes
+export const QUEST_ASSET_KEYS = {
+  // Kenney Nature Platformer — CC0 (backgrounds, ground, props)
+  QUEST_BG_FOREST: 'quest/bg-forest',
+  QUEST_BG_CAVE: 'quest/bg-cave',
+  QUEST_BG_DUNGEON: 'quest/bg-dungeon',
+  QUEST_BG_BOSS_ROOM: 'quest/bg-boss-room',
+  QUEST_PROP_FOREST_TREE: 'quest/prop-forest-tree',
+  QUEST_PROP_CAVE_ROCK: 'quest/prop-cave-rock',
+  QUEST_PROP_DUNGEON_PILLAR: 'quest/prop-dungeon-pillar',
+  QUEST_PROP_BOSS_THRONE: 'quest/prop-boss-throne',
+  QUEST_GROUND_FOREST: 'quest/ground-forest',
+  QUEST_GROUND_CAVE: 'quest/ground-cave',
+  QUEST_GROUND_DUNGEON: 'quest/ground-dungeon',
+  QUEST_GROUND_BOSS: 'quest/ground-boss',
+  // Kenney 1-Bit Pack — CC0 (monster silhouettes, RGBA with transparency)
+  QUEST_SILHOUETTE_MONSTER_SMALL: 'quest/silhouette-monster-small',
+  QUEST_SILHOUETTE_MONSTER_LARGE: 'quest/silhouette-monster-large',
+} as const;
+
+export type AssetKey =
+  | (typeof ASSET_KEYS)[keyof typeof ASSET_KEYS]
+  | (typeof QUEST_ASSET_KEYS)[keyof typeof QUEST_ASSET_KEYS];
 
 const ASSET_BASE = '/assets/';
 
@@ -37,6 +59,12 @@ export function assetPath(key: AssetKey): string {
 
 export function preloadCommonAssets(scene: Phaser.Scene): void {
   for (const key of Object.values(ASSET_KEYS)) {
+    scene.load.image(key, assetPath(key as AssetKey));
+  }
+}
+
+export function preloadQuestAssets(scene: Phaser.Scene): void {
+  for (const key of Object.values(QUEST_ASSET_KEYS)) {
     scene.load.image(key, assetPath(key as AssetKey));
   }
 }

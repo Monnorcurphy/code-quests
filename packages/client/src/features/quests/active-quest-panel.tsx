@@ -21,6 +21,8 @@ function formatEvent(event: AgentEvent): { icon: string; text: string } {
       return { icon: '💀', text: 'Quest failed.' };
     case 'log':
       return { icon: '📋', text: event.message };
+    case 'scene_change':
+      return { icon: '🗺', text: `Scene: ${event.to}` };
   }
 }
 

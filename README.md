@@ -166,6 +166,40 @@ The ANTHROPIC_API_KEY must be set in your environment for the real adapter to au
 
 During an active quest, a **Cancel quest** button appears in the War Room. Clicking it opens a confirmation dialog. On confirm, the agent subprocess receives SIGTERM, the quest transitions to `failed` with recommendation `retire`, and the result appears in the Hall of Returns under "Returned in Defeat."
 
+## Phase 5 — Quest Scenes
+
+Phase 5 introduces **Quest Mode**: a 2D side-scroller that plays when a quest is dispatched. The adventurer traverses four scenes (Forest → Cave → Dungeon → Boss Chamber), driven by live WebSocket events from the server-side agent.
+
+### What's new in Phase 5
+
+- **Four quest scenes** with CC0/CC-BY pixel art: Forest path, Cave, Dungeon corridor, Boss chamber
+- **`/quest/:questId` route** with a HUD overlay (title, adventurer name, status badge, connection chip, combat log, Return to Town button)
+- **Scene progression**: player walks right to advance scenes, or server-driven `scene_change` events auto-advance
+- **Party Map** peek-overlay (top-right corner) — visible from any route; lists all active quests with their current scene; click a row to jump directly to `/quest/:questId`
+
+### Phase 5 walkthrough
+
+```bash
+pnpm install && pnpm dev
+```
+
+Then in the browser at `http://localhost:5173`:
+
+1. **Town Square** — The Party Map shows the seeded demo quest "Phase 5 Demo: Cave Expedition" in the Cave
+2. Click the Party Map row → navigates to `/quest/:questId`
+3. The cave scene renders with Brielle the Bold
+4. Press and hold `ArrowRight` — the adventurer walks right; at the edge the scene advances to Dungeon
+5. Walk to the Dungeon right edge → Boss Chamber renders (terminal scene — no further advance)
+6. Click **Return to Town** → returns to your last town scene; the Party Map still lists the quest
+
+### Enter Quest from the Quest Board
+
+Active quests in the Quest Board (Town Square banner) now show an **Enter Quest** button alongside the quest name, navigating directly to the quest scene.
+
+### Watch Quest from the War Room
+
+Opening an active quest in the War Room shows a **Watch Quest** button. For idle quests, the button is disabled with a "Dispatch first" tooltip.
+
 ## Phase roadmap
 
 | Phase | Status | Content |
@@ -174,5 +208,6 @@ During an active quest, a **Cancel quest** button appears in the War Room. Click
 | 2 | Done | Pixel-art Phaser town, 8 scenes, HUD overlays, settings |
 | 3 | Done | Oracle, Tavern, Armory, dispatch flow |
 | 4 | Done | Agent subprocess adapter, WebSocket stream, Hall of Returns |
+| 5 | Done | Quest scenes, scene progression, Party Map, quest HUD |
 | 9 | Future | Re-post / Retire buttons, feedback loop |
 | 10 | Future | Library (learning loop + bestiary) |
