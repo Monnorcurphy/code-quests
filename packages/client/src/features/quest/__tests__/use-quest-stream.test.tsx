@@ -285,6 +285,27 @@ describe('useQuestStream', () => {
     expect(mockHandleAgentEvent).toHaveBeenCalledWith('q1', event);
   });
 
+  it('invalidates monsters query cache on monster_appeared', () => {
+    renderHook(() => useQuestStream('q1'));
+
+    const event: AgentEvent = {
+      type: 'monster_appeared',
+      timestamp: new Date().toISOString(),
+      encounterId: 'enc-2',
+      monsterId: 'mon-2',
+      monsterName: 'Troll',
+      monsterTypeId: 'troll_debt',
+      spritePath: 'monsters/troll.png',
+      difficulty: 2,
+    };
+
+    act(() => {
+      mockConnects[0].onEvent(event);
+    });
+
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['monsters'] });
+  });
+
   it('calls encounterStore.handleAgentEvent for monster_resolved', () => {
     renderHook(() => useQuestStream('q1'));
 

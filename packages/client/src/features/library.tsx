@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
 import Bestiary from './library/bestiary';
@@ -9,6 +9,17 @@ export default function Library() {
   const setActiveModal = useTownStore((s) => s.setActiveModal);
   const panelRef = useFocusTrap(() => setActiveModal(null));
   const [activeTab, setActiveTab] = useState<LibraryTab>('bestiary');
+
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (focusedRef.current) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const first = panel.querySelector<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), textarea:not([disabled])',
+    );
+    if (first) { first.focus(); focusedRef.current = true; }
+  }, [panelRef]);
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="library-title">
