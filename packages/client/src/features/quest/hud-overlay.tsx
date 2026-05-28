@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { useQuestStore } from '../../stores/quest-store';
+import CombatLog from './combat-log';
 import type { Quest } from '@code-quests/shared';
+import type { ConnectionStatus } from '../../lib/quest-socket';
 
 const STATUS_LABELS: Record<string, string> = {
   idle: 'Idle',
@@ -11,11 +14,20 @@ const STATUS_LABELS: Record<string, string> = {
   user_blocked: 'Blocked',
 };
 
+const CONNECTION_LABELS: Record<ConnectionStatus, string> = {
+  connecting: 'Reconnecting…',
+  connected: 'Live',
+  closed: 'Offline',
+};
+
 interface HUDOverlayProps {
   quest: Quest;
+  questId: string;
   onReturnToTown: () => void;
   advanceLoading: boolean;
   advanceError: string | null;
+  connectionStatus: ConnectionStatus;
+  parseError?: string | null;
 }
 
 function AdventurerName({ adventurerId }: { adventurerId: string | null }) {
@@ -29,8 +41,18 @@ function AdventurerName({ adventurerId }: { adventurerId: string | null }) {
   return <span className="text-gray-100 font-medium">{adventurer.name}</span>;
 }
 
-export default function HUDOverlay({ quest, onReturnToTown, advanceLoading, advanceError }: HUDOverlayProps) {
-  const statusLabel = STATUS_LABELS[quest.status] ?? quest.status;
+export default function HUDOverlay({
+  quest,
+  questId,
+  onReturnToTown,
+  advanceLoading,
+  advanceError,
+  connectionStatus,
+  parseError,
+}: HUDOverlayProps) {
+  const storeStatus = useQuestStore((s) => s.statusByQuest[questId]);
+  const displayStatus = storeStatus ?? quest.status;
+  const statusLabel = STATUS_LABELS[displayStatus] ?? displayStatus;
 
   return (
     <div
@@ -56,15 +78,11 @@ export default function HUDOverlay({ quest, onReturnToTown, advanceLoading, adva
           <h1 className="text-gray-100 font-bold" style={{ margin: 0, fontSize: '1rem' }}>
             {quest.title}
           </h1>
-          <span
-            className="text-gray-300"
-            style={{ fontSize: '0.875rem' }}
-            aria-label="Adventurer"
-          >
+          <span className="text-gray-300" style={{ fontSize: '0.875rem' }} aria-label="Adventurer">
             <AdventurerName adventurerId={quest.adventurerId} />
           </span>
           <span
-            className={`quest-status-badge quest-status-badge--${quest.status}`}
+            className={`quest-status-badge quest-status-badge--${displayStatus}`}
             style={{
               padding: '2px 8px',
               borderRadius: '4px',
@@ -75,6 +93,26 @@ export default function HUDOverlay({ quest, onReturnToTown, advanceLoading, adva
             aria-label={`Status: ${statusLabel}`}
           >
             <span className="text-gray-100">{statusLabel}</span>
+          </span>
+
+          {/* Connection status chip */}
+          <span
+            role="status"
+            aria-live="polite"
+            style={{
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              background:
+                connectionStatus === 'connected'
+                  ? 'rgba(30,120,30,0.8)'
+                  : connectionStatus === 'closed'
+                    ? 'rgba(120,30,30,0.8)'
+                    : 'rgba(120,90,20,0.8)',
+            }}
+          >
+            <span className="text-gray-100">{CONNECTION_LABELS[connectionStatus]}</span>
           </span>
         </div>
 
@@ -96,11 +134,11 @@ export default function HUDOverlay({ quest, onReturnToTown, advanceLoading, adva
         </button>
       </div>
 
-      {/* Advance-scene feedback strip */}
-      {(advanceLoading || advanceError) && (
+      {/* Advance-scene / parse-error feedback strip */}
+      {(advanceLoading || advanceError || parseError) && (
         <div
-          role={advanceError ? 'alert' : 'status'}
-          aria-live={advanceError ? 'assertive' : 'polite'}
+          role={advanceError || parseError ? 'alert' : 'status'}
+          aria-live={advanceError || parseError ? 'assertive' : 'polite'}
           style={{
             position: 'absolute',
             top: '52px',
@@ -108,24 +146,27 @@ export default function HUDOverlay({ quest, onReturnToTown, advanceLoading, adva
             transform: 'translateX(-50%)',
             padding: '6px 16px',
             borderRadius: '4px',
-            background: advanceError ? 'rgba(180,30,30,0.9)' : 'rgba(30,100,30,0.85)',
+            background:
+              advanceError || parseError
+                ? 'rgba(180,30,30,0.9)'
+                : 'rgba(30,100,30,0.85)',
             pointerEvents: 'auto',
           }}
         >
-          {advanceLoading && !advanceError && (
+          {advanceLoading && !advanceError && !parseError && (
             <span className="text-gray-100" style={{ fontSize: '0.8rem' }}>
               Advancing scene…
             </span>
           )}
-          {advanceError && (
+          {(advanceError || parseError) && (
             <span className="text-gray-100" style={{ fontSize: '0.8rem' }}>
-              {advanceError}
+              {advanceError ?? parseError}
             </span>
           )}
         </div>
       )}
 
-      {/* Combat log placeholder */}
+      {/* Combat log */}
       <div
         style={{
           position: 'absolute',
@@ -134,17 +175,11 @@ export default function HUDOverlay({ quest, onReturnToTown, advanceLoading, adva
           right: 0,
           maxHeight: '140px',
           background: 'rgba(20, 12, 5, 0.75)',
-          padding: '8px 16px',
           pointerEvents: 'auto',
-          overflowY: 'auto',
+          overflow: 'hidden',
         }}
-        role="log"
-        aria-label="Combat log"
-        aria-live="polite"
       >
-        <p className="text-gray-200" style={{ margin: 0, fontSize: '0.8rem', fontStyle: 'italic' }}>
-          Combat log will appear here
-        </p>
+        <CombatLog questId={questId} />
       </div>
     </div>
   );

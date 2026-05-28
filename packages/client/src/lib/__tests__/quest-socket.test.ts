@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { AgentEvent } from '@code-quests/shared';
-import { subscribe } from '../quest-socket';
+import { subscribe, connectQuestSocket } from '../quest-socket';
+import type { ConnectionStatus } from '../quest-socket';
 
 // ---------------------------------------------------------------------------
 // Fake WebSocket
@@ -230,5 +231,118 @@ describe('subscribe', () => {
     expect(wsInstances).toHaveLength(before);  // still waiting
     vi.advanceTimersByTime(1);
     expect(wsInstances).toHaveLength(before + 1); // fires at exactly 10 000 ms
+  });
+});
+
+// ---------------------------------------------------------------------------
+// connectQuestSocket — status-aware API
+// ---------------------------------------------------------------------------
+
+describe('connectQuestSocket', () => {
+  it('emits connecting on creation, connected on open', () => {
+    const statuses: ConnectionStatus[] = [];
+    connectQuestSocket('q1', {
+      onEvent: vi.fn(),
+      onConnectionChange: (s) => statuses.push(s),
+    });
+
+    expect(statuses).toEqual(['connecting']);
+
+    wsInstances[0]._open();
+    expect(statuses).toEqual(['connecting', 'connected']);
+  });
+
+  it('forwards valid events to onEvent', () => {
+    const onEvent = vi.fn<(e: AgentEvent) => void>();
+    connectQuestSocket('q1', { onEvent });
+    wsInstances[0]._open();
+
+    const event: AgentEvent = {
+      type: 'progress',
+      timestamp: '2024-01-01T00:00:00.000Z',
+      message: 'working',
+    };
+    wsInstances[0]._message(event);
+    expect(onEvent).toHaveBeenCalledWith(event);
+  });
+
+  it('calls onParseError for malformed JSON without calling onEvent', () => {
+    const onEvent = vi.fn();
+    const onParseError = vi.fn<(m: string) => void>();
+    connectQuestSocket('q1', { onEvent, onParseError });
+    wsInstances[0]._open();
+
+    wsInstances[0]._rawMessage('not json {');
+    expect(onEvent).not.toHaveBeenCalled();
+    expect(onParseError).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onParseError for frames failing schema validation', () => {
+    const onEvent = vi.fn();
+    const onParseError = vi.fn<(m: string) => void>();
+    connectQuestSocket('q1', { onEvent, onParseError });
+    wsInstances[0]._open();
+
+    wsInstances[0]._message({ type: 'unknown_type', foo: 'bar' });
+    expect(onEvent).not.toHaveBeenCalled();
+    expect(onParseError).toHaveBeenCalledTimes(1);
+  });
+
+  it('emits connecting on disconnect, closed after close()', () => {
+    const statuses: ConnectionStatus[] = [];
+    const handle = connectQuestSocket('q1', {
+      onEvent: vi.fn(),
+      onConnectionChange: (s) => statuses.push(s),
+    });
+    wsInstances[0]._open();
+
+    wsInstances[0]._drop();
+    expect(statuses).toContain('connecting');
+
+    handle.close();
+    expect(statuses[statuses.length - 1]).toBe('closed');
+  });
+
+  it('does not reconnect after close()', () => {
+    const handle = connectQuestSocket('q1', { onEvent: vi.fn() });
+    wsInstances[0]._open();
+
+    handle.close();
+    vi.advanceTimersByTime(30_000);
+    expect(wsInstances).toHaveLength(1);
+  });
+
+  it('reconnects with exponential backoff (1s base)', () => {
+    connectQuestSocket('q1', { onEvent: vi.fn() });
+    wsInstances[0]._open();
+    wsInstances[0]._drop();
+
+    expect(wsInstances).toHaveLength(1);
+    vi.advanceTimersByTime(999);
+    expect(wsInstances).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(wsInstances).toHaveLength(2);
+  });
+
+  it('caps backoff at 30s', () => {
+    connectQuestSocket('q1', { onEvent: vi.fn() });
+    // exhaust cap: 1s → 2s → 4s → 8s → 16s → 30s (capped)
+    wsInstances[0]._drop();
+    vi.advanceTimersByTime(1_000);   // ws[1]
+    wsInstances[1]._drop();
+    vi.advanceTimersByTime(2_000);   // ws[2]
+    wsInstances[2]._drop();
+    vi.advanceTimersByTime(4_000);   // ws[3]
+    wsInstances[3]._drop();
+    vi.advanceTimersByTime(8_000);   // ws[4]
+    wsInstances[4]._drop();
+    vi.advanceTimersByTime(16_000);  // ws[5] — now capped at 30s
+
+    wsInstances[5]._drop();
+    const before = wsInstances.length;
+    vi.advanceTimersByTime(29_999);
+    expect(wsInstances).toHaveLength(before);
+    vi.advanceTimersByTime(1);
+    expect(wsInstances).toHaveLength(before + 1);
   });
 });

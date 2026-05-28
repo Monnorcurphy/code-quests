@@ -1,6 +1,9 @@
 /* eslint-disable no-console */
+// Structured reconnect logger — suppressed in production builds
 export const logger = {
   warn(message: string): void {
-    console.warn(`[quest] ${message}`);
+    if (import.meta.env.DEV) {
+      console.warn(`[quest] ${message}`);
+    }
   },
 };

@@ -21,6 +21,10 @@ vi.mock('../game/scene-router', () => ({
   },
 }));
 
+vi.mock('../features/quest/use-quest-stream', () => ({
+  useQuestStream: vi.fn().mockReturnValue({ status: 'connected', parseError: null }),
+}));
+
 vi.mock('../lib/api', async (importOriginal) => {
   const original = await importOriginal<typeof import('../lib/api')>();
   return {
