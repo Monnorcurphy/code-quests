@@ -1,48 +1,44 @@
-# BUG: onClick={onCancelRef.current} — unnecessary ref indirection for click handler
+# BUG: cc-adapter removes `proc.stdin.end()` without verifying real `claude --print` behavior
 
-**Severity:** LOW
-**File(s):** `packages/client/src/features/guild/recruit-modal.tsx`
+**Severity:** HIGH
+**File(s):** `packages/server/src/agents/cc-adapter.ts`
 
 ## Problem
 
-The Cancel button uses `onClick={onCancelRef.current}` instead of `onClick={onCancel}`:
+The previous cc-adapter wrote the prompt to stdin and **closed** it:
 
-```tsx
-<button type="button" onClick={onCancelRef.current} disabled={disabled}>
-  Cancel
-</button>
+```ts
+proc.stdin!.write(buildPrompt(input));
+proc.stdin!.end();
 ```
 
-The `onCancelRef` pattern (store callback in ref, sync in layoutless effect) is necessary for the auto-dismiss `setTimeout` callback, because that runs outside the render cycle and would capture a stale closure. DOM event handlers do not have this problem — React updates them on every render, so `onClick={onCancel}` always calls the latest value of `onCancel`.
+The cloudburst change removes `proc.stdin!.end()` and leaves stdin open so `respond()` can write back later:
 
-Using `onCancelRef.current` here:
-- Reads the ref value at render time (same timing as reading the prop directly)
-- Adds complexity without adding correctness
+```ts
+const stdinStream = proc.stdin!;
+try {
+  stdinStream.write(buildPrompt(input));
+  // Keep stdin open so respond() can write back when paused_input arrives.
+  // The subprocess will see EOF only after stdinStream.end() is called or it exits.
+} catch { ... }
+```
+
+`claude --print` is documented (and behaves) as a one-shot batch invocation that reads its prompt from stdin until EOF, then prints a single result and exits. Without EOF, the subprocess may block indefinitely waiting for more input — never starting the actual model call. **This silently breaks every existing happy-path cc-adapter invocation that doesn't involve a pause.**
+
+The cc-adapter test suite cannot catch this regression: every fake binary in `cc-adapter.test.ts` (`fakeBinSuccess`, `fakeBinFail`, `fakeBinSlow`, `fakeBinBadShebang`, the new marker binaries) is a node script that writes to stdout and exits without ever reading stdin. The fakes simply don't exercise the EOF-dependent behavior of the real binary.
+
+The pause/resume design needs a different shape — either an interactive claude session mode that genuinely streams from stdin, or a separate write channel for the response — but the present implementation pairs a likely production regression with a test harness that hides it.
 
 ## Expected
 
-Click handlers should reference props directly. Refs are the right tool for callbacks invoked asynchronously (timers, subscriptions) — not for synchronous event handlers.
+- The cc-adapter must not silently regress the existing happy path. Either:
+  - Re-close stdin after writing the prompt and adopt a different mechanism for `respond()` (e.g., spawn an interactive `claude` session, use a stdin pipe only when a marker has appeared, or document explicitly that the cc-adapter is currently pause-only), OR
+  - Verify empirically against the real `claude --print` binary that leaving stdin open does not stall the subprocess, and add at minimum a manual verification note plus an integration test that runs against the real binary (gated behind an env var if needed).
+- The fake test binaries must be augmented so that at least one test actually reads from its own stdin and asserts the prompt was delivered — otherwise the regression is invisible to CI.
 
 ## Fix
 
-```tsx
-// Before
-<button type="button" onClick={onCancelRef.current} disabled={disabled}>
-
-// After
-<button type="button" onClick={onCancel} disabled={disabled}>
-```
-
-After this change, `onCancelRef` is no longer needed at all. Remove it along with the effect that syncs it:
-
-```tsx
-// Remove:
-const onCancelRef = useRef(onCancel);
-
-useEffect(() => {
-  onSuccessRef.current = onSuccess;
-  onCancelRef.current = onCancel;  // remove this line (or remove the whole effect if onSuccess still uses ref)
-});
-```
-
-`onSuccessRef` still needs to be kept — it is used inside the `setTimeout` auto-dismiss, which IS an async callback that requires the ref pattern.
+1. Decide on the production-safe path for `respond()` (interactive session, secondary pipe, or alternate transport).
+2. Restore `stdinStream.end()` on the non-marker path, or add a documented integration test that proves the change works against the real binary.
+3. Add at least one fake-binary test that reads its own stdin and asserts the prompt content arrived — closing the regression gap.
+4. If the keep-stdin-open behavior is in fact correct for `claude --print`, leave a code comment citing the verification (binary version + manual test command).
