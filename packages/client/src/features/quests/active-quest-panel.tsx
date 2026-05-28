@@ -23,6 +23,10 @@ function formatEvent(event: AgentEvent): { icon: string; text: string } {
       return { icon: '📋', text: event.message };
     case 'scene_change':
       return { icon: '🗺', text: `Scene: ${event.to}` };
+    case 'monster_appeared':
+      return { icon: '👾', text: `${event.monsterName} appeared!` };
+    case 'monster_resolved':
+      return { icon: '⚔', text: `Encounter ${event.outcome}.` };
   }
 }
 
