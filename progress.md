@@ -1,17 +1,14 @@
 # Progress — Phase 7
 
-Previous task progress archived to metrics/progress-before-convective-storm.md
+Previous task progress archived to metrics/progress-before-electrical-storm.md
 
-## convective-storm: Adventure framing translator
+## electrical-storm — REST + WebSocket surface for pause/respond/block/unblock
 
 **Status:** Done
 
-**What was built:**
-- Created `packages/server/src/services/adventure-framing.ts` with `frameInputRequest` and `frameUserBlocker` functions
-- Both functions call the haiku adapter to produce a one-sentence medieval D&D narrative framing
-- Deterministic fallback when API key is absent: `"${name} pauses on the path and asks: \"${question}\""` / `"${name} halts to seek counsel: \"${description}\""`
-- Output sanitization: strips HTML tags, collapses newlines, caps at 200 chars
-- Extended `paused_input` event in `AgentEventSchema` with optional `adventureFraming` field
-- Integrated into `quest-runner.ts`: after `setInputRequest()`, framing runs async (non-blocking); updates DB and publishes a follow-up `paused_input` WebSocket event with `adventureFraming` when ready
-- 21 unit tests in `services/__tests__/adventure-framing.test.ts` (fallback, sanitization, tag-stripping, caps, haiku path)
-- 2 integration tests in `__tests__/quest-runner.test.ts` verifying follow-up event + DB state
+- Added `POST /api/quests/:id/respond-input` — validates body (min 1, max 4000), 409 if not paused_input, 410 if no active handle, calls `handle.respond(text)`, returns current quest
+- Added `POST /api/quests/:id/block` — validates body (min 1, max 1000), 409 if not active/paused_input, transitions to user_blocked, persists userBlocker, cancels active agent handle, publishes status_change, kicks off async frameUserBlocker
+- Added `POST /api/quests/:id/unblock` — 409 if not user_blocked, sets unblockedAt, transitions to active, re-spawns agent via runQuest, publishes status_change
+- quest-channel.ts already forwards all AgentEvent types generically — no changes needed
+- 21 new integration tests covering 404/409/410 paths, full pause→respond cycle, block with handle cancellation, unblock with agent spawn, status_change events via channel, full block→unblock cycle
+- All 373 tests pass, typecheck clean, lint clean
