@@ -6,17 +6,19 @@ import type { SceneKey } from './scene-registry';
 
 interface PhaserMountProps {
   initialScene: SceneKey;
+  questId?: string;
 }
 
-export default function PhaserMount({ initialScene }: PhaserMountProps) {
+export default function PhaserMount({ initialScene, questId }: PhaserMountProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const initialSceneRef = useRef(initialScene);
+  const questIdRef = useRef(questId);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const config = getGameConfig(containerRef.current, initialSceneRef.current);
+    const config = getGameConfig(containerRef.current, initialSceneRef.current, questIdRef.current);
     const game = new Phaser.Game(config);
     gameRef.current = game;
     sceneRouter.init(game);
