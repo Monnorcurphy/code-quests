@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { useFocusTrap } from '../../lib/use-focus-trap';
 import { DifficultyStars } from './difficulty-stars';
 import type { Monster, MonsterType, MonsterEncounter } from '@code-quests/shared';
 
@@ -48,19 +49,32 @@ type PromoteModalProps = {
   monster: Monster;
   onClose: () => void;
   onSuccess: (updatedMonster: Monster) => void;
+  triggerRef: React.RefObject<HTMLButtonElement>;
 };
 
-function PromoteNemesisModal({ monster, onClose, onSuccess }: PromoteModalProps) {
+function PromoteNemesisModal({ monster, onClose, onSuccess, triggerRef }: PromoteModalProps) {
   const [name, setName] = useState(monster.name);
   const [error, setError] = useState<string | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
+
+  function handleClose() {
+    triggerRef.current?.focus();
+    onClose();
+  }
+
+  const panelRef = useFocusTrap(handleClose);
+
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
 
   const mutation = useMutation({
     mutationFn: () => api.monsters.promoteNemesis(monster.id, name !== monster.name ? name : undefined),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: ['monsters'] });
       void queryClient.invalidateQueries({ queryKey: ['monster', monster.id] });
+      triggerRef.current?.focus();
       onSuccess(updated);
     },
     onError: (err: unknown) => {
@@ -82,7 +96,7 @@ function PromoteNemesisModal({ monster, onClose, onSuccess }: PromoteModalProps)
       aria-modal="true"
       aria-labelledby="promote-modal-title"
     >
-      <div className="modal-panel promote-modal">
+      <div ref={panelRef} className="modal-panel promote-modal">
         <h3 id="promote-modal-title" className="modal-title">Promote to Nemesis</h3>
         <p className="modal-body">
           This will mark <strong>{monster.name}</strong> as a guild Nemesis — a recurring
@@ -119,7 +133,7 @@ function PromoteNemesisModal({ monster, onClose, onSuccess }: PromoteModalProps)
               ref={cancelRef}
               type="button"
               className="btn-secondary"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={mutation.isPending}
             >
               Cancel
@@ -149,6 +163,7 @@ export default function MonsterDetail({ monster: initialMonster, monsterType, on
   const [currentMonster, setCurrentMonster] = useState(initialMonster);
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const promoteButtonRef = useRef<HTMLButtonElement>(null);
 
   const {
     data: encounters,
@@ -233,6 +248,7 @@ export default function MonsterDetail({ monster: initialMonster, monsterType, on
         {currentMonster.scope === 'project' && (
           <div className="monster-detail-actions">
             <button
+              ref={promoteButtonRef}
               type="button"
               className="btn-primary"
               onClick={() => setShowPromoteModal(true)}
@@ -280,6 +296,7 @@ export default function MonsterDetail({ monster: initialMonster, monsterType, on
           monster={currentMonster}
           onClose={() => setShowPromoteModal(false)}
           onSuccess={handlePromoteSuccess}
+          triggerRef={promoteButtonRef}
         />
       )}
     </>

@@ -828,7 +828,7 @@ describe('runQuest lich aggregator', () => {
     expect(lichEncounter).toBeDefined();
   });
 
-  it('does not spawn a second lich for a second distinct type hitting the threshold', async () => {
+  it(`spawns one lich per distinct type that hits ${LICH_REPEAT_THRESHOLD} encounters`, async () => {
     insertAdventurer(db, 'adv-two-lich');
     insertQuest(db, 'q-two-lich', 'adv-two-lich');
 
