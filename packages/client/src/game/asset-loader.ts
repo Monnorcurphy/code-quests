@@ -53,6 +53,27 @@ export type AssetKey =
 
 const ASSET_BASE = '/assets/';
 
+const MONSTER_SPRITE_PATHS: Record<string, string> = {
+  goblin_linter:          'monsters/goblin.png',
+  imp_typecheck:          'monsters/imp.png',
+  wraith_flaky_test:      'monsters/wraith.png',
+  ogre_failing_test:      'monsters/ogre.png',
+  hydra_ac_mismatch:      'monsters/hydra.png',
+  mimic_silent_failure:   'monsters/mimic.png',
+  wizard_env_or_dep:      'monsters/wizard.png',
+  troll_build_fail:       'monsters/troll.png',
+  lich_repeated_failure:  'monsters/lich.png',
+  dragon_epic_obstacle:   'monsters/dragon.png',
+};
+
+export const monsterTypeIdToAssetKey: Record<string, string> = Object.fromEntries(
+  Object.entries(MONSTER_SPRITE_PATHS).map(([typeId, path]) => {
+    const filename = path.split('/')[1] ?? '';
+    const name = filename.replace('.png', '');
+    return [typeId, `monster-${name}`];
+  }),
+);
+
 export function assetPath(key: AssetKey): string {
   return `${ASSET_BASE}${key}.png`;
 }
@@ -66,5 +87,12 @@ export function preloadCommonAssets(scene: Phaser.Scene): void {
 export function preloadQuestAssets(scene: Phaser.Scene): void {
   for (const key of Object.values(QUEST_ASSET_KEYS)) {
     scene.load.image(key, assetPath(key as AssetKey));
+  }
+}
+
+export function preloadMonsterAssets(scene: Phaser.Scene): void {
+  for (const [typeId, spritePath] of Object.entries(MONSTER_SPRITE_PATHS)) {
+    const key = monsterTypeIdToAssetKey[typeId] ?? `monster-${typeId}`;
+    scene.load.image(key, `${ASSET_BASE}${spritePath}`);
   }
 }
