@@ -200,6 +200,67 @@ Active quests in the Quest Board (Town Square banner) now show an **Enter Quest*
 
 Opening an active quest in the War Room shows a **Watch Quest** button. For idle quests, the button is disabled with a "Dispatch first" tooltip.
 
+## Phase 6 — Monsters
+
+Phase 6 introduces the **Monster system**: combat encounters, the Bestiary, and Nemesis promotion.
+
+### What's new in Phase 6
+
+- **10 built-in MonsterTypes** — Goblin (lint), Imp (TypeScript error), Wraith (flaky test), Ogre (failing test), Hydra (AC mismatch), Mimic (silent failure), Wizard (env/dep), Troll (build fail), Lich (repeated failure), Dragon (epic obstacle)
+- **Monster detection** — when an agent emits a `combat` event, the server classifies the message against failure signatures and records a `MonsterEncounter` in the DB
+- **Lich aggregator** — after 3 encounters of the same monster type in a single quest attempt, a ★5 Lich automatically rises alongside the base monsters
+- **Quest HUD combat layer** — monster sprite, HP bar, star rating, and scrolling combat log render in the Quest scene
+- **Bestiary** in the Library — browse all monsters encountered, sorted by any column, filtered by Project vs. Guild scope
+- **Nemesis promotion** — click "Mark as Nemesis" on any project monster to elevate it to a guild-scope Nemesis that persists across all future quests
+- **Demo seed** — pre-built quest with Imp, Goblin, Wraith, and Lich encounters ready to browse in the Bestiary
+
+### Phase 6 walkthrough (demo mode)
+
+```bash
+pnpm install && pnpm dev
+```
+
+In a second terminal, seed the Phase 6 demo data (idempotent):
+
+```bash
+pnpm --filter=@code-quests/server exec tsx src/scripts/seed-demo-quest.ts
+```
+
+Then in the browser at `http://localhost:5173`:
+
+1. **Town Square** — walk to Quest Board or click "Quest Board" in the hidden nav
+2. Find "Phase 6 Demo: Banish the TypeScript Poltergeist" → click "View quest"
+3. The quest is already complete — scroll the War Room to see the combat history
+4. Click **Library** door (or press Enter near it) → Library opens to **Bestiary** tab
+5. The Bestiary shows four monsters: Imp (×3), Goblin, Wraith, and Lich
+6. Click the Lich row → see the full encounter history; notice it appeared because the Imp triggered 3× (lich aggregator)
+7. Click **Back to Bestiary**, then click the Imp row → click **Mark as Nemesis**
+8. A modal shows the generated name — keep it or rename → click **Mark as Nemesis**
+9. Success toast confirms promotion; the monster now shows ⚔ Nemesis badge
+10. Switch to the **Nemeses (Guild)** tab in the Bestiary — the Imp appears there
+11. Refresh the browser — monsters, encounters, and the new Nemesis all persist
+
+### Replay a fresh quest with scripted failures
+
+To run the full monster-detection pipeline without a real Claude Code subprocess:
+
+```bash
+# Ensure a fresh idle demo quest exists first
+pnpm --filter=@code-quests/server exec tsx src/scripts/seed-demo-quest.ts
+
+# Then replay the fixture (creates monsters + encounters in the DB)
+pnpm --filter=@code-quests/server exec tsx src/scripts/replay-failures.ts
+```
+
+After the replay completes, open the Bestiary to see the freshly created monsters.
+
+### Building the Library
+
+- **Library scene** (`/town/library`): a Phaser building scene that auto-opens the Library modal
+- **Bestiary** (`Library → Bestiary tab`): sortable table of all encountered monsters; click any row for details
+- **Monster detail**: type, scope, difficulty stars, encounter history with quest titles
+- **Nemesis modal**: confirm or rename before promoting; success auto-dismisses after 4 seconds
+
 ## Phase roadmap
 
 | Phase | Status | Content |
@@ -209,5 +270,6 @@ Opening an active quest in the War Room shows a **Watch Quest** button. For idle
 | 3 | Done | Oracle, Tavern, Armory, dispatch flow |
 | 4 | Done | Agent subprocess adapter, WebSocket stream, Hall of Returns |
 | 5 | Done | Quest scenes, scene progression, Party Map, quest HUD |
+| 6 | Done | Monster system, Bestiary, Lich aggregator, Nemesis promotion |
 | 9 | Future | Re-post / Retire buttons, feedback loop |
-| 10 | Future | Library (learning loop + bestiary) |
+| 10 | Future | Skills learning loop; user-defined MonsterTypes |

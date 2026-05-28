@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Database from 'better-sqlite3';
+import { z } from 'zod';
 import { MonsterScopeSchema } from '@code-quests/shared';
 import { listMonsterTypes } from '../services/monster-types';
 
@@ -149,6 +150,37 @@ export function createMonstersRouter(db: Database.Database): Router {
       .prepare(ENCOUNTER_BY_QUEST_SQL)
       .all(req.params.questId) as QuestEncounterRow[];
     res.json(rows.map(rowToQuestEncounter));
+  });
+
+  router.post('/monsters/:id/promote-nemesis', (req, res) => {
+    const monster = db
+      .prepare('SELECT * FROM monsters WHERE id = ?')
+      .get(req.params.id) as MonsterRow | undefined;
+    if (!monster) {
+      res.status(404).json({ error: 'Monster not found' });
+      return;
+    }
+    if (monster.scope === 'guild') {
+      res.status(400).json({ error: 'Monster is already a guild nemesis', field: 'scope' });
+      return;
+    }
+
+    const bodySchema = z.object({ name: z.string().min(1).max(120).optional() });
+    const parsed = bodySchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    db.prepare(
+      "UPDATE monsters SET scope = 'guild', project_id = NULL, name = COALESCE(?, name), last_seen_at = ? WHERE id = ?",
+    ).run(parsed.data.name ?? null, now, req.params.id);
+
+    const updated = db
+      .prepare('SELECT * FROM monsters WHERE id = ?')
+      .get(req.params.id) as MonsterRow;
+    res.json(rowToMonster(updated));
   });
 
   return router;

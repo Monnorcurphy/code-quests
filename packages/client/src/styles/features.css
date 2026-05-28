@@ -511,6 +511,23 @@
   width: 100%;
 }
 
+/* Library preview card in Town Square sidebar */
+.town-square-library-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.town-square-library-label {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.town-square-library-btn {
+  width: 100%;
+}
+
 /* Settings HUD button */
 .settings-hud-btn {
   position: absolute;
@@ -1019,6 +1036,25 @@
 /* Library panel — wider to accommodate the bestiary table */
 .library-panel {
   max-width: 780px;
+}
+
+/* Library header — title + badge row */
+.library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.library-bestiary-badge {
+  background: #fde68a;
+  color: #5a3e00;
+  border: 1px solid #f9a825;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .building-quest-name {
@@ -1549,6 +1585,48 @@
   margin: 0;
 }
 
+/* Bestiary scope tabs */
+.bestiary-scope-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.bestiary-scope-tab {
+  background: transparent;
+  border: 1px solid var(--color-stone-border);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.bestiary-scope-tab:hover {
+  color: var(--color-text);
+}
+
+.bestiary-scope-tab:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.bestiary-scope-tab--active {
+  background: var(--color-parchment);
+  color: var(--color-text);
+  font-weight: 600;
+  border-bottom: 2px solid var(--color-banner-red);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bestiary-scope-tab {
+    transition: none;
+  }
+}
+
 /* Difficulty stars */
 .difficulty-stars {
   font-size: 1rem;
@@ -1847,6 +1925,41 @@
   color: var(--color-text-secondary);
   font-size: 0.875rem;
   margin: 0;
+}
+
+.monster-detail-actions {
+  margin-top: 0.25rem;
+}
+
+/* Nemesis badge chip */
+.nemesis-badge {
+  display: inline-block;
+  background: #4c1d95;
+  color: #fff;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+/* Promote Nemesis modal */
+.promote-modal {
+  max-width: 480px;
+}
+
+.promote-form {
+  margin-top: 0.75rem;
+}
+
+.promote-success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
 }
 
 /* Encounter list */

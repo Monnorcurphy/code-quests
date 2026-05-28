@@ -6,8 +6,10 @@ import { getQuestAdapter } from '../agents/select-adapter';
 import { transitionQuestStatus, InvalidTransitionError } from './quest-status';
 import { advanceQuestScene } from './quest-scene-progression';
 import { classifyCombatEvent, recordEncounter, resolveEncounter } from './monster-detection';
+import { getMonsterType } from './monster-types';
 
 export const PROGRESS_EVENTS_PER_SCENE = 3;
+export const LICH_REPEAT_THRESHOLD = 3;
 
 export interface RunQuestDeps {
   db: Database.Database;
@@ -22,6 +24,7 @@ export interface QuestRunResult {
 const activeHandles = new Map<string, AgentHandle>();
 const progressCountByQuest = new Map<string, number>();
 const pendingEncountersByQuest = new Map<string, string[]>();
+const typeCountsByQuest = new Map<string, Map<string, number>>();
 
 export function getActiveHandle(questId: string): AgentHandle | undefined {
   return activeHandles.get(questId);
@@ -61,6 +64,7 @@ export async function runQuest(
   activeHandles.set(quest.id, handle);
   progressCountByQuest.set(quest.id, 0);
   pendingEncountersByQuest.set(quest.id, []);
+  typeCountsByQuest.set(quest.id, new Map<string, number>());
 
   const done = (async () => {
     const collectedEvents: AgentEvent[] = [];
@@ -94,6 +98,40 @@ export async function runQuest(
               };
               collectedEvents.push(appearedEvent);
               publishEvent?.(quest.id, appearedEvent);
+
+              // Lich aggregator: spawn lich after LICH_REPEAT_THRESHOLD same-type encounters
+              if (monsterType.id !== 'lich_repeated_failure') {
+                const typeCounts = typeCountsByQuest.get(quest.id) ?? new Map<string, number>();
+                const typeCount = (typeCounts.get(monsterType.id) ?? 0) + 1;
+                typeCounts.set(monsterType.id, typeCount);
+                typeCountsByQuest.set(quest.id, typeCounts);
+
+                if (typeCount === LICH_REPEAT_THRESHOLD) {
+                  const lichType = getMonsterType(db, 'lich_repeated_failure');
+                  if (lichType) {
+                    const lichMsg = `The same ${monsterType.name} has struck ${LICH_REPEAT_THRESHOLD} times — a Lich emerges from the pattern!`;
+                    const { monster: lich, encounter: lichEnc } = recordEncounter(db, {
+                      questId: quest.id,
+                      monsterTypeId: 'lich_repeated_failure',
+                      combatLogEntry: lichMsg,
+                    });
+                    encounters.push(lichEnc.id);
+                    pendingEncountersByQuest.set(quest.id, encounters);
+                    const lichEvent: AgentEvent = {
+                      type: 'monster_appeared',
+                      timestamp: new Date().toISOString(),
+                      encounterId: lichEnc.id,
+                      monsterId: lich.id,
+                      monsterName: lich.name,
+                      monsterTypeId: lichType.id,
+                      spritePath: lichType.spritePath,
+                      difficulty: lich.calibratedDifficulty,
+                    };
+                    collectedEvents.push(lichEvent);
+                    publishEvent?.(quest.id, lichEvent);
+                  }
+                }
+              }
             }
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
@@ -226,6 +264,7 @@ export async function runQuest(
       activeHandles.delete(quest.id);
       progressCountByQuest.delete(quest.id);
       pendingEncountersByQuest.delete(quest.id);
+      typeCountsByQuest.delete(quest.id);
     }
   })();
 

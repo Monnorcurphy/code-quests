@@ -18,6 +18,7 @@ vi.mock('../../../lib/api', async (importOriginal) => {
         get: vi.fn(),
         listEncounters: vi.fn(),
         listQuestEncounters: vi.fn(),
+        promoteNemesis: vi.fn(),
       },
       quests: {
         ...original.api.quests,
@@ -225,6 +226,86 @@ describe('Bestiary — loading state', () => {
     renderBestiary();
     const liveRegion = document.querySelector('[aria-live="polite"]');
     expect(liveRegion?.textContent).toContain('Loading bestiary');
+  });
+});
+
+describe('Bestiary — scope filter tabs', () => {
+  it('shows Mine (Project) and Nemeses (Guild) tabs', async () => {
+    vi.mocked(api.monsters.list).mockResolvedValue([]);
+    renderBestiary();
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /mine.*project/i })).toBeDefined();
+      expect(screen.getByRole('tab', { name: /nemeses.*guild/i })).toBeDefined();
+    });
+  });
+
+  it('Mine tab is selected by default', async () => {
+    vi.mocked(api.monsters.list).mockResolvedValue([]);
+    renderBestiary();
+    await waitFor(() => {
+      const mineTab = screen.getByRole('tab', { name: /mine.*project/i });
+      expect(mineTab.getAttribute('aria-selected')).toBe('true');
+    });
+  });
+
+  it('switching to Nemeses tab queries for guild scope', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.monsters.list).mockResolvedValue([]);
+    renderBestiary();
+    await waitFor(() => screen.getByRole('tab', { name: /nemeses.*guild/i }));
+    await user.click(screen.getByRole('tab', { name: /nemeses.*guild/i }));
+    await waitFor(() => {
+      const guildTab = screen.getByRole('tab', { name: /nemeses.*guild/i });
+      expect(guildTab.getAttribute('aria-selected')).toBe('true');
+    });
+    // The api.monsters.list should have been called with scope: 'guild'
+    expect(vi.mocked(api.monsters.list)).toHaveBeenCalledWith({ scope: 'guild' });
+  });
+
+  it('shows guild empty state with hint when Nemeses tab is active and empty', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.monsters.list).mockResolvedValue([]);
+    renderBestiary();
+    await waitFor(() => screen.getByRole('tab', { name: /nemeses.*guild/i }));
+    await user.click(screen.getByRole('tab', { name: /nemeses.*guild/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/no guild nemeses yet/i)).toBeDefined();
+    });
+  });
+});
+
+describe('PromoteNemesisModal — focus management', () => {
+  it('moves focus to Cancel button when promote modal opens', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.monsters.list).mockResolvedValue([makeMonster({ scope: 'project' })]);
+    vi.mocked(api.monsters.listEncounters).mockResolvedValue([]);
+    renderBestiary();
+    await waitFor(() => screen.getByText('Grizzlebar the Nit'));
+    await user.click(screen.getByRole('row', { name: /grizzlebar/i }));
+    await waitFor(() => screen.getByRole('button', { name: /mark grizzlebar the nit as guild nemesis/i }));
+    await user.click(screen.getByRole('button', { name: /mark grizzlebar the nit as guild nemesis/i }));
+    await waitFor(() => {
+      const cancelBtn = screen.getByRole('button', { name: /^cancel$/i });
+      expect(document.activeElement).toBe(cancelBtn);
+    });
+  });
+
+  it('returns focus to the trigger button when Cancel is clicked', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.monsters.list).mockResolvedValue([makeMonster({ scope: 'project' })]);
+    vi.mocked(api.monsters.listEncounters).mockResolvedValue([]);
+    renderBestiary();
+    await waitFor(() => screen.getByText('Grizzlebar the Nit'));
+    await user.click(screen.getByRole('row', { name: /grizzlebar/i }));
+    await waitFor(() => screen.getByRole('button', { name: /mark grizzlebar the nit as guild nemesis/i }));
+    await user.click(screen.getByRole('button', { name: /mark grizzlebar the nit as guild nemesis/i }));
+    await waitFor(() => screen.getByRole('button', { name: /^cancel$/i }));
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: /mark grizzlebar the nit as guild nemesis/i }),
+      );
+    });
   });
 });
 
