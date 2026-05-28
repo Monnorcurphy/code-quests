@@ -50,6 +50,9 @@ export default function HUDOverlay({
   connectionStatus,
   parseError,
 }: HUDOverlayProps) {
+  const reducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
   const storeStatus = useQuestStore((s) => s.statusByQuest[questId]);
   const storeScene = useQuestStore((s) => s.currentSceneByQuest[questId]);
   const encounter = useEncounterStore((s) => s.byQuest[questId] ?? null);
@@ -166,7 +169,7 @@ export default function HUDOverlay({
           right: '16px',
           pointerEvents: 'none',
           minWidth: '130px',
-          transition: 'opacity 0.2s ease',
+          transition: reducedMotion ? 'none' : 'opacity 0.2s ease',
           opacity: encounter ? 1 : 0,
         }}
       >
@@ -232,7 +235,7 @@ export default function HUDOverlay({
                     height: '100%',
                     background:
                       encounter.hp > 50 ? '#44cc44' : encounter.hp > 25 ? '#ccaa44' : '#cc4444',
-                    transition: 'width 0.3s ease',
+                    transition: reducedMotion ? 'none' : 'width 0.3s ease',
                   }}
                 />
               </div>

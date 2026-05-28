@@ -3,8 +3,7 @@ import { render, screen, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import HUDOverlay from '../hud-overlay';
 import { useEncounterStore } from '../../../stores/encounter-store';
-import type { Quest } from '@code-quests/shared';
-import type { AgentEvent } from '@code-quests/shared';
+import type { Quest, AgentEvent } from '@code-quests/shared';
 
 vi.mock('../return-to-town-button', () => ({
   default: () => <button>Return to Town</button>,
@@ -90,7 +89,7 @@ afterEach(() => {
 describe('HUDOverlay encounter panel', () => {
   it('renders no encounter info when no encounter is active', () => {
     renderHUD('q-1');
-    expect(screen.queryByRole('region', { name: /active encounter/i })).toBeDefined();
+    expect(screen.queryByRole('region', { name: /active encounter/i })).not.toBeNull();
     expect(screen.queryByText('Goblin')).toBeNull();
   });
 
@@ -186,5 +185,22 @@ describe('HUDOverlay encounter panel', () => {
     renderHUD('q-1');
     const region = screen.getByRole('region', { name: /active encounter/i });
     expect(region.getAttribute('aria-live')).toBe('polite');
+  });
+
+  it('applies no transition when prefers-reduced-motion is set', () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true, addListener: vi.fn(), removeEventListener: vi.fn() });
+    try {
+      renderHUD('q-1');
+      act(() => {
+        useEncounterStore.getState().handleAgentEvent('q-1', makeAppearedEvent());
+      });
+      const region = screen.getByRole('region', { name: /active encounter/i });
+      expect((region as HTMLElement).style.transition).toBe('none');
+      const hpFill = region.querySelector('[role="meter"] > div > div:last-child') as HTMLElement | null;
+      expect(hpFill?.style.transition).toBe('none');
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
   });
 });
