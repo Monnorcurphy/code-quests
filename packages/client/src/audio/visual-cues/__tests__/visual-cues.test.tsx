@@ -40,6 +40,7 @@ afterEach(() => {
 // ---------- AriaAnnouncer ----------
 
 describe('AriaAnnouncer', () => {
+  // QUEST_FAILED is excluded — AriaAnnouncer suppresses it (StingerToast announces assertively)
   const ALL_EVENTS: AudioEvent[] = [
     'TOWN',
     'ROAD',
@@ -47,7 +48,6 @@ describe('AriaAnnouncer', () => {
     'BOSS',
     'VICTORY_STINGER',
     'QUEST_COMPLETE',
-    'QUEST_FAILED',
     'PAUSE_BELL',
   ];
 
@@ -87,12 +87,10 @@ describe('AriaAnnouncer', () => {
     expect(screen.getByTestId('aria-announcer').textContent).toBe('Bell — input requested');
   });
 
-  it('announces QUEST_FAILED correctly', () => {
+  it('does NOT announce QUEST_FAILED (StingerToast handles it assertively)', () => {
     render(<AriaAnnouncer />);
     act(() => dispatchCue('QUEST_FAILED'));
-    expect(screen.getByTestId('aria-announcer').textContent).toBe(
-      'Quest failed — returned to town',
-    );
+    expect(screen.getByTestId('aria-announcer').textContent).toBe('');
   });
 });
 
@@ -325,25 +323,51 @@ describe('StingerToast', () => {
     act(() => dispatchCue('VICTORY_STINGER'));
     expect(screen.getByTestId('stinger-toast').className).toContain('stinger-toast--success');
   });
+
+  it('QUEST_FAILED has aria-live="assertive"', () => {
+    render(<StingerToast />);
+    act(() => dispatchCue('QUEST_FAILED'));
+    expect(screen.getByTestId('stinger-toast').getAttribute('aria-live')).toBe('assertive');
+  });
+
+  it('VICTORY_STINGER has aria-live="polite"', () => {
+    render(<StingerToast />);
+    act(() => dispatchCue('VICTORY_STINGER'));
+    expect(screen.getByTestId('stinger-toast').getAttribute('aria-live')).toBe('polite');
+  });
+
+  it('QUEST_COMPLETE has aria-live="polite"', () => {
+    render(<StingerToast />);
+    act(() => dispatchCue('QUEST_COMPLETE'));
+    expect(screen.getByTestId('stinger-toast').getAttribute('aria-live')).toBe('polite');
+  });
 });
 
 // ---------- Full event coverage ----------
 
 describe('every AudioEvent triggers at least one visual cue', () => {
-  const ALL_EVENTS: AudioEvent[] = [
+  // QUEST_FAILED is excluded here — it is announced assertively by StingerToast, not AriaAnnouncer
+  const ARIA_ANNOUNCER_EVENTS: AudioEvent[] = [
     'TOWN',
     'ROAD',
     'COMBAT',
     'BOSS',
     'VICTORY_STINGER',
     'QUEST_COMPLETE',
-    'QUEST_FAILED',
     'PAUSE_BELL',
   ];
 
-  it.each(ALL_EVENTS)('%s produces an aria announcement', (event) => {
+  it.each(ARIA_ANNOUNCER_EVENTS)('%s produces an aria announcement', (event) => {
     render(<AriaAnnouncer />);
     act(() => dispatchCue(event));
     expect(screen.getByTestId('aria-announcer').textContent).not.toBe('');
+  });
+
+  it('QUEST_FAILED is announced assertively by StingerToast (not duplicated in AriaAnnouncer)', () => {
+    render(<StingerToast />);
+    render(<AriaAnnouncer />);
+    act(() => dispatchCue('QUEST_FAILED'));
+    expect(screen.getByTestId('stinger-toast').getAttribute('aria-live')).toBe('assertive');
+    expect(screen.getByTestId('aria-announcer').textContent).toBe('');
   });
 });

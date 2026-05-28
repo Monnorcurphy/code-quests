@@ -18,6 +18,8 @@ export default function AriaAnnouncer() {
 
   useEffect(() => {
     return subscribeCue((event) => {
+      // QUEST_FAILED is announced assertively by StingerToast; skip here to avoid duplicate
+      if (event === 'QUEST_FAILED') return;
       setAnnouncement(ANNOUNCEMENTS[event]);
     });
   }, []);

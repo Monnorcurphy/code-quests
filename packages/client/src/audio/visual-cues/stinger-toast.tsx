@@ -48,7 +48,7 @@ export default function StingerToast() {
   return (
     <div
       className={`stinger-toast${toast.persistent ? ' stinger-toast--error' : ' stinger-toast--success'}`}
-      aria-live="polite"
+      aria-live={toast.persistent ? 'assertive' : 'polite'}
       aria-atomic="true"
       data-testid="stinger-toast"
     >
