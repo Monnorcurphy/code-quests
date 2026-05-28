@@ -17,3 +17,6 @@ export type { SpecGapBuilding, SpecGapSeverity, SpecGap, SpecAudit } from './spe
 
 export { AgentSchema, AgentEventSchema } from './agent';
 export type { Agent, AgentEvent } from './agent';
+
+export { MonsterScopeSchema, MonsterTypeSchema, MonsterSchema, MonsterEncounterSchema } from './monster';
+export type { MonsterScope, MonsterType, Monster, MonsterEncounter } from './monster';

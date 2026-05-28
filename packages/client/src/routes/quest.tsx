@@ -125,7 +125,7 @@ export default function QuestRoute() {
         parseError={parseError}
       />
       <Suspense fallback={null}>
-        <PhaserMount initialScene={quest.currentScene as SceneKey} />
+        <PhaserMount initialScene={quest.currentScene as SceneKey} questId={questId} />
       </Suspense>
     </main>
   );

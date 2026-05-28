@@ -73,8 +73,7 @@ export default function CombatLog({ questId }: CombatLogProps) {
     >
       {logEntries.length === 0 ? (
         <p
-          className="text-gray-200"
-          style={{ margin: 0, fontSize: '0.8rem', fontStyle: 'italic' }}
+          style={{ margin: 0, fontSize: '0.8rem', fontStyle: 'italic', color: '#e0d6c2' }}
         >
           Combat log will appear here
         </p>
@@ -89,11 +88,10 @@ export default function CombatLog({ questId }: CombatLogProps) {
               fontSize: '0.78rem',
             }}
           >
-            <span className="text-gray-300" style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums', color: '#d0c8b8' }}>
               {formatTimestamp(event.timestamp)}
             </span>
             <span
-              className="text-gray-100"
               style={{
                 padding: '1px 5px',
                 borderRadius: '3px',
@@ -101,11 +99,12 @@ export default function CombatLog({ questId }: CombatLogProps) {
                 flexShrink: 0,
                 fontSize: '0.7rem',
                 fontWeight: 600,
+                color: '#f5f5f5',
               }}
             >
               {TYPE_LABELS[event.type] ?? event.type}
             </span>
-            <span className="text-gray-100">{getMessage(event)}</span>
+            <span style={{ color: '#f5f5f5' }}>{getMessage(event)}</span>
           </div>
         ))
       )}

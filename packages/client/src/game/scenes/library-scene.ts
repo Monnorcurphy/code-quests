@@ -35,7 +35,14 @@ export class LibraryScene extends BaseBuildingScene {
       .setOrigin(0.5)
       .setDepth(2);
 
-    sceneRouter.setInteractives([this.returnDoorInteractive]);
+    sceneRouter.setInteractives([
+      {
+        id: 'ancient-tome',
+        label: 'Ancient Tome',
+        onActivate: () => useTownStore.getState().setActiveModal('library'),
+      },
+      this.returnDoorInteractive,
+    ]);
 
     useTownStore.getState().setActiveModal('library');
 

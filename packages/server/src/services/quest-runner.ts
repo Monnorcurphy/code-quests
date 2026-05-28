@@ -5,8 +5,11 @@ import { createAgent, endAgent } from './agents-service';
 import { getQuestAdapter } from '../agents/select-adapter';
 import { transitionQuestStatus, InvalidTransitionError } from './quest-status';
 import { advanceQuestScene } from './quest-scene-progression';
+import { classifyCombatEvent, recordEncounter, resolveEncounter } from './monster-detection';
+import { getMonsterType } from './monster-types';
 
 export const PROGRESS_EVENTS_PER_SCENE = 3;
+export const LICH_REPEAT_THRESHOLD = 3;
 
 export interface RunQuestDeps {
   db: Database.Database;
@@ -20,6 +23,8 @@ export interface QuestRunResult {
 
 const activeHandles = new Map<string, AgentHandle>();
 const progressCountByQuest = new Map<string, number>();
+const pendingEncountersByQuest = new Map<string, string[]>();
+const typeCountsByQuest = new Map<string, Map<string, number>>();
 
 export function getActiveHandle(questId: string): AgentHandle | undefined {
   return activeHandles.get(questId);
@@ -58,6 +63,8 @@ export async function runQuest(
 
   activeHandles.set(quest.id, handle);
   progressCountByQuest.set(quest.id, 0);
+  pendingEncountersByQuest.set(quest.id, []);
+  typeCountsByQuest.set(quest.id, new Map<string, number>());
 
   const done = (async () => {
     const collectedEvents: AgentEvent[] = [];
@@ -67,6 +74,71 @@ export async function runQuest(
     }
     try {
       for await (const event of handle.events()) {
+        if (event.type === 'combat') {
+          try {
+            const monsterType = classifyCombatEvent(db, event);
+            if (monsterType) {
+              const { monster, encounter } = recordEncounter(db, {
+                questId: quest.id,
+                monsterTypeId: monsterType.id,
+                combatLogEntry: event.message,
+              });
+              const encounters = pendingEncountersByQuest.get(quest.id) ?? [];
+              encounters.push(encounter.id);
+              pendingEncountersByQuest.set(quest.id, encounters);
+              const appearedEvent: AgentEvent = {
+                type: 'monster_appeared',
+                timestamp: new Date().toISOString(),
+                encounterId: encounter.id,
+                monsterId: monster.id,
+                monsterName: monster.name,
+                monsterTypeId: monsterType.id,
+                spritePath: monsterType.spritePath,
+                difficulty: monster.calibratedDifficulty,
+              };
+              collectedEvents.push(appearedEvent);
+              publishEvent?.(quest.id, appearedEvent);
+
+              // Lich aggregator: spawn lich after LICH_REPEAT_THRESHOLD same-type encounters
+              if (monsterType.id !== 'lich_repeated_failure') {
+                const typeCounts = typeCountsByQuest.get(quest.id) ?? new Map<string, number>();
+                const typeCount = (typeCounts.get(monsterType.id) ?? 0) + 1;
+                typeCounts.set(monsterType.id, typeCount);
+                typeCountsByQuest.set(quest.id, typeCounts);
+
+                if (typeCount === LICH_REPEAT_THRESHOLD) {
+                  const lichType = getMonsterType(db, 'lich_repeated_failure');
+                  if (lichType) {
+                    const lichMsg = `The same ${monsterType.name} has struck ${LICH_REPEAT_THRESHOLD} times — a Lich emerges from the pattern!`;
+                    const { monster: lich, encounter: lichEnc } = recordEncounter(db, {
+                      questId: quest.id,
+                      monsterTypeId: 'lich_repeated_failure',
+                      combatLogEntry: lichMsg,
+                    });
+                    encounters.push(lichEnc.id);
+                    pendingEncountersByQuest.set(quest.id, encounters);
+                    const lichEvent: AgentEvent = {
+                      type: 'monster_appeared',
+                      timestamp: new Date().toISOString(),
+                      encounterId: lichEnc.id,
+                      monsterId: lich.id,
+                      monsterName: lich.name,
+                      monsterTypeId: lichType.id,
+                      spritePath: lichType.spritePath,
+                      difficulty: lich.calibratedDifficulty,
+                    };
+                    collectedEvents.push(lichEvent);
+                    publishEvent?.(quest.id, lichEvent);
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            process.stderr.write(`[quest-runner] monster detection error for quest ${quest.id}: ${msg}\n`);
+          }
+        }
+
         collectedEvents.push(event);
         publishEvent?.(quest.id, event);
 
@@ -89,6 +161,25 @@ export async function runQuest(
         }
 
         if (event.type === 'completed') {
+          const pendingEncounters = pendingEncountersByQuest.get(quest.id) ?? [];
+          for (const encounterId of pendingEncounters) {
+            try {
+              resolveEncounter(db, encounterId, 'victory');
+              const resolvedEvent: AgentEvent = {
+                type: 'monster_resolved',
+                timestamp: new Date().toISOString(),
+                encounterId,
+                outcome: 'victory',
+              };
+              collectedEvents.push(resolvedEvent);
+              publishEvent?.(quest.id, resolvedEvent);
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              process.stderr.write(`[quest-runner] resolveEncounter error for ${encounterId}: ${msg}\n`);
+            }
+          }
+          pendingEncountersByQuest.set(quest.id, []);
+
           let transition = advanceQuestScene(db, quest.id);
           while (transition) {
             const sceneEvent: AgentEvent = {
@@ -112,6 +203,27 @@ export async function runQuest(
           return;
         }
         if (event.type === 'failed') {
+          const pendingEncounters = pendingEncountersByQuest.get(quest.id) ?? [];
+          for (let i = 0; i < pendingEncounters.length; i++) {
+            const encounterId = pendingEncounters[i];
+            const outcome = i === pendingEncounters.length - 1 ? 'defeat' : 'escape';
+            try {
+              resolveEncounter(db, encounterId, outcome);
+              const resolvedEvent: AgentEvent = {
+                type: 'monster_resolved',
+                timestamp: new Date().toISOString(),
+                encounterId,
+                outcome,
+              };
+              collectedEvents.push(resolvedEvent);
+              publishEvent?.(quest.id, resolvedEvent);
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              process.stderr.write(`[quest-runner] resolveEncounter error for ${encounterId}: ${msg}\n`);
+            }
+          }
+          pendingEncountersByQuest.set(quest.id, []);
+
           const failureSummary = {
             reason: event.reason ?? '',
             recommendation: 'repost_with_clarification' as const,
@@ -151,6 +263,8 @@ export async function runQuest(
     } finally {
       activeHandles.delete(quest.id);
       progressCountByQuest.delete(quest.id);
+      pendingEncountersByQuest.delete(quest.id);
+      typeCountsByQuest.delete(quest.id);
     }
   })();
 

@@ -11,7 +11,7 @@ import type { AgentEvent } from '@code-quests/shared';
 import { QuestSchema, AdventurerSchema } from '@code-quests/shared';
 import { openDb } from '../db/connection';
 import { runMigrations } from '../db/migrator';
-import { runQuest, PROGRESS_EVENTS_PER_SCENE } from '../services/quest-runner';
+import { runQuest, PROGRESS_EVENTS_PER_SCENE, LICH_REPEAT_THRESHOLD } from '../services/quest-runner';
 import { getQuestAdapter } from '../agents/select-adapter';
 import { offlineAdapter } from '../agents/offline-adapter';
 
@@ -566,5 +566,347 @@ describe('runQuest scene progression heuristic', () => {
     const sceneChangeEvents = publishedEvents.filter((e) => e.type === 'scene_change');
     // Already at boss-room — no scene_change needed
     expect(sceneChangeEvents).toHaveLength(0);
+  });
+});
+
+describe('runQuest combat/encounter integration', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    runMigrations(db);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    db.close();
+  });
+
+  it('publishes monster_appeared before combat and resolves all encounters as victory on completed', async () => {
+    insertAdventurer(db, 'adv-vic');
+    insertQuest(db, 'q-vic', 'adv-vic');
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-victory',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            yield { type: 'progress', timestamp: ts, message: 'Starting' };
+            yield { type: 'combat', timestamp: ts, message: 'lint error: no-console violation' };
+            yield { type: 'combat', timestamp: ts, message: 'typescript error: type mismatch' };
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-vic');
+    const adventurer = parseAdventurer(db, 'adv-vic');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const published = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    const types = published.map((e) => e.type);
+
+    // monster_appeared must precede its corresponding combat event
+    const firstAppearedIdx = types.indexOf('monster_appeared');
+    const firstCombatIdx = types.indexOf('combat');
+    expect(firstAppearedIdx).toBeGreaterThanOrEqual(0);
+    expect(firstAppearedIdx).toBeLessThan(firstCombatIdx);
+
+    // Two monster_appeared events (one per combat)
+    expect(published.filter((e) => e.type === 'monster_appeared')).toHaveLength(2);
+
+    // Two monster_resolved events, both victory, all published after completed
+    const resolvedEvents = published.filter((e) => e.type === 'monster_resolved');
+    expect(resolvedEvents).toHaveLength(2);
+    for (const e of resolvedEvents) {
+      if (e.type === 'monster_resolved') expect(e.outcome).toBe('victory');
+    }
+    const completedIdx = types.indexOf('completed');
+    const resolvedIndices = types.map((t, i) => (t === 'monster_resolved' ? i : -1)).filter((i) => i >= 0);
+    for (const idx of resolvedIndices) {
+      expect(idx).toBeGreaterThan(completedIdx);
+    }
+
+    // DB: both encounters have outcome victory
+    const encounters = db
+      .prepare("SELECT outcome FROM monster_encounters WHERE quest_id = ?")
+      .all('q-vic') as { outcome: string }[];
+    expect(encounters).toHaveLength(2);
+    for (const enc of encounters) {
+      expect(enc.outcome).toBe('victory');
+    }
+  });
+
+  it('resolves last encounter as defeat and earlier encounters as escape on failed', async () => {
+    insertAdventurer(db, 'adv-def');
+    insertQuest(db, 'q-def', 'adv-def');
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-defeat',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            const ts = new Date().toISOString();
+            yield { type: 'progress', timestamp: ts, message: 'Starting' };
+            yield { type: 'combat', timestamp: ts, message: 'lint error: no-console' };
+            yield { type: 'combat', timestamp: ts, message: 'typescript error: type error' };
+            yield { type: 'failed', timestamp: ts, reason: 'could not fix errors' };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 1 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-def');
+    const adventurer = parseAdventurer(db, 'adv-def');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const published = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    const types = published.map((e) => e.type);
+
+    // Two monster_resolved events published after the failed event
+    const resolvedEvents = published.filter((e) => e.type === 'monster_resolved');
+    expect(resolvedEvents).toHaveLength(2);
+
+    const failedIdx = types.indexOf('failed');
+    const resolvedIndices = types.map((t, i) => (t === 'monster_resolved' ? i : -1)).filter((i) => i >= 0);
+    for (const idx of resolvedIndices) {
+      expect(idx).toBeGreaterThan(failedIdx);
+    }
+
+    // First encounter: escape; last encounter: defeat
+    const [first, last] = resolvedEvents;
+    if (first.type === 'monster_resolved') expect(first.outcome).toBe('escape');
+    if (last.type === 'monster_resolved') expect(last.outcome).toBe('defeat');
+
+    // DB reflects the same outcome ordering
+    const encounters = db
+      .prepare("SELECT outcome FROM monster_encounters WHERE quest_id = ? ORDER BY appeared_at ASC")
+      .all('q-def') as { outcome: string }[];
+    expect(encounters).toHaveLength(2);
+    expect(encounters[0].outcome).toBe('escape');
+    expect(encounters[1].outcome).toBe('defeat');
+  });
+
+  it('clears pending encounters after resolution so a second quest run starts clean', async () => {
+    insertAdventurer(db, 'adv-clear');
+    insertQuest(db, 'q-clear-a', 'adv-clear');
+    insertQuest(db, 'q-clear-b', 'adv-clear');
+
+    const ts = new Date().toISOString();
+
+    // First quest: one combat then completed
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-clear-a',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            yield { type: 'combat', timestamp: ts, message: 'lint error' };
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const questA = parseQuest(db, 'q-clear-a');
+    const adventurer = parseAdventurer(db, 'adv-clear');
+    const { done: doneA } = await runQuest(questA, adventurer, { db });
+    await doneA;
+
+    // Second quest: no combat, just completed — should emit zero monster_resolved events
+    db.prepare("UPDATE quests SET status = 'active' WHERE id = ?").run('q-clear-b');
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-clear-b',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const questB = parseQuest(db, 'q-clear-b');
+    const spyB = vi.fn();
+    const { done: doneB } = await runQuest(questB, adventurer, { db, publishEvent: spyB });
+    await doneB;
+
+    const eventsB = spyB.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    expect(eventsB.filter((e) => e.type === 'monster_resolved')).toHaveLength(0);
+  });
+});
+
+describe('runQuest lich aggregator', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = openDb(':memory:');
+    runMigrations(db);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    db.close();
+  });
+
+  it(`spawns a lich after ${LICH_REPEAT_THRESHOLD} same-type encounters in one quest`, async () => {
+    insertAdventurer(db, 'adv-lich');
+    insertQuest(db, 'q-lich', 'adv-lich');
+
+    // Emit LICH_REPEAT_THRESHOLD combat events with imp_typecheck type
+    const ts = new Date().toISOString();
+    const impMsg = 'TS2345: type error found';
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-lich',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            for (let i = 0; i < LICH_REPEAT_THRESHOLD; i++) {
+              yield {
+                type: 'combat',
+                timestamp: ts,
+                monsterTypeId: 'imp_typecheck',
+                message: impMsg,
+              };
+            }
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-lich');
+    const adventurer = parseAdventurer(db, 'adv-lich');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const published = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+
+    // Should have LICH_REPEAT_THRESHOLD imp appeared events + 1 lich appeared
+    const appearedEvents = published.filter((e) => e.type === 'monster_appeared');
+    expect(appearedEvents.length).toBe(LICH_REPEAT_THRESHOLD + 1);
+
+    // Last appeared should be the lich
+    const lichAppeared = appearedEvents[appearedEvents.length - 1];
+    expect(lichAppeared.type).toBe('monster_appeared');
+    if (lichAppeared.type === 'monster_appeared') {
+      expect(lichAppeared.monsterTypeId).toBe('lich_repeated_failure');
+    }
+
+    // DB should have a lich encounter record for this quest
+    const lichEncounter = db
+      .prepare(
+        "SELECT me.* FROM monster_encounters me JOIN monsters m ON me.monster_id = m.id WHERE me.quest_id = ? AND m.type_id = 'lich_repeated_failure'",
+      )
+      .get('q-lich');
+    expect(lichEncounter).toBeDefined();
+  });
+
+  it(`spawns one lich per distinct type that hits ${LICH_REPEAT_THRESHOLD} encounters`, async () => {
+    insertAdventurer(db, 'adv-two-lich');
+    insertQuest(db, 'q-two-lich', 'adv-two-lich');
+
+    const ts = new Date().toISOString();
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-two-lich',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            // 3 imps + 3 goblins — two liches should appear
+            for (let i = 0; i < LICH_REPEAT_THRESHOLD; i++) {
+              yield { type: 'combat', timestamp: ts, monsterTypeId: 'imp_typecheck', message: 'typescript error' };
+            }
+            for (let i = 0; i < LICH_REPEAT_THRESHOLD; i++) {
+              yield { type: 'combat', timestamp: ts, monsterTypeId: 'goblin_linter', message: 'eslint error' };
+            }
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-two-lich');
+    const adventurer = parseAdventurer(db, 'adv-two-lich');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const published = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    const lichAppearedEvents = published.filter(
+      (e) => e.type === 'monster_appeared' && e.type === 'monster_appeared'
+        && (e as { monsterTypeId?: string }).monsterTypeId === 'lich_repeated_failure',
+    );
+    // Each distinct type hitting threshold spawns one lich
+    expect(lichAppearedEvents.length).toBe(2);
+  });
+
+  it('does not spawn lich for fewer than threshold same-type encounters', async () => {
+    insertAdventurer(db, 'adv-no-lich');
+    insertQuest(db, 'q-no-lich', 'adv-no-lich');
+
+    const ts = new Date().toISOString();
+
+    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+      name: 'mock-no-lich',
+      async spawn() {
+        return {
+          pid: null,
+          async *events(): AsyncGenerator<AgentEvent> {
+            // Only LICH_REPEAT_THRESHOLD - 1 encounters — no lich
+            for (let i = 0; i < LICH_REPEAT_THRESHOLD - 1; i++) {
+              yield { type: 'combat', timestamp: ts, monsterTypeId: 'imp_typecheck', message: 'typescript error' };
+            }
+            yield { type: 'completed', timestamp: ts };
+          },
+          async cancel() {},
+          async awaitExit() { return { exitCode: 0 }; },
+        };
+      },
+    });
+
+    const quest = parseQuest(db, 'q-no-lich');
+    const adventurer = parseAdventurer(db, 'adv-no-lich');
+    const publishSpy = vi.fn();
+
+    const { done } = await runQuest(quest, adventurer, { db, publishEvent: publishSpy });
+    await done;
+
+    const published = publishSpy.mock.calls.map((c: unknown[]) => c[1] as AgentEvent);
+    const lichAppearedEvents = published.filter(
+      (e) => e.type === 'monster_appeared'
+        && (e as { monsterTypeId?: string }).monsterTypeId === 'lich_repeated_failure',
+    );
+    expect(lichAppearedEvents).toHaveLength(0);
   });
 });

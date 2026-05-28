@@ -9,6 +9,33 @@ import Roster from './guild/roster';
 import RecruitModal from './guild/recruit-modal';
 import QuestBoard from './quests/quest-board';
 
+function LibraryPreview() {
+  const setActiveModal = useTownStore((s) => s.setActiveModal);
+  const { data: monsterCount } = useQuery({
+    queryKey: ['monsters-count'],
+    queryFn: () => api.monsters.list({ scope: 'project' }).then((m) => m.length),
+    staleTime: 30_000,
+  });
+
+  return (
+    <div className="town-square-library-preview">
+      <p className="town-square-library-label">
+        {monsterCount !== undefined && monsterCount > 0
+          ? `Bestiary unlocked — ${monsterCount} monster${monsterCount === 1 ? '' : 's'} logged`
+          : 'Library — Bestiary & Skills (Phase 10)'}
+      </p>
+      <button
+        type="button"
+        className="btn-secondary town-square-library-btn"
+        onClick={() => setActiveModal('library')}
+        aria-label="Open Library and Bestiary"
+      >
+        Open Library
+      </button>
+    </div>
+  );
+}
+
 function ReturnedQuestsBadge() {
   const { data } = useQuery({
     queryKey: ['quests', 'returned', 'count'],
@@ -158,6 +185,8 @@ function QuestBoardPanel({ onClose, onRecruit }: { onClose: () => void; onRecrui
             />
           </section>
           <aside className="town-square-sidebar">
+            <LibraryPreview />
+            <hr className="town-square-divider" />
             <p className="town-square-banner">Ready to grow your guild?</p>
             <button
               ref={recruitBtnRef}

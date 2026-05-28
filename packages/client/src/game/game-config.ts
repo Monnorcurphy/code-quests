@@ -18,6 +18,7 @@ import './scenes/quest-boss-room-scene';
 export function getGameConfig(
   parent: HTMLElement,
   initialScene: SceneKey,
+  questId?: string,
 ): Phaser.Types.Core.GameConfig {
   const allScenes = getSceneList()
     .map((key) => getScene(key))
@@ -37,6 +38,9 @@ export function getGameConfig(
     callbacks: {
       postBoot: (game: Phaser.Game) => {
         game.registry.set('initialScene', initialScene);
+        if (questId) {
+          game.registry.set('questId', questId);
+        }
       },
     },
     scene: scenes,

@@ -18,6 +18,8 @@ vi.mock('../../scene-router', () => ({
 
 vi.mock('../../asset-loader', () => ({
   preloadQuestAssets: vi.fn(),
+  preloadMonsterAssets: vi.fn(),
+  monsterTypeIdToAssetKey: {},
   QUEST_ASSET_KEYS: {
     QUEST_BG_FOREST: 'quest/bg-forest',
     QUEST_BG_CAVE: 'quest/bg-cave',

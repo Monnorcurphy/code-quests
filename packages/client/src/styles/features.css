@@ -511,6 +511,23 @@
   width: 100%;
 }
 
+/* Library preview card in Town Square sidebar */
+.town-square-library-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.town-square-library-label {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.town-square-library-btn {
+  width: 100%;
+}
+
 /* Settings HUD button */
 .settings-hud-btn {
   position: absolute;
@@ -1010,11 +1027,34 @@
   margin: 0.5rem 0;
 }
 
-/* Shared building panel styles (Oracle, Tavern, Library) */
+/* Shared building panel styles (Oracle, Tavern) */
 .oracle-panel,
-.tavern-panel,
-.library-panel {
+.tavern-panel {
   max-width: 560px;
+}
+
+/* Library panel — wider to accommodate the bestiary table */
+.library-panel {
+  max-width: 780px;
+}
+
+/* Library header — title + badge row */
+.library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.library-bestiary-badge {
+  background: #fde68a;
+  color: #5a3e00;
+  border: 1px solid #f9a825;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .building-quest-name {
@@ -1490,4 +1530,484 @@
 .town-square-active-link:focus {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;
+}
+
+/* Library tabs */
+.library-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--color-stone-border);
+}
+
+.library-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.library-tab:hover {
+  color: var(--color-text);
+}
+
+.library-tab--active {
+  color: var(--color-banner-red);
+  border-bottom-color: var(--color-banner-red);
+  font-weight: bold;
+}
+
+.library-tab:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-tab {
+    transition: none;
+  }
+}
+
+.library-tabpanel {
+  margin-bottom: 0.5rem;
+}
+
+.library-placeholder {
+  font-style: italic;
+  color: var(--color-text-secondary);
+  padding: 1rem 0;
+  margin: 0;
+}
+
+/* Bestiary scope tabs */
+.bestiary-scope-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.bestiary-scope-tab {
+  background: transparent;
+  border: 1px solid var(--color-stone-border);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.bestiary-scope-tab:hover {
+  color: var(--color-text);
+}
+
+.bestiary-scope-tab:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.bestiary-scope-tab--active {
+  background: var(--color-parchment);
+  color: var(--color-text);
+  font-weight: 600;
+  border-bottom: 2px solid var(--color-banner-red);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bestiary-scope-tab {
+    transition: none;
+  }
+}
+
+/* Difficulty stars */
+.difficulty-stars {
+  font-size: 1rem;
+  color: var(--color-banner-red);
+  letter-spacing: 1px;
+}
+
+/* Bestiary layout */
+.bestiary {
+  min-height: 120px;
+}
+
+.bestiary-empty {
+  padding: 1.5rem 0;
+}
+
+.bestiary-empty-message {
+  font-weight: bold;
+  color: var(--color-text);
+  margin: 0 0 0.5rem;
+}
+
+.bestiary-empty-hint {
+  color: var(--color-text-secondary);
+  margin: 0;
+  font-style: italic;
+}
+
+.bestiary-error {
+  padding: 0.75rem;
+  background: #fce4ec;
+  border: 1px solid #f48fb1;
+  border-radius: 4px;
+  color: #c62828;
+  margin: 0.5rem 0;
+}
+
+.bestiary-error p {
+  margin: 0 0 0.75rem;
+}
+
+/* Bestiary table */
+.bestiary-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 0.5rem;
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--color-stone-border);
+  border-radius: 4px;
+}
+
+.bestiary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.bestiary-table thead th {
+  background: var(--color-parchment-dark);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 2px solid var(--color-stone-border);
+}
+
+.bestiary-sort-btn {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  font-weight: bold;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.bestiary-sort-btn:hover {
+  color: var(--color-text);
+}
+
+.bestiary-sort-btn--active {
+  color: var(--color-banner-red);
+}
+
+.bestiary-sort-btn:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.bestiary-row {
+  border-bottom: 1px solid var(--color-parchment-dark);
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.bestiary-row:hover {
+  background: var(--color-parchment-dark);
+}
+
+.bestiary-row:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bestiary-row {
+    transition: none;
+  }
+}
+
+.bestiary-row--skeleton {
+  pointer-events: none;
+}
+
+.bestiary-cell {
+  padding: 0.5rem 0.75rem;
+  color: var(--color-text);
+  vertical-align: middle;
+}
+
+.bestiary-cell--sprite {
+  width: 36px;
+  padding: 0.25rem 0.5rem;
+}
+
+.bestiary-cell--name {
+  font-weight: bold;
+}
+
+.bestiary-cell--num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bestiary-sprite {
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.bestiary-sprite-placeholder {
+  display: block;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  text-align: center;
+  color: var(--color-stone);
+  font-size: 1rem;
+}
+
+.bestiary-skeleton-cell {
+  display: block;
+  height: 14px;
+  background: var(--color-parchment-dark);
+  border-radius: 3px;
+  min-width: 40px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bestiary-skeleton-cell {
+    animation: none;
+  }
+}
+
+/* Outcome badges */
+.outcome-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.outcome-badge--victory {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #2e7d32;
+}
+
+.outcome-badge--defeat {
+  background: #ffebee;
+  color: #8b1a1a;
+  border: 1px solid #c62828;
+}
+
+.outcome-badge--escape {
+  background: #fff8e1;
+  color: #6d4c00;
+  border: 1px solid #f9a825;
+}
+
+/* Monster detail panel */
+.monster-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.monster-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.monster-detail-back {
+  font-size: 0.875rem;
+  padding: 0.4rem 0.75rem;
+  flex-shrink: 0;
+}
+
+.monster-detail-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--color-text);
+  margin: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monster-detail-stats {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.monster-detail-sprite {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+  border: 1px solid var(--color-stone-border);
+  border-radius: 4px;
+  padding: 4px;
+  background: var(--color-parchment-dark);
+}
+
+.monster-detail-info {
+  flex: 1;
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+  font-size: 0.875rem;
+  align-items: baseline;
+}
+
+.monster-detail-info-row {
+  display: contents;
+}
+
+.monster-detail-info dt {
+  font-weight: bold;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.monster-detail-info dd {
+  color: var(--color-text);
+  margin: 0;
+}
+
+.monster-detail-encounters {
+  border-top: 1px solid var(--color-stone-border);
+  padding-top: 0.75rem;
+}
+
+.monster-detail-section-heading {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--color-text);
+  margin: 0 0 0.75rem;
+}
+
+.monster-detail-no-encounters {
+  font-style: italic;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.monster-detail-actions {
+  margin-top: 0.25rem;
+}
+
+/* Nemesis badge chip */
+.nemesis-badge {
+  display: inline-block;
+  background: #4c1d95;
+  color: #fff;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+/* Promote Nemesis modal */
+.promote-modal {
+  max-width: 480px;
+}
+
+.promote-form {
+  margin-top: 0.75rem;
+}
+
+.promote-success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
+}
+
+/* Encounter list */
+.encounter-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.encounter-item {
+  border: 1px solid var(--color-stone-border);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-parchment);
+}
+
+.encounter-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.encounter-item-quest {
+  font-weight: bold;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.encounter-item-date {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.encounter-item-log {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  font-style: italic;
 }
