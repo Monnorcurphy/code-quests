@@ -7,6 +7,7 @@ import { transitionQuestStatus, InvalidTransitionError } from './quest-status';
 import { advanceQuestScene } from './quest-scene-progression';
 import { classifyCombatEvent, recordEncounter, resolveEncounter } from './monster-detection';
 import { getMonsterType } from './monster-types';
+import { setInputRequest, clearInputRequest } from '../db/quest-repository';
 
 export const PROGRESS_EVENTS_PER_SCENE = 3;
 export const LICH_REPEAT_THRESHOLD = 3;
@@ -74,6 +75,58 @@ export async function runQuest(
     }
     try {
       for await (const event of handle.events()) {
+        if (event.type === 'paused_input') {
+          const ts = new Date().toISOString();
+          try {
+            transitionQuestStatus(db, quest.id, 'active', 'paused_input');
+            const statusChangeEvent: AgentEvent = {
+              type: 'status_change',
+              timestamp: ts,
+              from: 'active',
+              to: 'paused_input',
+            };
+            collectedEvents.push(statusChangeEvent);
+            publishEvent?.(quest.id, statusChangeEvent);
+          } catch (err) {
+            if (err instanceof InvalidTransitionError) {
+              process.stderr.write(
+                `[quest-runner] overwriting pending paused_input for quest ${quest.id}\n`,
+              );
+            } else {
+              throw err;
+            }
+          }
+          setInputRequest(db, quest.id, {
+            question: event.question,
+            context: event.context,
+            awaitingSince: event.timestamp,
+          });
+          collectedEvents.push(event);
+          publishEvent?.(quest.id, event);
+          persistEvents();
+          continue;
+        }
+
+        if (event.type === 'resumed') {
+          try {
+            transitionQuestStatus(db, quest.id, 'paused_input', 'active');
+            const statusChangeEvent: AgentEvent = {
+              type: 'status_change',
+              timestamp: event.timestamp,
+              from: 'paused_input',
+              to: 'active',
+            };
+            collectedEvents.push(statusChangeEvent);
+            publishEvent?.(quest.id, statusChangeEvent);
+          } catch (err) {
+            if (!(err instanceof InvalidTransitionError)) throw err;
+          }
+          clearInputRequest(db, quest.id);
+          collectedEvents.push(event);
+          publishEvent?.(quest.id, event);
+          continue;
+        }
+
         if (event.type === 'combat') {
           try {
             const monsterType = classifyCombatEvent(db, event);

@@ -1,19 +1,10 @@
 import type { AgentEvent } from '@code-quests/shared';
 import type { AgentAdapter, AgentHandle, AgentSpawnInput } from './adapter';
 
-function makeOfflineEvents(): AgentEvent[] {
-  const now = new Date().toISOString();
-  return [
-    { type: 'progress', timestamp: now, message: 'Setting out from town' },
-    {
-      type: 'combat',
-      timestamp: now,
-      monsterTypeId: 'goblin_linter',
-      message: 'Skirmish with a Goblin',
-    },
-    { type: 'progress', timestamp: now, message: 'Returning home' },
-    { type: 'completed', timestamp: now, summary: 'Quest completed in offline demo.' },
-  ];
+export const OFFLINE_PAUSE_QUESTION = 'Should I use approach A or approach B?';
+
+function delay(): Promise<void> {
+  return new Promise<void>((r) => setImmediate(r));
 }
 
 function createOfflineHandle(): AgentHandle {
@@ -22,11 +13,42 @@ function createOfflineHandle(): AgentHandle {
     resolveExit = res;
   });
 
+  let resolveRespond: ((text: string) => void) | null = null;
+  const respondPromise = new Promise<string>((res) => {
+    resolveRespond = res;
+  });
+
+  let settled = false;
+
   async function* generateEvents(): AsyncGenerator<AgentEvent> {
-    for (const event of makeOfflineEvents()) {
-      await new Promise<void>((r) => setImmediate(r));
-      yield { ...event, timestamp: new Date().toISOString() };
-    }
+    const now = () => new Date().toISOString();
+
+    await delay();
+    yield { type: 'progress', timestamp: now(), message: 'Setting out from town' };
+
+    await delay();
+    yield { type: 'paused_input', timestamp: now(), question: OFFLINE_PAUSE_QUESTION };
+
+    await respondPromise;
+
+    if (settled) return;
+
+    yield { type: 'resumed', timestamp: now(), source: 'input_response' };
+
+    await delay();
+    yield {
+      type: 'combat',
+      timestamp: now(),
+      monsterTypeId: 'goblin_linter',
+      message: 'Skirmish with a Goblin',
+    };
+
+    await delay();
+    yield { type: 'progress', timestamp: now(), message: 'Returning home' };
+
+    await delay();
+    yield { type: 'completed', timestamp: now(), summary: 'Quest completed in offline demo.' };
+
     resolveExit({ exitCode: 0 });
   }
 
@@ -38,7 +60,16 @@ function createOfflineHandle(): AgentHandle {
       return iter;
     },
     async cancel(): Promise<void> {
-      resolveExit({ exitCode: null });
+      if (!settled) {
+        settled = true;
+        resolveRespond?.('__cancel__');
+        resolveRespond = null;
+        resolveExit({ exitCode: null });
+      }
+    },
+    async respond(text: string): Promise<void> {
+      resolveRespond?.(text);
+      resolveRespond = null;
     },
     async awaitExit(): Promise<{ exitCode: number | null }> {
       return exitPromise;

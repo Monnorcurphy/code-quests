@@ -17,6 +17,7 @@ export interface AgentHandle {
   pid: number | null;
   events(): AsyncIterable<AgentEvent>;
   cancel(reason?: string): Promise<void>;
+  respond(text: string): Promise<void>;
   awaitExit(): Promise<{ exitCode: number | null }>;
 }
 

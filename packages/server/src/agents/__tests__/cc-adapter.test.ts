@@ -210,4 +210,62 @@ setTimeout(() => { process.exit(0); }, 60000);
     const newFiles = after.filter((f) => !before.includes(f));
     expect(newFiles).toHaveLength(0);
   });
+
+  it('detects [[PAUSED_INPUT]] marker and emits paused_input event with question', async () => {
+    const markerLine = JSON.stringify('[[PAUSED_INPUT question="Which approach should I use?"]]');
+    const fakeBinMarker = join(testTmpDir, 'fake-claude-marker');
+    writeFileSync(
+      fakeBinMarker,
+      `#!/usr/bin/env node\nprocess.stdout.write(${markerLine} + '\\n');\nprocess.exit(0);\n`,
+    );
+    chmodSync(fakeBinMarker, 0o755);
+
+    process.env.CODE_QUESTS_CLAUDE_BIN = fakeBinMarker;
+    const adapter = createCcAdapter();
+    const handle = await adapter.spawn!(SPAWN_INPUT);
+
+    const events: AgentEvent[] = [];
+    for await (const ev of handle.events()) {
+      events.push(ev);
+    }
+
+    const pausedEvent = events.find((e) => e.type === 'paused_input');
+    expect(pausedEvent).toBeDefined();
+    if (pausedEvent?.type === 'paused_input') {
+      expect(pausedEvent.question).toBe('Which approach should I use?');
+      expect(pausedEvent.context).toBeUndefined();
+    }
+
+    await handle.awaitExit();
+  });
+
+  it('detects [[PAUSED_INPUT]] marker with context field', async () => {
+    const markerLine = JSON.stringify(
+      '[[PAUSED_INPUT question="Use A or B?" context="Both options are viable"]]',
+    );
+    const fakeBinMarkerCtx = join(testTmpDir, 'fake-claude-marker-ctx');
+    writeFileSync(
+      fakeBinMarkerCtx,
+      `#!/usr/bin/env node\nprocess.stdout.write(${markerLine} + '\\n');\nprocess.exit(0);\n`,
+    );
+    chmodSync(fakeBinMarkerCtx, 0o755);
+
+    process.env.CODE_QUESTS_CLAUDE_BIN = fakeBinMarkerCtx;
+    const adapter = createCcAdapter();
+    const handle = await adapter.spawn!(SPAWN_INPUT);
+
+    const events: AgentEvent[] = [];
+    for await (const ev of handle.events()) {
+      events.push(ev);
+    }
+
+    const pausedEvent = events.find((e) => e.type === 'paused_input');
+    expect(pausedEvent).toBeDefined();
+    if (pausedEvent?.type === 'paused_input') {
+      expect(pausedEvent.question).toBe('Use A or B?');
+      expect(pausedEvent.context).toBe('Both options are viable');
+    }
+
+    await handle.awaitExit();
+  });
 });

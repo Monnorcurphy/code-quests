@@ -16,6 +16,8 @@ export class MissingBinaryError extends Error {
   }
 }
 
+const PAUSED_INPUT_MARKER = /^\[\[PAUSED_INPUT question="([^"]*)"(?:\s+context="([^"]*)")?\]\]$/;
+
 const FAILURE_PATTERNS: Array<{ monsterTypeId: string; regex: RegExp }> = [
   { monsterTypeId: 'goblin_linter', regex: /lint(ing|er?)?|eslint|tslint/i },
   { monsterTypeId: 'imp_typecheck', regex: /type[\s-]?check|TypeScript\s+error|error\s+TS\d+/i },
@@ -202,14 +204,26 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
 
   proc.on('error', (err: Error) => finalize(null, `spawn error: ${err.message}`));
 
+  const stdinStream = proc.stdin!;
   try {
-    proc.stdin!.write(buildPrompt(input));
-    proc.stdin!.end();
+    stdinStream.write(buildPrompt(input));
+    // Keep stdin open so respond() can write back when paused_input arrives.
+    // The subprocess will see EOF only after stdinStream.end() is called or it exits.
   } catch {
     // 'error' handler will fire and finalize; nothing to do here.
   }
 
   let stdoutBuf = '';
+
+  function pushPausedInput(question: string, context?: string): void {
+    const event: AgentEvent = {
+      type: 'paused_input',
+      timestamp: new Date().toISOString(),
+      question,
+      ...(context !== undefined ? { context } : {}),
+    };
+    queue.push(event);
+  }
 
   proc.stdout!.on('data', (chunk: Buffer) => {
     stdoutBuf += chunk.toString('utf8');
@@ -217,6 +231,11 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
     stdoutBuf = lines.pop() ?? '';
     for (const line of lines) {
       if (!line.trim()) continue;
+      const markerMatch = PAUSED_INPUT_MARKER.exec(line);
+      if (markerMatch) {
+        pushPausedInput(markerMatch[1], markerMatch[2]);
+        continue;
+      }
       const event = parseLine(line);
       if (event) queue.push(event);
     }
@@ -235,8 +254,13 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
 
   proc.on('close', (code: number | null) => {
     if (stdoutBuf.trim()) {
-      const event = parseLine(stdoutBuf);
-      if (event) queue.push(event);
+      const markerMatch = PAUSED_INPUT_MARKER.exec(stdoutBuf);
+      if (markerMatch) {
+        pushPausedInput(markerMatch[1], markerMatch[2]);
+      } else {
+        const event = parseLine(stdoutBuf);
+        if (event) queue.push(event);
+      }
     }
     finalize(code);
   });
@@ -253,6 +277,15 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
       killTimer = setTimeout(() => {
         if (!settled) proc.kill('SIGKILL');
       }, 5000);
+    },
+    async respond(text: string): Promise<void> {
+      if (settled) return;
+      try {
+        stdinStream.write(text + '\n');
+      } catch {
+        // stdin may be closed — best effort
+      }
+      queue.push({ type: 'resumed', timestamp: new Date().toISOString(), source: 'input_response' });
     },
     async awaitExit(): Promise<{ exitCode: number | null }> {
       return exitPromise;
