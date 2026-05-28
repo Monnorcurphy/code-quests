@@ -22,7 +22,13 @@ vi.mock('../../../lib/api', async (importOriginal) => {
 
 vi.mock('../../../stores/quest-store', () => ({
   useQuestStore: vi.fn((selector: (s: object) => unknown) =>
-    selector({ statusByQuest: {}, currentSceneByQuest: {}, entriesByQuest: {} }),
+    selector({
+      statusByQuest: {},
+      currentSceneByQuest: {},
+      entriesByQuest: {},
+      inputRequestByQuest: {},
+      userBlockerByQuest: {},
+    }),
   ),
 }));
 

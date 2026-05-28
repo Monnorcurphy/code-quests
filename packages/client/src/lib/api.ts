@@ -209,6 +209,8 @@ export const api = {
       postJson(QuestSchema, `/quests/${id}/block`, { description }),
     unblock: (id: string) =>
       postJson(QuestSchema, `/quests/${id}/unblock`, {}),
+    respondInput: (id: string, text: string) =>
+      postJson(QuestSchema, `/quests/${id}/respond-input`, { text }),
     returned: (opts?: { limit?: number; offset?: number }) =>
       fetchJson(
         ReturnedQuestsPageSchema,

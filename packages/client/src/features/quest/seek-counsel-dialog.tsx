@@ -5,10 +5,11 @@ interface SeekCounselDialogProps {
   questId: string;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
   onClose: () => void;
+  initialDescription?: string;
 }
 
-export function SeekCounselDialog({ questId, triggerRef, onClose }: SeekCounselDialogProps) {
-  const [description, setDescription] = useState('');
+export function SeekCounselDialog({ questId, triggerRef, onClose, initialDescription = '' }: SeekCounselDialogProps) {
+  const [description, setDescription] = useState(initialDescription);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
