@@ -50,13 +50,16 @@ export default function HUDOverlay({
   parseError,
 }: HUDOverlayProps) {
   const storeStatus = useQuestStore((s) => s.statusByQuest[questId]);
+  const storeScene = useQuestStore((s) => s.currentSceneByQuest[questId]);
   const displayStatus = storeStatus ?? quest.status;
+  const displayScene = storeScene ?? quest.currentScene;
   const statusLabel = STATUS_LABELS[displayStatus] ?? displayStatus;
 
   return (
     <div
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10 }}
       aria-label="Quest HUD"
+      data-current-scene={displayScene}
     >
       {/* Top banner */}
       <div

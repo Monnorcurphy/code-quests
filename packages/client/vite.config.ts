@@ -15,6 +15,7 @@ export default defineConfig({
       '/epics': 'http://localhost:4001',
       '/quests': 'http://localhost:4001',
       '/health': 'http://localhost:4001',
+      '/test': 'http://localhost:4001',
     },
   },
 });

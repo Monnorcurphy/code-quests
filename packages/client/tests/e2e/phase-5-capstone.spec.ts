@@ -64,8 +64,12 @@ test.describe('Phase 5 capstone — quest mode end-to-end', () => {
     });
     expect(emitRes.status()).toBe(200);
 
-    // Wait briefly for WebSocket event propagation
-    await page.waitForTimeout(500);
+    // Assert HUD reflects the scene_change to boss-room
+    await expect(page.locator('[aria-label="Quest HUD"]')).toHaveAttribute(
+      'data-current-scene',
+      'quest-boss-room',
+      { timeout: 5000 },
+    );
 
     // 7. Click Return to Town
     await page.getByRole('button', { name: /return to town/i }).click();
@@ -108,10 +112,10 @@ test.describe('Phase 5 capstone — quest mode end-to-end', () => {
     expect(results.violations).toEqual([]);
   });
 
-  test('test-emit route is not available in non-test environments', async ({ page }) => {
-    // This test verifies the route is mounted (NODE_ENV=test in playwright config)
-    // and that a production server would NOT expose it.
-    // We verify the endpoint works in test mode (mounted):
+  test('test-emit route is mounted when NODE_ENV=test', async ({ page }) => {
+    // Verifies the route is reachable in the test environment (NODE_ENV=test).
+    // The server-side negative case (404 in production) is covered by the unit test
+    // in packages/server/src/index.test.ts.
     const questsRes = await page.request.get('/quests/active');
     const activeQuests = await questsRes.json() as { id: string; title: string }[];
     const demoQuest = activeQuests.find((q) => q.title === PHASE5_QUEST_TITLE);
