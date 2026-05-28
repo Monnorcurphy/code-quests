@@ -1,11 +1,23 @@
 # Progress — Phase 7
 
-Previous task progress archived to metrics/progress-before-extratropical-cyclone.md
+Previous task progress archived to metrics/progress-before-gale.md
 
-## extratropical-cyclone — Client store + Phaser scene freeze
+## Task gale — Mark-self-blocked control in HUD
 
-- Extended `quest-store.ts` with `inputRequestByQuest` and `userBlockerByQuest` maps plus four new actions: `setInputRequest`, `clearInputRequest`, `setUserBlocker`, `clearUserBlocker`. Updated `reset()` to clear these fields.
-- Extended `use-quest-stream.ts`: `paused_input` event → `setInputRequest`; `resumed` event → clears both; `status_change` to `user_blocked` → invalidates query cache and refetches quest REST to populate `userBlocker`; `status_change` to `active` → clears both modal states.
-- Extended `base-quest-scene.ts`: subscribes to quest store in `create()`, freezes scene on `paused_input`/`user_blocked` (`tweens.pauseAll()`, `player.pauseAnimations()`, dim overlay or canvas opacity 0.7 for reduced motion), resumes on `active`. Applies initial freeze state immediately on mount. Unsubscribes on `shutdown`.
-- Added `pauseAnimations()` / `resumeAnimations()` to `Player`.
-- All 587 client tests pass; typecheck and lint clean.
+**Status:** Complete
+
+### What was done
+
+- Added `api.quests.block(id, description)` and `api.quests.unblock(id)` to `packages/client/src/lib/api.ts`
+- Created `packages/client/src/features/quest/seek-counsel-dialog.tsx`: parchment-styled dialog with a textarea labeled "What are you waiting on?" (max 1000 chars), "Mark blocked" submit, and "Cancel" button. Calls `POST /api/quests/:id/block`. Focus trapping (Tab cycles within dialog), ESC closes, focus returns to trigger button on close.
+- Created `packages/client/src/features/quest/block-controls.tsx`: extracted component rendering the "Seek counsel" button (active/paused_input) and "Unblock" button (user_blocked) with loading/error states. 409/410 errors show "The agent is no longer running this quest" and trigger a React Query invalidation. Extracted to keep hud-overlay.tsx under 300 lines.
+- Updated `packages/client/src/features/quest/hud-overlay.tsx` to render `<BlockControls questId={questId} status={displayStatus} />` in the top banner.
+- Tests: 35 new tests across `seek-counsel-dialog.test.tsx` and `block-controls.test.tsx` covering button visibility by status, dialog open/close, loading states, API calls, error handling.
+
+### Files created/modified
+- `packages/client/src/lib/api.ts`
+- `packages/client/src/features/quest/seek-counsel-dialog.tsx` (new)
+- `packages/client/src/features/quest/block-controls.tsx` (new)
+- `packages/client/src/features/quest/hud-overlay.tsx`
+- `packages/client/src/features/quest/__tests__/seek-counsel-dialog.test.tsx` (new)
+- `packages/client/src/features/quest/__tests__/block-controls.test.tsx` (new)
