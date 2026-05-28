@@ -1,16 +1,14 @@
 # Progress — Phase 6
 
-Previous task progress archived to metrics/progress-before-arizona.md
+Previous task progress archived to metrics/progress-before-calypso.md
 
-## Task: arizona — Monster-detection service + encounter recorder
+## calypso — Monsters / encounters REST API + project nemesis listing
 
-**Status:** Done
-
-**Delivered:**
-- `packages/server/src/services/monster-name-generator.ts` — generates names like "Grumbling Goblin" from a 15-adjective word list
-- `packages/server/src/services/monster-detection.ts` — `classifyCombatEvent`, `recordEncounter`, `resolveEncounter`, `recalibrateDifficulty`
-- `packages/server/src/services/__tests__/monster-detection.test.ts` — 20 tests covering all functions
-- `packages/shared/src/agent.ts` — added `monster_appeared` and `monster_resolved` event types to `AgentEventSchema`
-- `packages/server/src/services/quest-runner.ts` — integrated monster detection into the event loop; publishes `monster_appeared` before `combat` event; resolves encounters on `completed`/`failed`
-
-**Verification:** 271 tests pass, typecheck clean, lint clean.
+- Created `packages/shared/src/monster.ts` with Zod schemas: `MonsterScopeSchema`, `MonsterTypeSchema`, `MonsterSchema`, `MonsterEncounterSchema`
+- Added re-exports to `packages/shared/src/index.ts`
+- Created `packages/server/src/routes/monsters.ts` with 5 endpoints: `GET /monster-types`, `GET /monsters` (scope + typeId filters), `GET /monsters/:id`, `GET /monsters/:id/encounters`, `GET /quests/:questId/encounters`
+- Created `packages/server/src/routes/__tests__/monsters.test.ts` with 19 integration tests covering 404, empty-list, scope filter, ordering, and field mapping
+- Mounted monsters router at `/` in `packages/server/src/index.ts`
+- Added typed fetch wrappers `api.monsters.*` to `packages/client/src/lib/api.ts`
+- Built shared package so dist reflects new schemas
+- All 293 server tests pass, zero type errors, zero lint warnings
