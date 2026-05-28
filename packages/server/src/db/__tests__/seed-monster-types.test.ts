@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import Database from 'better-sqlite3';
 import { openDb } from '../connection';
 import { runMigrations } from '../migrator';
@@ -78,8 +80,13 @@ describe('monster_types seed migration', () => {
     }
   });
 
-  it('is idempotent — running migrations twice yields exactly 10 rows', () => {
-    runMigrations(db);
+  it('is idempotent — re-running the seed SQL does not duplicate rows', () => {
+    const seedSql = fs.readFileSync(
+      path.join(__dirname, '..', 'migrations', '006_monster_types_seed.sql'),
+      'utf8',
+    );
+    db.exec(seedSql);
+    db.exec(seedSql);
     const count = (
       db.prepare('SELECT COUNT(*) as n FROM monster_types').get() as { n: number }
     ).n;

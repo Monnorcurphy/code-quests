@@ -164,8 +164,6 @@ Only CC0 and CC-BY assets are permitted (no CC-NC or commercial-license art).
 
 ---
 
----
-
 ## Phase 6 — Monster Sprites
 
 ### Kenney 1-Bit Pack — monster glyphs
