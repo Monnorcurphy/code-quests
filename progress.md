@@ -1,32 +1,12 @@
 # Progress — Phase 11
 
-Previous task progress archived to metrics/progress-before-cancer.md
+Previous task progress archived to metrics/progress-before-capricorn.md
 
-## Task cancer — Failure → scar → re-post loop integration
+## capricorn — Pre-capstone UX polish (complete)
 
-**Status:** Complete
-
-**What was done:**
-- Server: Added `monsterTypeId` to the fatal monster JSON in the Hall of Returns list query
-- Server: Created `packages/server/src/__tests__/repost-cycle.test.ts` — full integration test covering the fail→scar→repost→complete arc using the seeded showcase scenario (Brielle dispatched without type_whisperer, fails, gains scar, re-post adds type_whisperer, quest completes)
-- Server: Added showcase seed scenario test to `quest-return.test.ts` — verifies scar shape (questId, failureSummary, monsterIdAtFatal, occurredAt) using seeded Brielle adventurer data
-- Server: Added unit test to `auto-match.test.ts` — verifies Brielle's JWT scar lowers her score for a type-heavy future quest, causing a clean champion newcomer to be selected instead
-- Client: Added `monsterTypeId` to `FatalMonsterSchema` in `api.ts`
-- Client: Added `equipment` field to `HallOfReturnsQuestSchema` in `api.ts`
-- Client: Extended `api.quests.repost` to accept `equipment` in adjustments
-- Client: Updated `failure-summary-card.tsx` — "Browse Library" link now points to `/town/library?typeId=xxx` filtered to the fatal monster's type
-- Client: Updated `repost-dialog.tsx` — added inline skills equipment-edit section with constrained checkbox pickers (pre-populated from quest's existing equipment), passes equipment in the repost API call
-- Client: Updated `bestiary.tsx` — accepts `initialTypeFilter` prop, filters monster list by typeId, shows a filter banner when active
-- Client: Updated `library.tsx` — reads `typeId` from `useSearchParams()` and passes to `Bestiary` as `initialTypeFilter`
-- Tests: Updated `repost-dialog.test.tsx` to cover equipment section (skills API mock, checkbox toggle, pre-population, submission with equipment)
-- Tests: Fixed 5 test fixtures to add new required fields (`equipment`, `monsterTypeId`)
-- Tests: Fixed `library.test.tsx` to wrap renders in `MemoryRouter` (required by new `useSearchParams` call)
-
-**Acceptance criteria met:**
-- ✅ Integration test passes deterministically
-- ✅ Hall of Returns failure summary shows non-empty recommendation text and links to bestiary filtered by monster type
-- ✅ Re-post inline equipment editor uses constrained inputs (checkboxes, not free text)
-- ✅ Scar persists on adventurer across re-post + win
-- ✅ Auto-match considers scars (verified by unit test)
-- ✅ All 1542 tests pass (551 server, 991 client)
-- ✅ Lint, typecheck, all green
+- **Contrast violations fixed**: replaced banned `text-gray-{100,200,300}` Tailwind classes in `hud-overlay.tsx` and `return-to-town-button.tsx` with inline style color values; `checks/contrast-classes.sh` exits 0
+- **Bell flash for reduced-motion users**: added `flashKey` state to `BellCue` — renders `.pause-bell-flash--static` overlay (no animation, static for 800ms) when `prefers-reduced-motion` is active; animated version auto-fades in 400ms for motion users. Uses pre-existing CSS classes from `features.css`
+- **Pause all app animations on modal open**: `PausedInputModal` now sets `data-quest-paused="true"` on `document.body` when visible; added CSS rule in `features.css` that sets `animation-play-state: paused !important` on all child elements (excluding the modal itself and the flash overlay)
+- **Accessibility sweep E2E test**: created `packages/client/tests/e2e/accessibility-sweep.spec.ts` covering Town Square, War Room, Guild Hall, Oracle, Library, Armory, Tavern, Hall of Returns, Quest scene, PAUSED_INPUT modal, reduced-motion bell-flash, and body pause attribute
+- **Contrast audit**: created `packages/client/src/styles/contrast-audit.md` recording all tailwind class swaps
+- All 995 unit tests pass, typecheck clean, lint clean

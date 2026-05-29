@@ -153,6 +153,14 @@
 
 /* ============================================================ */
 
+/* Pause all CSS animations/transitions when the paused-input modal is visible */
+body[data-quest-paused='true'] *:not([class*='pause-bell-flash']):not([role='dialog']) {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+
+/* ============================================================ */
+
 /* Visually hidden but accessible to screen readers */
 .sr-only {
   position: absolute;
