@@ -1,48 +1,63 @@
-# BUG: onClick={onCancelRef.current} — unnecessary ref indirection for click handler
+# BUG: 3-second post-success setTimeout is not cleared on unmount
 
 **Severity:** LOW
-**File(s):** `packages/client/src/features/guild/recruit-modal.tsx`
+**File(s):** `packages/client/src/features/library/coin-monster-type-modal.tsx`
 
 ## Problem
 
-The Cancel button uses `onClick={onCancelRef.current}` instead of `onClick={onCancel}`:
+In `handleSubmit` (lines 127–130), on a successful create the modal schedules
+a bare `setTimeout(..., 3000)` to invoke `onSuccess(...)` and `handleClose()`.
+The timer ID is discarded and there is no cleanup `useEffect` that clears it.
 
-```tsx
-<button type="button" onClick={onCancelRef.current} disabled={disabled}>
-  Cancel
-</button>
-```
+During those 3 seconds the modal remains dismissable via the backdrop click
+(`onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}`) and
+via `Escape` (through `useFocusTrap`). The Cancel button is disabled while
+`isSubmitting` is true, but backdrop + Escape are not gated by `isSubmitting`.
 
-The `onCancelRef` pattern (store callback in ref, sync in layoutless effect) is necessary for the auto-dismiss `setTimeout` callback, because that runs outside the render cycle and would capture a stale closure. DOM event handlers do not have this problem — React updates them on every render, so `onClick={onCancel}` always calls the latest value of `onCancel`.
+If the user dismisses early, the modal unmounts but the timer continues to
+fire. When it does:
 
-Using `onCancelRef.current` here:
-- Reads the ref value at render time (same timing as reading the prop directly)
-- Adds complexity without adding correctness
+1. `onSuccess(type.name)` is called on the parent (currently a no-op, but the
+   contract is still violated).
+2. `handleClose()` calls `triggerRef.current?.focus()` — this re-focuses the
+   "+ Coin New Type" button up to 3 seconds after the user moved on, stealing
+   focus from whatever they're now interacting with.
+3. `handleClose()` then calls `onClose()` again on an already-closed modal —
+   harmless `setShowCoinModal(false)`, but unnecessary churn.
+
+The focus-stealing in step 2 is the user-visible bug.
 
 ## Expected
 
-Click handlers should reference props directly. Refs are the right tool for callbacks invoked asynchronously (timers, subscriptions) — not for synchronous event handlers.
+Per `rules/state-management.md` ("Event listeners: Store-Level, Not
+Component-Level" / cleanup discipline) and React's standard pattern for
+async side effects, the pending `setTimeout` must be cleared when the
+component unmounts.
 
 ## Fix
 
-```tsx
-// Before
-<button type="button" onClick={onCancelRef.current} disabled={disabled}>
-
-// After
-<button type="button" onClick={onCancel} disabled={disabled}>
-```
-
-After this change, `onCancelRef` is no longer needed at all. Remove it along with the effect that syncs it:
+Store the timer id in a ref and clear it from a cleanup effect. Example:
 
 ```tsx
-// Remove:
-const onCancelRef = useRef(onCancel);
+const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 useEffect(() => {
-  onSuccessRef.current = onSuccess;
-  onCancelRef.current = onCancel;  // remove this line (or remove the whole effect if onSuccess still uses ref)
-});
+  return () => {
+    if (successTimerRef.current !== null) {
+      clearTimeout(successTimerRef.current);
+      successTimerRef.current = null;
+    }
+  };
+}, []);
+
+// in handleSubmit, replace setTimeout(...) with:
+successTimerRef.current = setTimeout(() => {
+  onSuccess(type.name);
+  handleClose();
+}, 3000);
 ```
 
-`onSuccessRef` still needs to be kept — it is used inside the `setTimeout` auto-dismiss, which IS an async callback that requires the ref pattern.
+(Alternatively: clear in the existing `handleClose` so an early dismiss
+cancels the pending tick.) After the fix, a regression test should mount the
+modal, trigger success, unmount the modal before 3 s elapse, then
+`vi.advanceTimersByTime(3000)` and assert `mockOnSuccess` was NOT called.
