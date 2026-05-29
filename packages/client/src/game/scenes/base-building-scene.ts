@@ -20,7 +20,14 @@ const RETURN_DOOR: DoorConfig = {
   label: 'Return to Town Square',
 };
 
-const SIGN_STYLE = { fontSize: '10px', color: '#f0e6d2', align: 'center' as const };
+const SIGN_STYLE = {
+  fontSize: '11px',
+  color: '#fef9e7',
+  align: 'center' as const,
+  fontStyle: 'bold',
+  backgroundColor: '#1a0e08',
+  padding: { x: 6, y: 2 },
+};
 
 export abstract class BaseBuildingScene extends BaseTownScene {
   abstract override get sceneKey(): SceneKey;
@@ -31,6 +38,11 @@ export abstract class BaseBuildingScene extends BaseTownScene {
 
   protected override get sceneWidth(): number {
     return BUILDING_SCENE_WIDTH;
+  }
+
+  // Interior — skip the outdoor sky/hills the base class draws.
+  protected override get isOutdoor(): boolean {
+    return false;
   }
 
   override get doorConfigs(): DoorConfig[] {

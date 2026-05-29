@@ -51,16 +51,24 @@ export abstract class BaseTownScene extends Phaser.Scene {
     preloadCommonAssets(this);
   }
 
+  protected get isOutdoor(): boolean {
+    return true;
+  }
+
   create(): void {
     const reducedMotion =
       window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
 
     const sceneBounds = { min: 0, max: this.sceneWidth };
-    this.drawSkyAndLandscape();
-    // Ground bed (under the front grass strip)
-    this.add.rectangle(this.sceneWidth / 2, GROUND_Y, this.sceneWidth, GROUND_HEIGHT, GROUND_COLOR);
-    // Add per-building facades above doors before doors themselves
-    this.drawFacades();
+    if (this.isOutdoor) {
+      this.drawSkyAndLandscape();
+      // Ground bed (under the front grass strip)
+      this.add.rectangle(
+        this.sceneWidth / 2, GROUND_Y, this.sceneWidth, GROUND_HEIGHT, GROUND_COLOR,
+      );
+      // Add per-building facades above doors before doors themselves
+      this.drawFacades();
+    }
 
     this.player = new Player(this, this._spawnX, PLAYER_Y, sceneBounds, { reducedMotion });
 

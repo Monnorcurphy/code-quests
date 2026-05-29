@@ -45,18 +45,31 @@ function makeText() {
 }
 
 function makeRect() {
-  return {
-    setDepth: vi.fn().mockReturnThis(),
-    setStrokeStyle: vi.fn().mockReturnThis(),
-    setFillStyle: vi.fn().mockReturnThis(),
-    setAlpha: vi.fn().mockReturnThis(),
-    setInteractive: vi.fn().mockReturnThis(),
-    on: vi.fn().mockReturnThis(),
+  const m: Record<string, unknown> = {
+    setDepth: vi.fn(() => m),
+    setStrokeStyle: vi.fn(() => m),
+    setFillStyle: vi.fn(() => m),
+    setAlpha: vi.fn(() => m),
+    setInteractive: vi.fn(() => m),
+    on: vi.fn(() => m),
+    setOrigin: vi.fn(() => m),
+    setLineWidth: vi.fn(() => m),
+    setDisplaySize: vi.fn(() => m),
   };
+  return m;
 }
 
 function makeSprite() {
-  return { setFlipX: vi.fn(), play: vi.fn(), x: 0 };
+  const m: Record<string, unknown> = {
+    setFlipX: vi.fn(() => m),
+    play: vi.fn(),
+    x: 0,
+    setDepth: vi.fn(() => m),
+    setInteractive: vi.fn(() => m),
+    on: vi.fn(() => m),
+    setOrigin: vi.fn(() => m),
+  };
+  return m;
 }
 
 function buildMockStore(extra: Partial<Record<string, unknown>> = {}) {
@@ -89,8 +102,12 @@ function attachMockContext(scene: object) {
       text: vi.fn(() => makeText()),
       ellipse: vi.fn(() => makeRect()),
       image: vi.fn(() => makeRect()),
+      circle: vi.fn(() => makeRect()),
+      line: vi.fn(() => makeRect()),
+      triangle: vi.fn(() => makeRect()),
     },
     textures: { exists: vi.fn(() => false) },
+    tweens: { add: vi.fn() },
     anims: {
       exists: vi.fn(() => false),
       create: vi.fn(),
