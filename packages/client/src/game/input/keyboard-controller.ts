@@ -19,6 +19,19 @@ interface CursorKeysLike {
   right: KeyLike;
 }
 
+interface KeyboardPluginLike {
+  disableGlobalCapture?: () => void;
+  enableGlobalCapture?: () => void;
+}
+
+function isEditableElementFocused(): boolean {
+  if (typeof document === 'undefined') return false;
+  const el = document.activeElement as HTMLElement | null;
+  if (!el || el === document.body) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable === true;
+}
+
 export class KeyboardController {
   private readonly cursors: CursorKeysLike;
   private readonly aKey: KeyLike;
@@ -26,6 +39,8 @@ export class KeyboardController {
   private readonly enterKey: KeyLike;
   private readonly escKey: KeyLike;
   private readonly tabKey: KeyLike;
+  private readonly keyboard: KeyboardPluginLike;
+  private readonly handleFocusChange: () => void;
 
   private prevEnter = false;
   private prevEsc = false;
@@ -45,6 +60,20 @@ export class KeyboardController {
     this.enterKey = keys['ENTER'];
     this.escKey = keys['ESC'];
     this.tabKey = keys['TAB'];
+    this.keyboard = scene.input.keyboard as unknown as KeyboardPluginLike;
+
+    this.handleFocusChange = () => {
+      if (isEditableElementFocused()) {
+        this.keyboard.disableGlobalCapture?.();
+      } else {
+        this.keyboard.enableGlobalCapture?.();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('focusin', this.handleFocusChange);
+      document.addEventListener('focusout', this.handleFocusChange);
+      this.handleFocusChange();
+    }
   }
 
   on(event: ControllerEvent, listener: Listener): this {
@@ -63,6 +92,14 @@ export class KeyboardController {
   }
 
   update(): void {
+    if (isEditableElementFocused()) {
+      if (this.prevMoving !== null) {
+        this.emit('stop');
+        this.prevMoving = null;
+      }
+      return;
+    }
+
     const movingLeft = this.cursors.left.isDown || this.aKey.isDown;
     const movingRight = this.cursors.right.isDown || this.dKey.isDown;
 
@@ -91,6 +128,11 @@ export class KeyboardController {
   }
 
   destroy(): void {
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('focusin', this.handleFocusChange);
+      document.removeEventListener('focusout', this.handleFocusChange);
+    }
+    this.keyboard.enableGlobalCapture?.();
     this.listeners.clear();
   }
 }

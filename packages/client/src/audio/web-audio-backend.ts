@@ -1,6 +1,7 @@
 import type { AudioEvent } from './audio-events';
 import type { AudioBackend } from './backend';
 import { AUDIO_MANIFEST } from './asset-manifest';
+import { isProceduralTheme, synthesizeTheme } from './procedural-music';
 
 const CROSSFADE_DURATION = 0.4;
 
@@ -44,6 +45,19 @@ export class WebAudioBackend implements AudioBackend {
     const ctx = this.getContext();
     await Promise.all(
       events.map(async (event) => {
+        // Looping themes use procedural chiptune (~3:30 each) instead of
+        // the 2-second WAV stubs the project shipped with.
+        if (isProceduralTheme(event)) {
+          try {
+            const buf = await synthesizeTheme(event);
+            if (buf) {
+              this.buffers.set(event, buf);
+              return;
+            }
+          } catch {
+            // Fall through to WAV fallback below
+          }
+        }
         const url = AUDIO_MANIFEST[event];
         const response = await fetch(url);
         const arrayBuffer = await response.arrayBuffer();
