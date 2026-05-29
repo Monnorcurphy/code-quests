@@ -2346,3 +2346,111 @@
   margin: 0;
   font-style: italic;
 }
+
+/* ============================================================
+   Returned Quests Badge (Town Square)
+   ============================================================ */
+
+.returned-quests-badge {
+  margin: 0.5rem 0;
+}
+
+.returned-quests-badge-btn {
+  background: #b22222;
+  color: #fff;
+  padding: 0.25rem 0.75rem;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.returned-quests-badge-btn:hover {
+  background: #8b1a1a;
+}
+
+.returned-quests-badge-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .returned-quests-badge-btn {
+    transition: none;
+  }
+}
+
+/* ============================================================
+   Scar List (Guild Hall Roster)
+   ============================================================ */
+
+.scar-list {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.scar-badge {
+  background: #6b2e2e;
+  color: #fde8e8;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.scar-badge:hover {
+  background: #5a2424;
+}
+
+.scar-badge:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scar-badge {
+    transition: none;
+  }
+}
+
+.scar-entries {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0 0.5rem;
+}
+
+.scar-entry {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.scar-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-link, #4da6e8);
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.scar-link:hover {
+  color: var(--color-link-hover, #76bcf5);
+}
+
+.scar-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.scar-date {
+  font-size: 0.8em;
+  color: var(--color-text-secondary, #666);
+  flex-shrink: 0;
+}

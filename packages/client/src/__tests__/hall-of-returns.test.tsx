@@ -69,7 +69,7 @@ function makeItem(overrides: Partial<HallOfReturnsList['items'][number]> = {}): 
 }
 
 function makePage(items: HallOfReturnsList['items']): HallOfReturnsList {
-  return { items, nextCursor: null };
+  return { items, nextCursor: null, total: items.length };
 }
 
 function renderPanel(initialPath = '/town/hall-of-returns') {

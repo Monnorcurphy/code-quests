@@ -228,6 +228,7 @@ export const HallOfReturnsQuestSchema = z.object({
 const HallOfReturnsListSchema = z.object({
   items: z.array(HallOfReturnsQuestSchema),
   nextCursor: z.string().nullable(),
+  total: z.number().default(0),
 });
 
 const PostMortemAttemptSchema = z.object({

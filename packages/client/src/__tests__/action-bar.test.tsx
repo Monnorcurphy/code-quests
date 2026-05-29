@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ActionBar from '../features/hall-of-returns/actions/action-bar';
 import { useTownStore } from '../stores/town-store';
 import type { HallOfReturnsQuest } from '../lib/api';
@@ -49,10 +50,13 @@ function makeQuest(overrides: Partial<HallOfReturnsQuest> = {}): HallOfReturnsQu
 }
 
 function renderBar(quest = makeQuest()) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <ActionBar questId="q-1" quest={quest} recommendation="repost_with_clarification" />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <ActionBar questId="q-1" quest={quest} recommendation="repost_with_clarification" />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

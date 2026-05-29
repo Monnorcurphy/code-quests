@@ -41,7 +41,7 @@ function ReturnedQuestsBadge() {
 
   const { data: returnedData } = useQuery({
     queryKey: ['hall-of-returns', 'badge'],
-    queryFn: () => api.hallOfReturns.listQuests({ status: 'returned_to_town', limit: 20 }),
+    queryFn: () => api.hallOfReturns.listQuests({ status: 'returned_to_town', limit: 1 }),
   });
 
   // Subscribe to active quests to catch quest_returned events in real time
@@ -67,7 +67,7 @@ function ReturnedQuestsBadge() {
   }, [activeIdsKey, queryClient]);
 
   const goToHallOfReturns = useTownStore((s) => s.goToHallOfReturns);
-  const count = returnedData?.items.length ?? 0;
+  const count = returnedData?.total ?? 0;
 
   if (count === 0) return null;
 

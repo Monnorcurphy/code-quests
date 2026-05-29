@@ -295,11 +295,9 @@ test.describe('Phase 9 capstone — Hall of Returns failure loop', () => {
     const dialog = page.getByRole('dialog', { name: /break into smaller/i });
     await expect(dialog).toBeVisible({ timeout: 5000 });
 
-    const submitBtn = dialog.getByRole('button', { name: /submit/i });
-    // With only empty stubs the submit should be disabled
-    await expect(submitBtn).toBeDisabled({ timeout: 3000 }).catch(() => {
-      // Some implementations start with 2 pre-filled stubs; verify at least the form is present
-    });
+    const submitBtn = dialog.getByRole('button', { name: /split into/i });
+    // With only empty stubs the submit must be disabled
+    await expect(submitBtn).toBeDisabled({ timeout: 3000 });
 
     // Close
     await page.keyboard.press('Escape');
@@ -338,9 +336,8 @@ test.describe('Phase 9 capstone — Hall of Returns failure loop', () => {
 
     // Expand scars for richer DOM
     const scarBadge = page.getByRole('button', { name: /scars \(1\)/i });
-    if (await scarBadge.isVisible()) {
-      await scarBadge.click();
-    }
+    await expect(scarBadge).toBeVisible({ timeout: 5000 });
+    await scarBadge.click();
 
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations).toEqual([]);
@@ -366,11 +363,10 @@ test.describe('Phase 9 capstone — Hall of Returns failure loop', () => {
 
     // Submit the re-post (ACs already pre-filled)
     const submitBtn = dialog.getByRole('button', { name: /re-post quest/i });
-    if (await submitBtn.isEnabled()) {
-      await submitBtn.click();
-      // Toast should appear
-      await expect(page.getByRole('status')).toBeVisible({ timeout: 5000 });
-    }
+    await expect(submitBtn).toBeEnabled({ timeout: 5000 });
+    await submitBtn.click();
+    // Toast should appear
+    await expect(page.getByRole('status')).toBeVisible({ timeout: 5000 });
   });
 
   test('Retire flow: confirm retire and see success toast', async ({ page }) => {
@@ -387,10 +383,9 @@ test.describe('Phase 9 capstone — Hall of Returns failure loop', () => {
     const dialog = page.getByRole('dialog', { name: /retire/i });
     await expect(dialog).toBeVisible({ timeout: 5000 });
 
-    const confirmBtn = dialog.getByRole('button', { name: /confirm/i });
-    if (await confirmBtn.isVisible()) {
-      await confirmBtn.click();
-      await expect(page.getByRole('status')).toBeVisible({ timeout: 5000 });
-    }
+    const confirmBtn = dialog.getByRole('button', { name: /^retire$/i });
+    await expect(confirmBtn).toBeVisible({ timeout: 5000 });
+    await confirmBtn.click();
+    await expect(page.getByRole('status')).toBeVisible({ timeout: 5000 });
   });
 });
