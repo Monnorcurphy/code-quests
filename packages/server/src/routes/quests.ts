@@ -14,11 +14,12 @@ import {
   FailureSummaryRecommendationSchema,
   UserBlockerSchema,
 } from '@code-quests/shared';
-import type { AgentEvent } from '@code-quests/shared';
+import type { AgentEvent, Monster, MonsterType } from '@code-quests/shared';
 import { validate } from '../middleware/validate';
 import { auditQuest } from '../audit/audit-quest';
 import { getAuditAdapter } from '../agents/select-adapter';
 import { autoMatch } from '../services/auto-match';
+import { listMonsterTypes } from '../services/monster-types';
 import { runQuest, getActiveHandle } from '../services/quest-runner';
 import { transitionQuestStatus, InvalidTransitionError } from '../services/quest-status';
 import { findAgentByQuest, endAgent } from '../services/agents-service';
@@ -391,8 +392,36 @@ export function createQuestsRouter(
             }),
           );
 
+          const monsterRows = db.prepare('SELECT id, type_id FROM monsters').all() as { id: string; type_id: string }[];
+          const monsters: Monster[] = monsterRows.map((r) => ({
+            id: r.id,
+            typeId: r.type_id,
+            name: '',
+            scope: 'project' as const,
+            projectId: null,
+            firstSeenAt: '',
+            lastSeenAt: '',
+            encounters: 0,
+            defeats: 0,
+            escapes: 0,
+            calibratedDifficulty: 1,
+            notes: '',
+          }));
+          const monsterTypes: MonsterType[] = listMonsterTypes(db).map((mt) => ({
+            id: mt.id,
+            name: mt.name,
+            spritePath: mt.spritePath,
+            defaultDifficulty: mt.defaultDifficulty,
+            failureSignature: mt.failureSignature,
+            createdBy: mt.createdBy as 'system' | 'user',
+          }));
+
           const quest = QuestSchema.parse(rowToApi(row));
-          const matched = autoMatch(quest, guild, activeAgents);
+          const matched = autoMatch(quest, guild, activeAgents, {
+            monsters,
+            monsterTypes,
+            logger: (entry) => { process.stdout.write(JSON.stringify(entry) + '\n'); },
+          });
           if (matched === null) {
             res.status(409).json({
               error: 'No available adventurer — recruit one in the Town Square',

@@ -293,6 +293,51 @@ All three settings persist across reloads (localStorage, key `code-quests.audio`
 - **Strict CSP blocking audio**: if your environment has a Content-Security-Policy that restricts `media-src`, the Web Audio `fetch()` calls will fail silently. Enable Silent Mode or relax `media-src` to allow `self`.
 - **Placeholder audio files**: Phase 8 ships with self-generated placeholder tones. Swap in real CC0/CC-BY tracks by replacing files under `packages/client/public/audio/` — no code changes required (the manifest in `packages/client/src/audio/asset-manifest.ts` is the single source of truth for paths).
 
+## Phase 9 walkthrough — Failure loop
+
+Phase 9 closes the quest failure loop: failed quests are automatically returned to the **Hall of Returns**, where you can review the combat log, leave feedback, and choose a remedy.
+
+### What's new in Phase 9
+
+- **Automatic failure capture** — when a quest agent exits non-zero or exhausts its retry budget, the `quest-failure-detector` automatically transitions the quest from `failed` → `returned_to_town` and synthesises a `FailureSummary`
+- **Hall of Returns** (`/town/hall-of-returns`) — two tabs: Returned (quests awaiting action) and Completed (victorious quests); live badge in Town Square when ≥1 quest is waiting
+- **Post-mortem panel** — per-quest view with scrollable combat-log replay, failure summary card showing the recommendation, and a feedback textarea (1–2000 chars, validated)
+- **Three remedy actions** — Re-post (with adjustments), Retire (permanent, confirmation required), Break into Smaller (≥2 child quests)
+- **Scars** — when an adventurer fails in a repeatable pattern, a `ScarRecord` is appended to their profile; the Guild Hall roster shows a "Scars (N)" badge that expands to link back to the originating post-mortems
+- **Scar-aware auto-match** — the auto-match scoring function subtracts 15 points per matching scar (capped at −30), so scarred adventurers are nudged away from quests that match their failure pattern
+
+### Human walkthrough (with seed data)
+
+```bash
+pnpm install && pnpm dev
+
+# In a second terminal:
+pnpm --filter=@code-quests/server seed:phase9
+```
+
+1. **Town Square** — walk to the Quest Board and open it (press Enter / click "Quest Board"). A red "📜 1 quest returned" badge appears near the Hall of Returns link.
+2. Click the badge (or walk to the Hall of Returns door and press Enter) → list view opens, "Returned" tab active, showing the seeded quest "Migrate the payment gateway integration".
+3. Click the quest row → post-mortem panel loads:
+   - **Combat log** replays the two Hydra (AC mismatch) encounters
+   - **Failure summary card** shows recommendation: "Re-post with clarification"
+   - **Feedback textarea** (labelled "Your feedback") with live char counter
+4. Type feedback ("ACs were too vague — specify which flows count as end-to-end") → click **Submit Feedback** → success toast appears and auto-dismisses after 3s.
+5. Click **Re-post** (shown with "Recommended" badge) → dialog opens with original ACs pre-filled → tighten one AC → click **Re-post Quest** → toast "New quest posted: …" with link to the new quest.
+6. Auto-match the new quest → "Vance the Scarred" scores lower (scar penalty −15 logged as `scarPenalty: -15`).
+7. Navigate to **Guild Hall** → Vance's roster row shows "Scars (1)" badge → click it → scar entry links back to the post-mortem.
+8. Return to **Hall of Returns** → switch to "Completed" tab → empty state ("No completed quests yet — the guild has been victorious").
+9. Open the original returned quest → click **Retire** → confirmation dialog → confirm → toast "Quest retired" → quest disappears from the Returned tab.
+
+### Automated E2E
+
+```bash
+pnpm test:e2e --grep "Phase 9"
+```
+
+The Playwright spec (`packages/client/tests/e2e/phase-9-capstone.spec.ts`) mocks the API and walks through the key interaction paths, including axe-core accessibility scans on every Phase 9 surface.
+
+---
+
 ## Phase roadmap
 
 | Phase | Status | Content |
@@ -305,5 +350,5 @@ All three settings persist across reloads (localStorage, key `code-quests.audio`
 | 6 | Done | Monster system, Bestiary, Lich aggregator, Nemesis promotion |
 | 7 | Done | PAUSED_INPUT modal, user-blocked flow, Pause Bell |
 | 8 | Done | Audio layer — ambient themes, stingers, silent mode, credits |
-| 9 | Future | Re-post / Retire buttons, feedback loop |
+| 9 | Done | Hall of Returns, post-mortem, re-post / retire / split, scars, failure loop |
 | 10 | Future | Skills learning loop; user-defined MonsterTypes |

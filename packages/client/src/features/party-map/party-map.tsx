@@ -14,6 +14,8 @@ const STATUS_LABELS: Record<QuestStatus, string> = {
   failed: 'Failed',
   paused_input: 'Awaiting Input',
   user_blocked: 'Blocked',
+  returned_to_town: 'Returned',
+  retired: 'Retired',
 };
 
 const MAX_ROWS = 8;

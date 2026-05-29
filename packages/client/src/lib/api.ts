@@ -5,6 +5,7 @@ import {
   QuestSchema,
   QuestSceneKeySchema,
   QuestStatusSchema,
+  FailureSummarySchema,
   EpicSchema,
   SkillSchema,
   ToolSchema,
@@ -15,7 +16,9 @@ import {
   MonsterSchema,
   MonsterEncounterSchema,
 } from '@code-quests/shared';
-import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope } from '@code-quests/shared';
+import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild } from '@code-quests/shared';
+
+const FeedbackSuccessSchema = z.object({}).passthrough();
 
 const ReturnedAgentSchema = z.object({
   id: z.string(),
@@ -43,8 +46,12 @@ const ReturnedQuestBaseSchema = z.object({
   adventurerId: z.string().nullable(),
   agentId: z.string().nullable(),
   failureSummary: z.object({
-    reason: z.string(),
-    recommendation: z.enum(['retry', 'repost_with_clarification', 'retire']),
+    recommendation: z.enum(['retry', 'repost_with_clarification', 'retire', 'break_into_smaller', 'level_up_first']),
+    reason: z.string().default(''),
+    fatalEncounterId: z.string().optional(),
+    retries: z.number().optional(),
+    notes: z.string().optional(),
+    userFeedback: z.string().optional(),
   }).nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -63,7 +70,14 @@ const ReturnedQuestsPageSchema = z.object({
 
 export type ReturnedAdventurer = { id: string; name: string; class: AdventurerClass };
 export type ReturnedAgent = { id: string; startedAt: string; endedAt: string | null; events: AgentEvent[] };
-export type ReturnedQuestFailureSummary = { reason: string; recommendation: FailureSummaryRecommendation };
+export type ReturnedQuestFailureSummary = {
+  reason: string;
+  fatalEncounterId?: string;
+  retries?: number;
+  notes?: string;
+  recommendation: FailureSummaryRecommendation;
+  userFeedback?: string;
+};
 export type ReturnedQuest = {
   id: string;
   epicId: string | null;
@@ -182,6 +196,84 @@ const AdvanceSceneResponseSchema = z.object({
 
 export type AdvanceSceneResponse = z.infer<typeof AdvanceSceneResponseSchema>;
 
+const FatalMonsterSchema = z.object({
+  monsterId: z.string(),
+  monsterName: z.string(),
+  spritePath: z.string(),
+  difficulty: z.number(),
+});
+
+export const HallOfReturnsQuestSchema = z.object({
+  id: z.string(),
+  epicId: z.string().nullable(),
+  title: z.string(),
+  description: z.string(),
+  acceptanceCriteria: z.array(z.string()),
+  edgeCases: z.array(z.string()),
+  context: z.string(),
+  status: QuestStatusSchema,
+  adventurerId: z.string().nullable(),
+  agentId: z.string().nullable(),
+  failureSummary: FailureSummarySchema.nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  adventurer: z.object({
+    id: z.string(),
+    name: z.string(),
+    class: AdventurerClassSchema,
+  }).nullable(),
+  fatalMonster: FatalMonsterSchema.nullable(),
+}).passthrough();
+
+const HallOfReturnsListSchema = z.object({
+  items: z.array(HallOfReturnsQuestSchema),
+  nextCursor: z.string().nullable(),
+  total: z.number().default(0),
+});
+
+const PostMortemAttemptSchema = z.object({
+  id: z.string(),
+  startedAt: z.string(),
+  endedAt: z.string().nullable(),
+  events: z.array(AgentEventSchema),
+});
+
+const PostMortemAdventurerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  class: AdventurerClassSchema,
+});
+
+export const PostMortemResponseSchema = z.object({
+  quest: HallOfReturnsQuestSchema,
+  attempts: z.array(PostMortemAttemptSchema),
+  encounters: z.array(MonsterEncounterSchema),
+  failureSummary: FailureSummarySchema.nullable(),
+  adventurer: PostMortemAdventurerSchema.nullable(),
+});
+
+export type HallOfReturnsQuest = z.infer<typeof HallOfReturnsQuestSchema>;
+export type HallOfReturnsList = z.infer<typeof HallOfReturnsListSchema>;
+export type FatalMonster = z.infer<typeof FatalMonsterSchema>;
+export type PostMortemResponse = z.infer<typeof PostMortemResponseSchema>;
+export type PostMortemAttempt = z.infer<typeof PostMortemAttemptSchema>;
+
+// Re-export FailureSummary type for convenience
+export type { FailureSummary };
+
+// Schemas that match the actual server response shapes
+const RepostServerResponseSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+}).passthrough();
+
+const SplitServerResponseSchema = z.object({
+  childQuests: z.array(z.object({ id: z.string(), title: z.string() }).passthrough()),
+}).passthrough();
+
+export type RepostResult = { newQuestId: string; newTitle: string };
+export type SplitResult = { questIds: string[]; titles: string[] };
+
 export const api = {
   adventurers: {
     list: () => fetchJson(z.array(AdventurerSchema), '/adventurers'),
@@ -216,6 +308,19 @@ export const api = {
         ReturnedQuestsPageSchema,
         `/quests/returned?limit=${opts?.limit ?? 20}&offset=${opts?.offset ?? 0}`,
       ),
+    submitFeedback: (id: string, text: string) =>
+      postJson(FeedbackSuccessSchema, `/quests/${id}/actions/feedback`, { text }),
+    repost: (id: string, adjustments?: { acceptanceCriteria?: string[]; edgeCases?: string[] }): Promise<RepostResult> =>
+      postJson(RepostServerResponseSchema, `/quests/${id}/actions/repost`, { adjustments })
+        .then((q) => ({ newQuestId: q.id, newTitle: q.title })),
+    retire: (id: string) =>
+      postJson(z.object({}).passthrough(), `/quests/${id}/actions/retire`, {}),
+    split: (id: string, children: SplitChild[]): Promise<SplitResult> =>
+      postJson(SplitServerResponseSchema, `/quests/${id}/actions/split`, { children })
+        .then(({ childQuests }) => ({
+          questIds: childQuests.map((q) => q.id),
+          titles: childQuests.map((q) => q.title),
+        })),
   },
   epics: {
     list: () => fetchJson(z.array(EpicSchema), '/epics'),
@@ -243,5 +348,16 @@ export const api = {
       fetchJson(z.array(MonsterEncounterSchema), `/quests/${questId}/encounters`),
     promoteNemesis: (id: string, name?: string): Promise<Monster> =>
       postJson(MonsterSchema, `/monsters/${id}/promote-nemesis`, name !== undefined ? { name } : {}),
+  },
+  hallOfReturns: {
+    listQuests: (opts?: { status?: 'returned_to_town' | 'complete'; cursor?: string; limit?: number }) => {
+      const params = new URLSearchParams();
+      params.set('status', opts?.status ?? 'returned_to_town');
+      params.set('limit', String(opts?.limit ?? 20));
+      if (opts?.cursor) params.set('cursor', opts.cursor);
+      return fetchJson(HallOfReturnsListSchema, `/hall-of-returns/quests?${params.toString()}`);
+    },
+    getPostMortem: (questId: string) =>
+      fetchJson(PostMortemResponseSchema, `/hall-of-returns/quests/${questId}/post-mortem`),
   },
 };

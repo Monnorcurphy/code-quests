@@ -31,6 +31,16 @@ function formatEvent(event: AgentEvent): { icon: string; text: string } {
       return { icon: '⏸', text: `Awaiting input: ${event.question}` };
     case 'resumed':
       return { icon: '▶', text: `Resumed (${event.source === 'input_response' ? 'input received' : 'user unblocked'})` };
+    case 'quest_returned':
+      return { icon: '🏰', text: `Quest returned to town` };
+    case 'quest_reposted':
+      return { icon: '🔁', text: `Quest reposted` };
+    case 'quest_retired':
+      return { icon: '📦', text: `Quest retired` };
+    case 'quest_split':
+      return { icon: '✂', text: `Quest split into sub-quests` };
+    case 'quest_feedback_added':
+      return { icon: '💬', text: `Feedback added` };
   }
 }
 

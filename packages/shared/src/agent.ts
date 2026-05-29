@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { QuestStatusSchema, QuestSceneKeySchema } from './quest';
+import { QuestStatusSchema, QuestSceneKeySchema, FailureSummarySchema } from './quest';
 
 export const AgentSchema = z.object({
   id: z.string().min(1),
@@ -79,6 +79,35 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
     type: z.literal('resumed'),
     timestamp: z.string(),
     source: z.enum(['input_response', 'user_unblock']),
+  }),
+  z.object({
+    type: z.literal('quest_returned'),
+    timestamp: z.string(),
+    questId: z.string(),
+    failureSummary: FailureSummarySchema,
+    scarAdded: z.boolean(),
+  }),
+  z.object({
+    type: z.literal('quest_reposted'),
+    timestamp: z.string(),
+    questId: z.string(),
+    newQuestId: z.string(),
+  }),
+  z.object({
+    type: z.literal('quest_retired'),
+    timestamp: z.string(),
+    questId: z.string(),
+  }),
+  z.object({
+    type: z.literal('quest_split'),
+    timestamp: z.string(),
+    questId: z.string(),
+    childQuestIds: z.array(z.string()),
+  }),
+  z.object({
+    type: z.literal('quest_feedback_added'),
+    timestamp: z.string(),
+    questId: z.string(),
   }),
 ]);
 

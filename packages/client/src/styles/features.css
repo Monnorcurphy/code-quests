@@ -1383,170 +1383,273 @@
   font-style: italic;
 }
 
-.hall-of-returns-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-}
-
-@media (max-width: 560px) {
-  .hall-of-returns-columns {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Columns */
-.return-column {
+/* Hall of Returns — tabbed list view */
+.hall-tabs {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.return-column-heading {
-  font-size: 0.95rem;
-  font-weight: bold;
-  margin: 0 0 0.5rem;
-  padding-bottom: 0.4rem;
+  gap: 0;
+  margin-bottom: 1rem;
   border-bottom: 2px solid var(--color-stone-border);
 }
 
-.return-column--complete .return-column-heading {
-  color: #1b5e20;
-  border-bottom-color: #2e7d32;
-}
-
-.return-column--failed .return-column-heading {
-  color: #8b1a1a;
-  border-bottom-color: #c62828;
-}
-
-.return-column-count {
-  font-weight: normal;
-  font-size: 0.85rem;
-}
-
-.return-column-empty {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  font-style: italic;
-  margin: 0;
-}
-
-/* Quest return cards */
-.return-card-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-.return-card-item {
-  margin: 0;
-}
-
-.return-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  width: 100%;
-  background: var(--color-parchment);
-  border: 1px solid var(--color-stone-border);
-  border-radius: 4px;
-  padding: 0.6rem 0.75rem;
-  font-size: 0.875rem;
+.hall-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
   font-family: inherit;
+  color: var(--color-text-secondary);
   cursor: pointer;
-  text-align: left;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-.return-card--complete:hover {
-  border-color: #2e7d32;
-  background: #f1f8f1;
+.hall-tab:hover {
+  color: var(--color-text);
 }
 
-.return-card--failed:hover {
-  border-color: #c62828;
-  background: #fff5f5;
+.hall-tab--active {
+  color: var(--color-banner-red);
+  border-bottom-color: var(--color-banner-red);
+  font-weight: bold;
 }
 
-.return-card:focus-visible {
+.hall-tab:focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .return-card {
+  .hall-tab {
     transition: none;
   }
 }
 
-[data-reduced-motion='true'] .return-card {
+[data-reduced-motion='true'] .hall-tab {
   transition: none;
 }
 
-.return-card-header {
+/* Quest list */
+.hall-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0;
 }
 
-.return-card-title {
-  font-weight: bold;
-  color: var(--color-text);
+.hall-list-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-parchment-dark);
+  padding: 0.6rem 0.5rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.1s ease;
+}
+
+.hall-list-row:hover {
+  background: var(--color-parchment-dark);
+}
+
+.hall-list-row:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: -2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hall-list-row {
+    transition: none;
+  }
+}
+
+[data-reduced-motion='true'] .hall-list-row {
+  transition: none;
+}
+
+/* List columns */
+.hall-list-col {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.hall-list-col--title {
+  color: var(--color-text);
+  font-weight: 600;
   flex: 1;
+  min-width: 0;
 }
 
-.return-card-adventurer {
-  font-size: 0.8rem;
+.hall-list-col--adventurer,
+.hall-list-col--monster {
   color: var(--color-text-secondary);
-  margin: 0;
+  font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
-.return-card-adventurer-name {
+.hall-list-col--time {
+  color: var(--color-stone);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hall-list-col--badge {
+  flex-shrink: 0;
+}
+
+/* Adventurer / monster sub-elements */
+.hall-list-adventurer-name {
   font-weight: 600;
   color: var(--color-text);
 }
 
-.return-card-adventurer-class {
+.hall-list-adventurer-class {
   text-transform: capitalize;
 }
 
-.return-card-duration {
-  color: var(--color-stone);
+.hall-list-adventurer-sep {
+  color: var(--color-stone-border);
 }
 
-.return-card-log {
-  list-style: none;
-  padding: 0;
-  margin: 0.25rem 0 0;
+.hall-list-no-adventurer,
+.hall-list-no-monster {
+  color: var(--color-stone);
+  font-style: italic;
+}
+
+.hall-list-monster-sprite {
+  vertical-align: middle;
+  image-rendering: pixelated;
+}
+
+.hall-list-monster-name {
+  color: var(--color-text);
+}
+
+/* Skeleton rows */
+.hall-list-row--skeleton {
+  pointer-events: none;
+  cursor: default;
+}
+
+.hall-list-skeleton-title,
+.hall-list-skeleton-meta,
+.hall-list-skeleton-badge {
+  display: block;
+  height: 14px;
+  background: var(--color-parchment-dark);
+  border-radius: 3px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.hall-list-skeleton-title {
+  width: 40%;
+}
+
+.hall-list-skeleton-meta {
+  width: 20%;
+}
+
+.hall-list-skeleton-badge {
+  width: 60px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hall-list-skeleton-title,
+  .hall-list-skeleton-meta,
+  .hall-list-skeleton-badge {
+    animation: none;
+  }
+}
+
+[data-reduced-motion='true'] .hall-list-skeleton-title,
+[data-reduced-motion='true'] .hall-list-skeleton-meta,
+[data-reduced-motion='true'] .hall-list-skeleton-badge {
+  animation: none;
+}
+
+/* Recommendation badges */
+.hall-rec-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.hall-rec-badge--repost_with_clarification {
+  background: #e3f2fd;
+  color: #0d47a1;
+  border: 1px solid #1565c0;
+}
+
+.hall-rec-badge--retry {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #2e7d32;
+}
+
+.hall-rec-badge--retire {
+  background: #ffebee;
+  color: #8b1a1a;
+  border: 1px solid #c62828;
+}
+
+.hall-rec-badge--break_into_smaller {
+  background: #fff8e1;
+  color: #6d4c00;
+  border: 1px solid #f9a825;
+}
+
+.hall-rec-badge--level_up_first {
+  background: #fce4ec;
+  color: #880e4f;
+  border: 1px solid #ad1457;
+}
+
+/* Empty / error states */
+.hall-list-empty {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.hall-list-error {
+  padding: 0.75rem;
+  background: #fce4ec;
+  border: 1px solid #f48fb1;
+  border-radius: 4px;
+  margin: 0.5rem 0;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.5rem;
+  align-items: flex-start;
 }
 
-.return-card-log-line {
-  font-size: 0.775rem;
-  color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.return-card-failure-rec {
-  font-size: 0.775rem;
-  font-style: italic;
-  color: #8b1a1a;
+.hall-list-error-msg {
+  color: #c62828;
+  font-size: 0.9rem;
+  font-weight: 600;
   margin: 0;
-  text-transform: capitalize;
 }
 
 /* Returned quest detail */
@@ -2242,4 +2345,112 @@
   color: var(--color-text-secondary);
   margin: 0;
   font-style: italic;
+}
+
+/* ============================================================
+   Returned Quests Badge (Town Square)
+   ============================================================ */
+
+.returned-quests-badge {
+  margin: 0.5rem 0;
+}
+
+.returned-quests-badge-btn {
+  background: #b22222;
+  color: #fff;
+  padding: 0.25rem 0.75rem;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.returned-quests-badge-btn:hover {
+  background: #8b1a1a;
+}
+
+.returned-quests-badge-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .returned-quests-badge-btn {
+    transition: none;
+  }
+}
+
+/* ============================================================
+   Scar List (Guild Hall Roster)
+   ============================================================ */
+
+.scar-list {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.scar-badge {
+  background: #6b2e2e;
+  color: #fde8e8;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.scar-badge:hover {
+  background: #5a2424;
+}
+
+.scar-badge:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scar-badge {
+    transition: none;
+  }
+}
+
+.scar-entries {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0 0.5rem;
+}
+
+.scar-entry {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.scar-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-link, #4da6e8);
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.scar-link:hover {
+  color: var(--color-link-hover, #76bcf5);
+}
+
+.scar-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.scar-date {
+  font-size: 0.8em;
+  color: var(--color-text-secondary, #666);
+  flex-shrink: 0;
 }
