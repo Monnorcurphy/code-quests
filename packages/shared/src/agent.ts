@@ -87,6 +87,28 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
     failureSummary: FailureSummarySchema,
     scarAdded: z.boolean(),
   }),
+  z.object({
+    type: z.literal('quest_reposted'),
+    timestamp: z.string(),
+    questId: z.string(),
+    newQuestId: z.string(),
+  }),
+  z.object({
+    type: z.literal('quest_retired'),
+    timestamp: z.string(),
+    questId: z.string(),
+  }),
+  z.object({
+    type: z.literal('quest_split'),
+    timestamp: z.string(),
+    questId: z.string(),
+    childQuestIds: z.array(z.string()),
+  }),
+  z.object({
+    type: z.literal('quest_feedback_added'),
+    timestamp: z.string(),
+    questId: z.string(),
+  }),
 ]);
 
 export type AgentEvent = z.infer<typeof AgentEventSchema>;

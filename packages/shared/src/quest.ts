@@ -45,6 +45,7 @@ export const FailureSummarySchema = z.object({
   retries: z.number().int().nonnegative().optional(),
   notes: z.string().optional(),
   userFeedback: z.string().optional(),
+  splitIntoQuestIds: z.array(z.string()).optional(),
 });
 export type FailureSummary = z.infer<typeof FailureSummarySchema>;
 

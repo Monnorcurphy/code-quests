@@ -1,20 +1,14 @@
 # Progress — Phase 9
 
-Previous task progress archived to metrics/progress-before-acacia.md
+Previous task progress archived to metrics/progress-before-alder.md
 
-## TASK acacia — Failure summary engine + scar minting (backend)
+## alder — Hall of Returns API (backend)
 
-**Status:** Complete
-
-**What was built:**
-- `packages/server/src/db/migrations/007_quest_status_phase9.sql` — expands `quests.status` CHECK to include `returned_to_town` and `retired` via table recreation (SQLite requires this for CHECK constraint changes)
-- `packages/shared/src/quest.ts` — expanded `FailureSummaryRecommendationSchema` with `break_into_smaller` and `level_up_first`; expanded `FailureSummarySchema` with optional `fatalEncounterId`, `retries`, `notes`, `userFeedback` fields; added `returned_to_town` and `retired` to `QuestStatusSchema`
-- `packages/shared/src/adventurer.ts` — added `ScarRecordSchema` / `ScarRecord` type; updated `AdventurerSchema.scars` from `string[]` to `ScarRecord[]`
-- `packages/shared/src/agent.ts` — added `quest_returned` event type to `AgentEventSchema`
-- `packages/server/src/lib/failure-summary.ts` — `buildFailureSummary(quest, agents, encounters): FailureSummary` with deterministic recommendation heuristic
-- `packages/server/src/lib/scar.ts` — `mintScar(quest, adventurer, failureSummary, ctx): ScarRecord | null` with grace period and spec-fault rules
-- `packages/server/src/services/quest-return.ts` — `returnQuestToTown(questId, db, channel?)` orchestrating all writes in a single transaction + WebSocket event emission
-- Tests: 3 new test files covering all branches (pure unit + real in-memory SQLite integration)
-- Client fixes: Added `returned_to_town`/`retired` to status maps in `quest-board.tsx` and `party-map.tsx`; added `quest_returned` case to event formatters in `active-quest-panel.tsx` and `returned-quest-detail.tsx`
-
-**All 1,320 tests pass; all packages typecheck and lint clean.**
+- Created `packages/shared/src/return-actions.ts`: Zod schemas for `RepostBodySchema`, `SplitBodySchema`, `FeedbackBodySchema`, `FeedbackEntrySchema`
+- Extended `FailureSummarySchema` with `splitIntoQuestIds?: string[]` (for split action)
+- Extended `AgentEventSchema` with 4 new event types: `quest_reposted`, `quest_retired`, `quest_split`, `quest_feedback_added`
+- Created `packages/server/src/routes/hall-of-returns.ts`: `GET /hall-of-returns/quests` (cursor-paginated, status filter) + `GET /hall-of-returns/quests/:questId/post-mortem` (full hydration payload)
+- Created `packages/server/src/routes/quest-actions.ts`: `POST /quests/:id/actions/{repost,retire,split,feedback}` with full validation, state guards, and WebSocket events
+- Mounted both routers in `packages/server/src/index.ts`
+- Created integration tests: `hall-of-returns.test.ts` (17 tests) + `quest-actions.test.ts` (21 tests)
+- All 461 server tests pass; typecheck + lint clean
