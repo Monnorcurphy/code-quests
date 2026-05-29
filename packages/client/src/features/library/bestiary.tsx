@@ -256,7 +256,23 @@ export default function Bestiary({ initialTypeFilter }: BestiaryProps = {}) {
           : <BestiaryEmptyState />
       )}
 
-      {!isLoading && !isError && monsters && monsters.length > 0 && (
+      {!isLoading && !isError && monsters && monsters.length > 0 && initialTypeFilter && sortedMonsters.length === 0 && (
+        <div className="bestiary-filtered-empty" role="status">
+          <p>
+            No monsters of type <strong>{types.find((t) => t.id === initialTypeFilter)?.name ?? initialTypeFilter}</strong> have been recorded yet.
+            They appear here once an adventurer encounters one.
+          </p>
+          <button
+            type="button"
+            className="bestiary-filtered-empty-link"
+            onClick={() => window.history.pushState({}, '', '/town/library')}
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
+
+      {!isLoading && !isError && monsters && monsters.length > 0 && sortedMonsters.length > 0 && (
         <div className="bestiary-table-wrap">
           <table className="bestiary-table" aria-label="Monster bestiary">
             <thead>

@@ -3040,3 +3040,84 @@
   color: #2e7d32;
   font-weight: 600;
 }
+
+/* Repost dialog — Skills (Equipment) fieldset */
+.repost-skills-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.repost-skill-row {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--color-parchment-dark);
+}
+
+.repost-skill-row:last-child {
+  border-bottom: none;
+}
+
+.repost-skill-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.repost-skill-name {
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.repost-skills-empty {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  margin: 0.25rem 0;
+}
+
+/* Bestiary — type filter banner */
+.bestiary-type-filter-banner {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: #0d47a1;
+}
+
+/* Bestiary — filtered empty state */
+.bestiary-filtered-empty {
+  padding: 1.5rem 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.bestiary-filtered-empty p {
+  margin: 0 0 0.5rem;
+}
+
+.bestiary-filtered-empty-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-banner-red);
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.bestiary-filtered-empty-link:hover {
+  color: var(--color-banner-red-dark);
+}
+
+.bestiary-filtered-empty-link:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
