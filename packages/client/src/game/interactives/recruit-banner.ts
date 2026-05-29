@@ -22,12 +22,19 @@ export class RecruitBannerInteractive {
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.x = x;
 
-    this.body = scene.add
-      .rectangle(x, y, WIDTH, HEIGHT, COLOR_IDLE, ALPHA_IDLE)
-      .setDepth(0)
-      .setInteractive({ useHandCursor: true });
-
-    this.body.on('pointerdown', () => this.activate());
+    if (scene.textures.exists('tex-recruit-banner')) {
+      const img = scene.add.image(x, y, 'tex-recruit-banner').setDepth(0);
+      img.setDisplaySize(WIDTH, HEIGHT);
+      img.setInteractive({ useHandCursor: true });
+      img.on('pointerdown', () => this.activate());
+      this.body = img as unknown as Phaser.GameObjects.Rectangle;
+    } else {
+      this.body = scene.add
+        .rectangle(x, y, WIDTH, HEIGHT, COLOR_IDLE, ALPHA_IDLE)
+        .setDepth(0)
+        .setInteractive({ useHandCursor: true });
+      this.body.on('pointerdown', () => this.activate());
+    }
 
     this.outline = scene.add
       .rectangle(x, y, WIDTH + OUTLINE_STROKE * 2, HEIGHT + OUTLINE_STROKE * 2)
@@ -60,9 +67,16 @@ export class RecruitBannerInteractive {
     if (nowInRange === this._inRange) return;
 
     this._inRange = nowInRange;
-    const color = nowInRange ? COLOR_HIGHLIGHT : COLOR_IDLE;
-    const alpha = nowInRange ? ALPHA_HIGHLIGHT : ALPHA_IDLE;
-    this.body.setFillStyle(color, alpha);
+    const setFillStyle = (this.body as { setFillStyle?: (c: number, a: number) => void }).setFillStyle;
+    if (typeof setFillStyle === 'function') {
+      const color = nowInRange ? COLOR_HIGHLIGHT : COLOR_IDLE;
+      const alpha = nowInRange ? ALPHA_HIGHLIGHT : ALPHA_IDLE;
+      setFillStyle.call(this.body, color, alpha);
+    } else {
+      (this.body as { setAlpha?: (a: number) => void }).setAlpha?.(
+        nowInRange ? ALPHA_HIGHLIGHT : ALPHA_IDLE,
+      );
+    }
     this.outline.setStrokeStyle(OUTLINE_STROKE, OUTLINE_COLOR, nowInRange ? 1 : 0);
   }
 

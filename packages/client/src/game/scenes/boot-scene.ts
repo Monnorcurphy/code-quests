@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { registerScene } from '../scene-registry';
+import { generateAllProceduralSprites } from '../procedural-sprites';
 import type { SceneKey } from '../scene-registry';
 
 export class BootScene extends Phaser.Scene {
@@ -8,6 +9,10 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Regenerate adventurer + monster textures procedurally, overriding the
+    // checker-pattern PNG placeholders that ship in /assets/.
+    generateAllProceduralSprites(this);
+
     const { width, height } = this.cameras.main;
     this.cameras.main.setBackgroundColor('#f0e6d2');
 

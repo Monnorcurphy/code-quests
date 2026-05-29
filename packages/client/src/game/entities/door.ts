@@ -38,12 +38,21 @@ export class Door {
     this.targetSpawnX = opts.targetSpawnX;
     this.label = opts.label;
 
-    this.body = scene.add
-      .rectangle(opts.x, opts.y, w, h, COLOR_DOOR, ALPHA_IDLE)
-      .setDepth(0)
-      .setInteractive({ useHandCursor: true });
-
-    this.body.on('pointerdown', () => this.enter());
+    // Prefer the procedural door texture (drawn at BootScene) — falls back
+    // to a plain rectangle if for any reason it wasn't generated.
+    if (scene.textures.exists('tex-door')) {
+      const img = scene.add.image(opts.x, opts.y, 'tex-door').setDepth(0);
+      img.setDisplaySize(w, h);
+      img.setInteractive({ useHandCursor: true });
+      img.on('pointerdown', () => this.enter());
+      this.body = img as unknown as Phaser.GameObjects.Rectangle;
+    } else {
+      this.body = scene.add
+        .rectangle(opts.x, opts.y, w, h, COLOR_DOOR, ALPHA_IDLE)
+        .setDepth(0)
+        .setInteractive({ useHandCursor: true });
+      this.body.on('pointerdown', () => this.enter());
+    }
 
     this.outline = scene.add
       .rectangle(opts.x, opts.y, w + OUTLINE_STROKE * 2, h + OUTLINE_STROKE * 2)
@@ -65,8 +74,10 @@ export class Door {
     if (nowInRange === this._inRange) return;
 
     this._inRange = nowInRange;
-    const alpha = nowInRange ? ALPHA_HIGHLIGHT : ALPHA_IDLE;
-    this.body.setAlpha(alpha);
+    // Image and Rectangle both support setAlpha; just call it.
+    (this.body as Phaser.GameObjects.GameObject & { setAlpha?: (a: number) => void }).setAlpha?.(
+      nowInRange ? ALPHA_HIGHLIGHT : ALPHA_IDLE,
+    );
     this.outline.setStrokeStyle(OUTLINE_STROKE, COLOR_HIGHLIGHT, nowInRange ? 1 : 0);
   }
 

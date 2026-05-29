@@ -56,8 +56,11 @@ export abstract class BaseTownScene extends Phaser.Scene {
       window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
 
     const sceneBounds = { min: 0, max: this.sceneWidth };
-    this.cameras.main.setBackgroundColor('#c8b89a');
+    this.drawSkyAndLandscape();
+    // Ground bed (under the front grass strip)
     this.add.rectangle(this.sceneWidth / 2, GROUND_Y, this.sceneWidth, GROUND_HEIGHT, GROUND_COLOR);
+    // Add per-building facades above doors before doors themselves
+    this.drawFacades();
 
     this.player = new Player(this, this._spawnX, PLAYER_Y, sceneBounds, { reducedMotion });
 
@@ -94,6 +97,60 @@ export abstract class BaseTownScene extends Phaser.Scene {
       .on('interact', () => this._handleInteract());
 
     this.cameras.main.fadeIn(reducedMotion ? 0 : FADE_DURATION_MS);
+  }
+
+  protected drawSkyAndLandscape(): void {
+    // Sky gradient — soft dawn from deep blue to pale gold
+    const skyBands = [
+      { y: 0, h: 80, color: 0x29406b },
+      { y: 80, h: 80, color: 0x4c6a96 },
+      { y: 160, h: 80, color: 0x83a3c5 },
+      { y: 240, h: 80, color: 0xc5c2b0 },
+      { y: 320, h: 60, color: 0xd6c08e },
+    ];
+    for (const b of skyBands) {
+      this.add.rectangle(this.sceneWidth / 2, b.y + b.h / 2, this.sceneWidth, b.h, b.color).setDepth(-10);
+    }
+    // Distant rolling hills (two layers for depth)
+    const hillsBackY = 360;
+    const hillsBackColor = 0x6d8264;
+    const hillsFrontY = 420;
+    const hillsFrontColor = 0x4f6447;
+    for (let x = 0; x < this.sceneWidth + 200; x += 220) {
+      const wob = ((x * 73) % 90) - 30;
+      this.add
+        .ellipse(x, hillsBackY + wob, 320, 110, hillsBackColor)
+        .setDepth(-9);
+    }
+    for (let x = -100; x < this.sceneWidth + 200; x += 180) {
+      const wob = ((x * 41) % 60) - 20;
+      this.add
+        .ellipse(x, hillsFrontY + wob, 260, 90, hillsFrontColor)
+        .setDepth(-8);
+    }
+    // Grass strip above ground
+    this.add
+      .rectangle(this.sceneWidth / 2, 620, this.sceneWidth, 40, 0x4f6a3a)
+      .setDepth(-1);
+    // Grass tufts (subtle)
+    for (let x = 30; x < this.sceneWidth; x += 70) {
+      const tuftX = x + ((x * 31) % 50) - 25;
+      this.add.ellipse(tuftX, 630, 10, 4, 0x3a5028).setDepth(0);
+    }
+  }
+
+  protected drawFacades(): void {
+    // Town square doors carry per-scene targets; map each door to a building
+    // facade texture (generated at boot). Doors without a matching facade
+    // simply get no decor (e.g. return-to-town doors in interior scenes).
+    for (const cfg of this.doorConfigs) {
+      const facadeKey = `town-facade-${cfg.targetScene}`;
+      if (!this.textures.exists(facadeKey)) continue;
+      this.add
+        .image(cfg.x, 500, facadeKey)
+        .setDepth(-2)
+        .setOrigin(0.5, 1);
+    }
   }
 
   private _handleInteract(): void {

@@ -26,7 +26,9 @@ function makeMockScene(): Phaser.Scene {
   return {
     add: {
       rectangle: vi.fn(() => rect),
+      image: vi.fn(() => rect),
     },
+    textures: { exists: vi.fn(() => false) },
   } as unknown as Phaser.Scene;
 }
 

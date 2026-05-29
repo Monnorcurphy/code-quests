@@ -87,7 +87,10 @@ function attachMockContext(scene: object) {
       rectangle: vi.fn(() => makeRect()),
       sprite: vi.fn(() => makeSprite()),
       text: vi.fn(() => makeText()),
+      ellipse: vi.fn(() => makeRect()),
+      image: vi.fn(() => makeRect()),
     },
+    textures: { exists: vi.fn(() => false) },
     anims: {
       exists: vi.fn(() => false),
       create: vi.fn(),
