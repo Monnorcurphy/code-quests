@@ -147,6 +147,7 @@ describe('ReturnedQuestList', () => {
     const row = await screen.findByRole('button', { name: /slay the dragon/i });
     row.focus();
     await user.keyboard('{Enter}');
+    expect(navigateMock).toHaveBeenCalledTimes(1);
     expect(navigateMock).toHaveBeenCalledWith('/hall-of-returns/quest-1');
   });
 
@@ -176,7 +177,7 @@ describe('ReturnedQuestList', () => {
     renderList();
     await screen.findByText('Slay the Dragon');
     const timeEl = document.querySelector('time');
-    expect(timeEl).toBeDefined();
+    expect(timeEl).not.toBeNull();
   });
 
   it('renders multiple rows', async () => {

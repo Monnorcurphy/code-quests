@@ -131,7 +131,7 @@ describe('HallOfReturns', () => {
     mockListQuests.mockImplementation(() => new Promise(() => {}));
     renderPanel();
     const list = document.querySelector('[aria-busy="true"]');
-    expect(list).toBeDefined();
+    expect(list).not.toBeNull();
   });
 
   it('shows error state when fetch fails', async () => {
@@ -187,8 +187,8 @@ describe('HallOfReturns', () => {
   it('tabpanels exist in DOM for screen readers', async () => {
     renderPanel();
     await screen.findByRole('dialog');
-    expect(document.getElementById('hall-panel-returned')).toBeDefined();
-    expect(document.getElementById('hall-panel-completed')).toBeDefined();
+    expect(document.getElementById('hall-panel-returned')).not.toBeNull();
+    expect(document.getElementById('hall-panel-completed')).not.toBeNull();
   });
 
   it('tab state preserved via URL search param when tab=complete', async () => {

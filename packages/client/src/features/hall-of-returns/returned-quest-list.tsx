@@ -47,9 +47,6 @@ function QuestRow({ quest, onClick }: QuestRowProps) {
       <button
         className="hall-list-row"
         onClick={() => onClick(quest.id)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') onClick(quest.id);
-        }}
         aria-label={`${quest.title} — view post-mortem`}
       >
         <span className="hall-list-col hall-list-col--title">
