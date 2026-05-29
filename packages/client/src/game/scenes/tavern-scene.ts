@@ -91,7 +91,7 @@ export class TavernScene extends BaseBuildingScene {
       textureKey: 'character/npc-villager',
       bubbleText: 'Innkeep Rorek — Tavernkeeper',
       bubbleWidth: 200,
-      onActivate: () => useTownStore.getState().setActiveModal('tavern'),
+      onActivate: () => useTownStore.getState().openNpcHint('innkeep-rorek'),
     });
 
     sceneRouter.setInteractives([
@@ -103,7 +103,7 @@ export class TavernScene extends BaseBuildingScene {
       {
         id: 'innkeep-rorek',
         label: 'Innkeep Rorek (Tavernkeeper)',
-        onActivate: () => useTownStore.getState().setActiveModal('tavern'),
+        onActivate: () => useTownStore.getState().openNpcHint('innkeep-rorek'),
       },
       this.returnDoorInteractive,
     ]);

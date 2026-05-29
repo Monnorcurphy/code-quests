@@ -111,7 +111,7 @@ export class GuildHallScene extends BaseBuildingScene {
       textureKey: 'character/npc-villager',
       bubbleText: 'Master Eldra — Guild Master',
       bubbleWidth: 200,
-      onActivate: () => useTownStore.getState().setActiveModal('guild-hall'),
+      onActivate: () => useTownStore.getState().openNpcHint('master-eldra'),
     });
 
     sceneRouter.setInteractives([
@@ -123,7 +123,7 @@ export class GuildHallScene extends BaseBuildingScene {
       {
         id: 'master-eldra',
         label: 'Master Eldra (Guild Master)',
-        onActivate: () => useTownStore.getState().setActiveModal('guild-hall'),
+        onActivate: () => useTownStore.getState().openNpcHint('master-eldra'),
       },
       this.returnDoorInteractive,
     ]);

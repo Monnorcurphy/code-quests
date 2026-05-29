@@ -83,7 +83,7 @@ export class LibraryScene extends BaseBuildingScene {
       textureKey: 'character/npc-villager',
       bubbleText: 'Sage Mireldine — Librarian',
       bubbleWidth: 180,
-      onActivate: () => useTownStore.getState().setActiveModal('library'),
+      onActivate: () => useTownStore.getState().openNpcHint('sage-mireldine'),
     });
 
     sceneRouter.setInteractives([
@@ -95,7 +95,7 @@ export class LibraryScene extends BaseBuildingScene {
       {
         id: 'sage-mireldine',
         label: 'Sage Mireldine (Librarian)',
-        onActivate: () => useTownStore.getState().setActiveModal('library'),
+        onActivate: () => useTownStore.getState().openNpcHint('sage-mireldine'),
       },
       this.returnDoorInteractive,
     ]);

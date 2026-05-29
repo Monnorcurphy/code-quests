@@ -124,7 +124,7 @@ export class WarRoomScene extends BaseBuildingScene {
       textureKey: 'character/npc-villager',
       bubbleText: 'Commander Tyra — Officer',
       bubbleWidth: 190,
-      onActivate: () => useTownStore.getState().setActiveModal('draft'),
+      onActivate: () => useTownStore.getState().openNpcHint('commander-tyra'),
     });
 
     sceneRouter.setInteractives([
@@ -136,7 +136,7 @@ export class WarRoomScene extends BaseBuildingScene {
       {
         id: 'commander-tyra',
         label: 'Commander Tyra (Officer)',
-        onActivate: () => useTownStore.getState().setActiveModal('draft'),
+        onActivate: () => useTownStore.getState().openNpcHint('commander-tyra'),
       },
       this.returnDoorInteractive,
     ]);

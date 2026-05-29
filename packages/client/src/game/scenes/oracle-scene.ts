@@ -66,7 +66,7 @@ export class OracleScene extends BaseBuildingScene {
       textureKey: 'character/npc-villager',
       bubbleText: 'Seer Caelis — Priestess',
       bubbleWidth: 170,
-      onActivate: () => useTownStore.getState().setActiveModal('oracle'),
+      onActivate: () => useTownStore.getState().openNpcHint('seer-caelis'),
     });
 
     sceneRouter.setInteractives([
@@ -78,7 +78,7 @@ export class OracleScene extends BaseBuildingScene {
       {
         id: 'seer-caelis',
         label: 'Seer Caelis (Priestess)',
-        onActivate: () => useTownStore.getState().setActiveModal('oracle'),
+        onActivate: () => useTownStore.getState().openNpcHint('seer-caelis'),
       },
       this.returnDoorInteractive,
     ]);

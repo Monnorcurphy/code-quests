@@ -23,11 +23,21 @@ function readHasOpenedLibrary(): boolean {
   }
 }
 
+export type NpcKey =
+  | 'sage-mireldine'
+  | 'seer-caelis'
+  | 'innkeep-rorek'
+  | 'commander-tyra'
+  | 'smith-bran'
+  | 'master-eldra'
+  | 'keeper-vorn';
+
 interface TownState {
   currentScene: SceneKey;
   playerX: number;
   facing: 'left' | 'right';
-  activeModal: 'recruit' | 'draft' | 'quest-board' | 'guild-hall' | 'coming-soon' | 'armory-loadout' | 'oracle' | 'library' | 'tavern' | 'hall-of-returns' | 'help' | null;
+  activeModal: 'recruit' | 'draft' | 'quest-board' | 'guild-hall' | 'coming-soon' | 'armory-loadout' | 'oracle' | 'library' | 'tavern' | 'hall-of-returns' | 'help' | 'npc-hint' | null;
+  activeNpc: NpcKey | null;
   selectedQuestId: string | null;
   hasOpenedLibrary: boolean;
   libraryInitialTab: 'bestiary' | 'skills';
@@ -38,6 +48,7 @@ interface TownState {
   setSelectedQuestId: (id: string | null) => void;
   markLibraryOpened: () => void;
   setLibraryInitialTab: (tab: 'bestiary' | 'skills') => void;
+  openNpcHint: (npc: NpcKey) => void;
   goToBuilding: (building: SpecGapBuilding) => void;
   goToHallOfReturns: () => void;
 }
@@ -47,14 +58,19 @@ export const useTownStore = create<TownState>((set) => ({
   playerX: 0,
   facing: 'right',
   activeModal: null,
+  activeNpc: null,
   selectedQuestId: null,
   hasOpenedLibrary: readHasOpenedLibrary(),
   libraryInitialTab: 'bestiary',
   setScene: (scene) => set({ currentScene: scene }),
   setPlayerX: (x) => set({ playerX: x }),
   setFacing: (facing) => set({ facing }),
-  setActiveModal: (modal) => set({ activeModal: modal }),
+  setActiveModal: (modal) => set((state) => ({
+    activeModal: modal,
+    activeNpc: modal === 'npc-hint' ? state.activeNpc : null,
+  })),
   setSelectedQuestId: (id) => set({ selectedQuestId: id }),
+  openNpcHint: (npc) => set({ activeNpc: npc, activeModal: 'npc-hint' }),
   markLibraryOpened: () => {
     try {
       localStorage.setItem(HAS_OPENED_LIBRARY_KEY, 'true');

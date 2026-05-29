@@ -98,7 +98,7 @@ export class ArmoryScene extends BaseBuildingScene {
       textureKey: 'character/npc-villager',
       bubbleText: 'Smith Bran — Blacksmith',
       bubbleWidth: 170,
-      onActivate: () => useTownStore.getState().setActiveModal('armory-loadout'),
+      onActivate: () => useTownStore.getState().openNpcHint('smith-bran'),
     });
 
     sceneRouter.setInteractives([
@@ -111,7 +111,7 @@ export class ArmoryScene extends BaseBuildingScene {
       {
         id: 'smith-bran',
         label: 'Smith Bran (Blacksmith)',
-        onActivate: () => useTownStore.getState().setActiveModal('armory-loadout'),
+        onActivate: () => useTownStore.getState().openNpcHint('smith-bran'),
       },
     ]);
 

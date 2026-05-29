@@ -44,14 +44,14 @@ export class HallOfReturnsScene extends BaseBuildingScene {
       textureKey: 'character/npc-villager',
       bubbleText: 'Keeper Vorn — Undertaker',
       bubbleWidth: 180,
-      onActivate: () => useTownStore.getState().setActiveModal('hall-of-returns'),
+      onActivate: () => useTownStore.getState().openNpcHint('keeper-vorn'),
     });
 
     sceneRouter.setInteractives([
       {
         id: 'keeper-vorn',
         label: 'Keeper Vorn (Undertaker)',
-        onActivate: () => useTownStore.getState().setActiveModal('hall-of-returns'),
+        onActivate: () => useTownStore.getState().openNpcHint('keeper-vorn'),
       },
       this.returnDoorInteractive,
     ]);

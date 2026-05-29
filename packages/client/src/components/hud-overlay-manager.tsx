@@ -10,6 +10,7 @@ import GuildHall from '../features/guild/guild-hall';
 import LoadoutPanel from '../features/armory/loadout-panel';
 import HallOfReturns from '../features/hall-of-returns/hall-of-returns';
 import { HelpPanelContainer } from '../features/help-panel';
+import { NpcHintPanelContainer } from '../features/npc-hint-panel';
 import ComingSoonPanel from './coming-soon-panel';
 import { sceneRouter } from '../game/scene-router';
 import { isTownSceneKey } from '../game/scene-registry';
@@ -72,6 +73,9 @@ export function HUDOverlayManager() {
   }
   if (activeModal === 'help') {
     return <HelpPanelContainer />;
+  }
+  if (activeModal === 'npc-hint') {
+    return <NpcHintPanelContainer />;
   }
   if (activeModal === 'coming-soon' && comingSoonContent) {
     return (
