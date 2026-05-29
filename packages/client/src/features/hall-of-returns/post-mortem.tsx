@@ -7,6 +7,7 @@ import { usePostMortem } from './use-post-mortem';
 import CombatLogReplay from './combat-log-replay';
 import FailureSummaryCard from './failure-summary-card';
 import FeedbackForm from './feedback-form';
+import ActionBar from './actions/action-bar';
 
 function LoadingState() {
   return (
@@ -120,6 +121,12 @@ export default function PostMortem() {
             fatalMonster={quest.fatalMonster ?? null}
           />
         )}
+
+        <ActionBar
+          questId={quest.id}
+          quest={quest}
+          recommendation={failureSummary?.recommendation}
+        />
 
         <CombatLogReplay encounters={encounters} />
 

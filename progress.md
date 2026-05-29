@@ -1,22 +1,16 @@
 # Progress — Phase 9
 
-Previous task progress archived to metrics/progress-before-ebony.md
+Previous task progress archived to metrics/progress-before-elder.md
 
-## TASK ebony — Post-mortem panel (frontend)
+## elder — Quest remedy actions (complete)
 
-**Status:** DONE
+**Delivered:**
+- `packages/client/src/features/hall-of-returns/actions/action-bar.tsx` — three action buttons (Re-post, Retire, Break into Smaller Quests); recommended action gets badge + `aria-current="true"`; toast region with 4s auto-dismiss; linkage display after successful re-post or split
+- `packages/client/src/features/hall-of-returns/actions/repost-dialog.tsx` — modal pre-filling quest ACs and edge cases; submit disabled when all ACs cleared; loading/error states; focus trap + Escape to close; focus returns to trigger button
+- `packages/client/src/features/hall-of-returns/actions/retire-dialog.tsx` — confirmation modal with permanent-action warning; Cancel button focused on mount (safest action); focus trap + Escape; loading/error states
+- `packages/client/src/features/hall-of-returns/actions/split-dialog.tsx` — dynamic child quest stubs (min 2); Submit disabled until ≥2 valid children; add/remove child quests and ACs; loading/error states; focus trap
+- `packages/client/src/features/hall-of-returns/actions/__tests__/*.test.tsx` — 58 tests covering all dialogs: open/close, validation, happy path, server error, focus management
+- `packages/client/src/lib/api.ts` — added `quests.repost`, `quests.retire`, `quests.split` with Zod-validated response types
+- `packages/client/src/features/hall-of-returns/post-mortem.tsx` — renders ActionBar below FailureSummaryCard
 
-**What was built:**
-- `use-post-mortem.ts` — TanStack Query hook for `GET /hall-of-returns/quests/:id/post-mortem`; invalidates on `quest_feedback_added` WebSocket event
-- `combat-log-replay.tsx` — semantic `<ol>` of `MonsterEncounter` rows; each row shows sprite, name, difficulty stars, outcome badge, and collapsible combat-log detail lines
-- `failure-summary-card.tsx` — shows `notes`/`reason`, `retries`, recommendation badge (styled per recommendation type), and fatal monster with bestiary link
-- `feedback-form.tsx` — textarea with visible label, char counter (0/2000), submit disabled until ≥1 char, 3 mutation states (loading / success-toast auto-dismiss / error-persistent), field-named error messages
-- `post-mortem.tsx` — main page at `/hall-of-returns/:questId`; loading, 404, and server-error states; back button restores hall-of-returns modal via `useTownStore`; `prefers-reduced-motion` class applied
-- `app.tsx` — replaced redirect for `/hall-of-returns/:questId` with real `<PostMortem />` route
-- `api.ts` — added `PostMortemResponseSchema`, `api.hallOfReturns.getPostMortem`, `api.quests.submitFeedback`
-- Tests: `__tests__/post-mortem.test.tsx` (12 tests), `__tests__/feedback-form.test.tsx` (14 tests)
-
-**Verify:**
-- 851 tests pass, 0 failures
-- TypeScript: clean
-- ESLint: clean
+**Verify:** 910 tests pass, typecheck clean, lint clean

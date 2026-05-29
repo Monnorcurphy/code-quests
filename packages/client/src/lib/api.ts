@@ -16,7 +16,7 @@ import {
   MonsterSchema,
   MonsterEncounterSchema,
 } from '@code-quests/shared';
-import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope } from '@code-quests/shared';
+import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild } from '@code-quests/shared';
 
 const FeedbackSuccessSchema = z.object({}).passthrough();
 
@@ -260,6 +260,19 @@ export type PostMortemAttempt = z.infer<typeof PostMortemAttemptSchema>;
 // Re-export FailureSummary type for convenience
 export type { FailureSummary };
 
+const RepostResultSchema = z.object({
+  newQuestId: z.string(),
+  newTitle: z.string(),
+}).passthrough();
+
+const SplitResultSchema = z.object({
+  questIds: z.array(z.string()),
+  titles: z.array(z.string()),
+}).passthrough();
+
+export type RepostResult = z.infer<typeof RepostResultSchema>;
+export type SplitResult = z.infer<typeof SplitResultSchema>;
+
 export const api = {
   adventurers: {
     list: () => fetchJson(z.array(AdventurerSchema), '/adventurers'),
@@ -296,6 +309,12 @@ export const api = {
       ),
     submitFeedback: (id: string, text: string) =>
       postJson(FeedbackSuccessSchema, `/quests/${id}/actions/feedback`, { text }),
+    repost: (id: string, adjustments?: { acceptanceCriteria?: string[]; edgeCases?: string[] }) =>
+      postJson(RepostResultSchema, `/quests/${id}/actions/repost`, { adjustments }),
+    retire: (id: string) =>
+      postJson(z.object({}).passthrough(), `/quests/${id}/actions/retire`, {}),
+    split: (id: string, children: SplitChild[]) =>
+      postJson(SplitResultSchema, `/quests/${id}/actions/split`, { children }),
   },
   epics: {
     list: () => fetchJson(z.array(EpicSchema), '/epics'),
