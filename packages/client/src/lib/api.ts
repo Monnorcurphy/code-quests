@@ -311,8 +311,22 @@ export const api = {
       patchJson(QuestSchema, `/quests/${id}`, body),
     audit: (id: string) =>
       postJson(SpecAuditSchema, `/quests/${id}/audit`, {}),
-    dispatch: (id: string, bypass = false) =>
-      postJson(QuestSchema, `/quests/${id}/dispatch${bypass ? '?bypass=true' : ''}`, {}),
+    dispatch: (id: string, bypass = false, adventurerId?: string | null) =>
+      postJson(
+        QuestSchema,
+        `/quests/${id}/dispatch${bypass ? '?bypass=true' : ''}`,
+        adventurerId ? { adventurerId } : {},
+      ),
+    autoMatch: (id: string) =>
+      fetchJson(
+        z.object({
+          adventurerId: z.string().nullable(),
+          adventurerName: z.string().nullable(),
+          adventurerClass: AdventurerClassSchema.nullable(),
+          reason: z.string(),
+        }),
+        `/quests/${id}/auto-match`,
+      ),
     cancel: (id: string) =>
       postJson(QuestSchema, `/quests/${id}/cancel`, {}),
     advanceScene: (id: string, expectedFrom: QuestSceneKey) =>
