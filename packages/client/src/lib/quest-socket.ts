@@ -175,8 +175,22 @@ export function connectQuestSocket(questId: string, opts: ConnectOptions): Quest
         retryTimer = null;
       }
       if (ws !== null) {
-        ws.send(JSON.stringify({ type: 'unsubscribe', questId }));
-        ws.close();
+        // Only send the unsubscribe frame if the socket is actually OPEN;
+        // calling send() during CONNECTING throws InvalidStateError and
+        // crashes the host component (React StrictMode double-mount made
+        // this easy to hit during dev).
+        if (ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(JSON.stringify({ type: 'unsubscribe', questId }));
+          } catch {
+            // socket may have transitioned mid-send; nothing to do
+          }
+        }
+        try {
+          ws.close();
+        } catch {
+          // already closing
+        }
         ws = null;
       }
       opts.onConnectionChange?.('closed');

@@ -38,7 +38,14 @@ export function AudioProvider({ children }: AudioProviderProps) {
         'QUEST_FAILED',
         'PAUSE_BELL',
       ])
-      .then(() => {
+      .catch((err) => {
+        // Never let a preload failure leave the backend permanently unset —
+        // surface the error but still expose the (possibly partially loaded)
+        // backend so the app remains usable.
+        // eslint-disable-next-line no-console
+        console.warn('[AudioProvider] preload error', err);
+      })
+      .finally(() => {
         if (!cancelled) {
           setBackend(b);
           const isTestable =

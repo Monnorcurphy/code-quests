@@ -43,10 +43,13 @@ export class WebAudioBackend implements AudioBackend {
 
   async preload(events: AudioEvent[]): Promise<void> {
     const ctx = this.getContext();
-    await Promise.all(
+    // Use allSettled so a single failed render or fetch never rejects the
+    // whole preload — that would leave the audio provider stuck "loading"
+    // forever and no music ever plays.
+    await Promise.allSettled(
       events.map(async (event) => {
-        // Looping themes use procedural chiptune (~3:30 each) instead of
-        // the 2-second WAV stubs the project shipped with.
+        // Looping themes use composed procedural chiptune instead of the
+        // 2-second WAV stubs the project shipped with.
         if (isProceduralTheme(event)) {
           try {
             const buf = await synthesizeTheme(event);
@@ -54,14 +57,16 @@ export class WebAudioBackend implements AudioBackend {
               this.buffers.set(event, buf);
               return;
             }
-          } catch {
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn(`[AudioBackend] Procedural synth failed for ${event}`, e);
             // Fall through to WAV fallback below
           }
         }
         const url = AUDIO_MANIFEST[event];
-        const response = await fetch(url);
-        const arrayBuffer = await response.arrayBuffer();
         try {
+          const response = await fetch(url);
+          const arrayBuffer = await response.arrayBuffer();
           const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
           this.buffers.set(event, audioBuffer);
         } catch {

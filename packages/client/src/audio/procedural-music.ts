@@ -8,8 +8,13 @@ import { LOOPING_EVENTS } from './audio-events';
 // so it sounds like a song, not noodling.
 
 const SAMPLE_RATE = 22050;
-const SINGLE_TRACK_SECONDS = 300;
-const VARIATION_SECONDS = 300;
+// Each theme renders a ~90-second song that loops. Originally tried 5 min but
+// rendering 4 themes × 5 min × thousands of oscillator nodes via
+// OfflineAudioContext exceeded reasonable startup time and the audio backend
+// never came online. 90 seconds covers two AABABA cycles and renders in
+// well under a second per theme.
+const SINGLE_TRACK_SECONDS = 90;
+const VARIATION_SECONDS = 90;
 
 type Wave = 'square' | 'triangle' | 'sawtooth' | 'sine';
 
