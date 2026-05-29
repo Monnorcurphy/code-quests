@@ -1,52 +1,51 @@
-# BUG: BuildingModal still uses inline focus trap instead of useFocusTrap hook
+# BUG: Phase 10 capstone E2E uses banned conditional assertions and silent error swallowing
 
-**Severity:** LOW
-**File(s):** `packages/client/src/routes/town.tsx`
+**Severity:** HIGH
+**File(s):** packages/client/tests/e2e/phase-10-capstone.spec.ts
 
 ## Problem
 
-`BuildingModal` contains a 25-line inline focus trap (Tab cycling + Escape handling) that is functionally identical to the `useFocusTrap` hook extracted in task bran. The hook was extracted because GuildHall and TownSquare were the 3rd occurrence of the same pattern — but the 1st occurrence (BuildingModal) was not migrated.
+`packages/client/tests/e2e/phase-10-capstone.spec.ts` contains multiple patterns explicitly banned by `.claude/rules/testing.md` and `.claude/rules/common-findings.md` §9:
 
-This means two independent implementations now exist for the same behavior. If the Tab cycling logic or the Escape handler ever needs to change, it must be updated in two places, and they can silently diverge.
+1. **Click-then-swallow (line 193):**
+   ```ts
+   await page.getByRole('button', { name: /open town square/i }).click().catch(() => {});
+   ```
+   No "intentionally swallowed: <reason>" comment and the swallowed failure hides the real issue (the button does not exist).
 
-Additionally, `BuildingModal` retains `onCloseRef` + its sync effect solely to pass the callback into the inline keydown handler — boilerplate the hook was designed to eliminate.
+2. **Conditional click with `isVisible().catch`** (lines 200–203, 289–296):
+   ```ts
+   const openBtn = page.getByRole('button', { name: /town square/i }).first();
+   if (await openBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+     await openBtn.click();
+   }
+   ```
+   ```ts
+   if (await monsterBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+     await monsterBtn.click();
+     ...
+   } else {
+     await expect(page.getByText(/no monsters|empty/i).or(...)).toBeVisible({ timeout: 5000 });
+   }
+   ```
+   These patterns silently skip when the element is not present, so the test "passes" while validating nothing of substance. From `rules/testing.md`: "Never wrap assertions in `if (await element.isEnabled())` — These silently skip when the condition is false — the test passes but validates nothing."
+
+3. **`isVisible({...}).catch(() => false)`** doubles down by hiding any error from `isVisible` itself (not just the visibility result).
 
 ## Expected
 
-`code-quality.md` Rule of Three: after extracting a shared helper, all occurrences should use it. The hook exists precisely for `BuildingModal`'s pattern.
+Per `rules/testing.md` and `rules/common-findings.md` §9:
+- Assertions must be unconditional. Assert that the element IS visible, not "if it is, do X."
+- Every `catch` must surface the error or include a comment justifying the swallow.
+- E2E tests must deterministically reproduce the spec's interaction path; if state setup is required (e.g. opening a modal), do it explicitly via store injection or a known UI step rather than conditional click attempts.
+- `checks/conditional-assertions.sh` exists as a hard gate — these patterns would be caught by it.
 
 ## Fix
 
-Refactor `BuildingModal` to use `useFocusTrap`:
+For each affected test:
 
-```tsx
-function BuildingModal({ building, onClose }: BuildingModalProps) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useFocusTrap(onClose);
+- Remove the conditional `if (await el.isVisible())` wrappers. Replace with explicit setup that guarantees the element is present (e.g. inject `activeModal` into the Zustand store before asserting), then assert visibility unconditionally.
+- Remove every `.catch(() => {})` and `.catch(() => false)`. Either let the failure surface (preferred) or add an inline comment explaining why the failure is acceptable.
+- For the monster-detail test (line 283–297), the mock data is fully controlled by the test (`MOCK_MONSTERS` always contains Grimtooth) — the monster button must be visible, so the conditional branch is dead. Drop the conditional, assert the button is visible, click it, and assert the Forge Skill button appears. The fallback branch hides the real problem if the bestiary fails to render the list.
 
-  useEffect(() => {
-    closeRef.current?.focus();
-  }, []);
-
-  return (
-    <div
-      className="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-    >
-      <div ref={panelRef} className="modal-panel">
-        <h2 id="modal-title" className="modal-title">
-          {building.name}
-        </h2>
-        <p className="modal-body">Coming in Phase 2 — Phaser scene</p>
-        <button ref={closeRef} className="modal-close" onClick={onClose}>
-          Close
-        </button>
-      </div>
-    </div>
-  );
-}
-```
-
-Remove the `onCloseRef`, its sync effect, the entire 25-line keydown handler, and the `panelRef` declaration — all replaced by `useFocusTrap(onClose)`. Add `import { useFocusTrap } from '../lib/use-focus-trap';`.
+After fixing, re-run `pnpm test:e2e --grep "Phase 10"` and `checks/conditional-assertions.sh` (if present) to confirm the patterns are gone.
