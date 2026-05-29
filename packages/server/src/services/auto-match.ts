@@ -120,8 +120,44 @@ export function autoMatch(
     const bNet = getStatInt(b.stats, 'questsWon') - getStatInt(b.stats, 'questsLost');
     if (bNet !== aNet) return bNet - aNet;
 
-    return a.createdAt.localeCompare(b.createdAt);
+    const dateDiff = a.createdAt.localeCompare(b.createdAt);
+    if (dateDiff !== 0) return dateDiff;
+
+    // tie-break: lower id wins so results are fully deterministic
+    return a.id.localeCompare(b.id);
   });
 
   return sorted[0] ?? null;
+}
+
+export interface AutoMatchResult {
+  adventurer: Adventurer | null;
+  reason: string;
+}
+
+export function autoMatchWithReason(
+  quest: Quest,
+  guild: Adventurer[],
+  activeAgents: Agent[],
+  options: AutoMatchOptions = {},
+): AutoMatchResult {
+  const adventurer = autoMatch(quest, guild, activeAgents, options);
+  if (adventurer === null) {
+    return { adventurer: null, reason: 'No available adventurer — recruit one in the Guild Hall' };
+  }
+
+  const pClass = preferredClass(quest);
+  const wins = getStatInt(adventurer.stats as Record<string, unknown>, 'questsWon');
+  const penalty = computeScarPenalty(adventurer, quest, options);
+
+  const classLabel = adventurer.class.charAt(0).toUpperCase() + adventurer.class.slice(1);
+  const classNote = adventurer.class === pClass ? `${classLabel} class` : `${classLabel} (${pClass} quest)`;
+  const winsNote = `${wins} win${wins === 1 ? '' : 's'}`;
+  const relevantScars = penalty < 0 ? Math.round(Math.abs(penalty) / 15) : 0;
+  const scarNote = relevantScars === 0 ? 'no relevant scars' : `${relevantScars} relevant scar${relevantScars > 1 ? 's' : ''}`;
+
+  return {
+    adventurer,
+    reason: `${classNote} + ${winsNote}, ${scarNote}`,
+  };
 }

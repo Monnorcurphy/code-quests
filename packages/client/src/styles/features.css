@@ -1199,6 +1199,86 @@
   flex-wrap: wrap;
 }
 
+/* Auto-match preview */
+.auto-match-preview {
+  margin: 0.75rem 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-stone-border);
+  border-radius: 4px;
+  background: var(--color-parchment);
+}
+
+.auto-match-heading {
+  font-size: 0.875rem;
+  font-weight: bold;
+  color: var(--color-text);
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.auto-match-suggestion {
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
+  line-height: 1.4;
+}
+
+.auto-match-label {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.auto-match-name {
+  font-weight: bold;
+  color: var(--color-text);
+}
+
+.auto-match-reason {
+  color: #555;
+  font-weight: normal;
+}
+
+.auto-match-loading {
+  font-size: 0.9rem;
+  color: #555;
+  font-style: italic;
+  margin: 0 0 0.5rem;
+}
+
+.auto-match-error {
+  background: #fce4ec;
+  border: 1px solid #f48fb1;
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  color: #c62828;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.auto-match-unavailable {
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.auto-match-no-adventurers {
+  color: #666;
+  font-size: 0.875rem;
+  margin: 0.25rem 0 0;
+  font-style: italic;
+}
+
+.auto-match-hint {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0.25rem 0 0;
+}
+
+.auto-match-override {
+  margin-top: 0.5rem;
+}
+
 /* War Room quest detail */
 .war-room-quest-detail {
   margin-top: 0.25rem;
