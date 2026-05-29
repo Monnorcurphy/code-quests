@@ -121,7 +121,11 @@ function MonsterRow({
   );
 }
 
-export default function Bestiary() {
+interface BestiaryProps {
+  initialTypeFilter?: string | null;
+}
+
+export default function Bestiary({ initialTypeFilter }: BestiaryProps = {}) {
   const [sortCol, setSortCol] = useState<SortCol>('lastSeen');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -146,13 +150,16 @@ export default function Bestiary() {
 
   const sortedMonsters = useMemo(() => {
     if (!monsters) return [];
-    return [...monsters].sort((a, b) => {
+    const filtered = initialTypeFilter
+      ? monsters.filter((m) => m.typeId === initialTypeFilter)
+      : monsters;
+    return [...filtered].sort((a, b) => {
       const av = sortKey(a, sortCol, types);
       const bv = sortKey(b, sortCol, types);
       const cmp = av < bv ? -1 : av > bv ? 1 : 0;
       return sortDir === 'asc' ? cmp : -cmp;
     });
-  }, [monsters, sortCol, sortDir, types]);
+  }, [monsters, sortCol, sortDir, types, initialTypeFilter]);
 
   function handleSort(col: SortCol) {
     if (sortCol === col) {
@@ -176,13 +183,16 @@ export default function Bestiary() {
     }
   }
 
-  const emptyLabel = activeScope === 'guild'
-    ? 'No guild Nemeses yet.'
-    : undefined;
+  const emptyLabel = activeScope === 'guild' ? 'No guild Nemeses yet.' : undefined;
 
   return (
     <>
     <div className="bestiary">
+      {initialTypeFilter && (
+        <p className="bestiary-type-filter-banner" role="status">
+          Filtered by type: <strong>{types.find((t) => t.id === initialTypeFilter)?.name ?? initialTypeFilter}</strong>
+        </p>
+      )}
       <div className="bestiary-header">
         <div
           role="tablist"

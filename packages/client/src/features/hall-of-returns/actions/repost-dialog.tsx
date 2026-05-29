@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '../../../lib/api';
 import type { HallOfReturnsQuest, RepostResult } from '../../../lib/api';
 
@@ -17,12 +18,20 @@ export default function RepostDialog({ questId, quest, triggerRef, onClose, onSu
   const [edgeCases, setEdgeCases] = useState<string[]>(
     quest.edgeCases.length > 0 ? [...quest.edgeCases] : [''],
   );
+  const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(
+    new Set(quest.equipment?.skillIds ?? []),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
   const errorId = useId();
+
+  const { data: availableSkills = [] } = useQuery({
+    queryKey: ['skills-active'],
+    queryFn: () => api.skills.list({ status: 'active' }),
+  });
 
   useEffect(() => {
     firstInputRef.current?.focus();
@@ -65,35 +74,27 @@ export default function RepostDialog({ questId, quest, triggerRef, onClose, onSu
   );
 
   function handleAcChange(idx: number, val: string) {
-    setAcs((prev) => {
-      const next = [...prev];
-      next[idx] = val;
-      return next;
-    });
+    setAcs((prev) => { const next = [...prev]; next[idx] = val; return next; });
   }
-
   function handleRemoveAc(idx: number) {
     setAcs((prev) => prev.filter((_, i) => i !== idx));
   }
-
-  function handleAddAc() {
-    setAcs((prev) => [...prev, '']);
-  }
+  function handleAddAc() { setAcs((prev) => [...prev, '']); }
 
   function handleEdgeCaseChange(idx: number, val: string) {
-    setEdgeCases((prev) => {
-      const next = [...prev];
-      next[idx] = val;
-      return next;
-    });
+    setEdgeCases((prev) => { const next = [...prev]; next[idx] = val; return next; });
   }
-
   function handleRemoveEdgeCase(idx: number) {
     setEdgeCases((prev) => prev.filter((_, i) => i !== idx));
   }
+  function handleAddEdgeCase() { setEdgeCases((prev) => [...prev, '']); }
 
-  function handleAddEdgeCase() {
-    setEdgeCases((prev) => [...prev, '']);
+  function handleSkillToggle(skillId: string) {
+    setSelectedSkillIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(skillId)) { next.delete(skillId); } else { next.add(skillId); }
+      return next;
+    });
   }
 
   const filledAcs = acs.filter((ac) => ac.trim().length > 0);
@@ -108,6 +109,11 @@ export default function RepostDialog({ questId, quest, triggerRef, onClose, onSu
       const result = await api.quests.repost(questId, {
         acceptanceCriteria: filledAcs,
         edgeCases: edgeCases.filter((ec) => ec.trim().length > 0),
+        equipment: {
+          skillIds: Array.from(selectedSkillIds),
+          toolIds: quest.equipment?.toolIds ?? [],
+          mcpServerIds: quest.equipment?.mcpServerIds ?? [],
+        },
       });
       onSuccess(result);
     } catch (err) {
@@ -198,6 +204,29 @@ export default function RepostDialog({ questId, quest, triggerRef, onClose, onSu
             <button type="button" onClick={handleAddEdgeCase} className="ac-add-btn btn-secondary">
               + Add Edge Case
             </button>
+          </fieldset>
+
+          <fieldset disabled={loading}>
+            <legend className="action-dialog-legend">Skills (Equipment)</legend>
+            {availableSkills.length === 0 ? (
+              <p className="repost-skills-empty">No active skills available.</p>
+            ) : (
+              <ul aria-label="Available skills" className="repost-skills-list">
+                {availableSkills.map((skill) => (
+                  <li key={skill.id} className="repost-skill-row">
+                    <label className="repost-skill-label">
+                      <input
+                        type="checkbox"
+                        checked={selectedSkillIds.has(skill.id)}
+                        onChange={() => handleSkillToggle(skill.id)}
+                        aria-label={skill.name}
+                      />
+                      <span className="repost-skill-name">{skill.name}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
           </fieldset>
 
           <div className="action-dialog-actions">

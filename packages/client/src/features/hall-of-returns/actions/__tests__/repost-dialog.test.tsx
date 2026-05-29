@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RepostDialog from '../repost-dialog';
 import type { HallOfReturnsQuest } from '../../../../lib/api';
 
 const mockRepost = vi.fn();
+const mockSkillsList = vi.fn();
 
 vi.mock('../../../../lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../lib/api')>();
@@ -17,9 +19,18 @@ vi.mock('../../../../lib/api', async (importOriginal) => {
         ...actual.api.quests,
         repost: (...args: unknown[]) => mockRepost(...args),
       },
+      skills: {
+        ...actual.api.skills,
+        list: (...args: unknown[]) => mockSkillsList(...args),
+      },
     },
   };
 });
+
+const MOCK_SKILLS = [
+  { id: 'type_whisperer', name: 'Type Whisperer', status: 'active', monsterTypeIds: ['imp_typecheck'], createdBy: 'system', createdAt: '2024-01-01T00:00:00Z', hitCount: 7, implementation: '' },
+  { id: 'linters_bane', name: "Linter's Bane", status: 'active', monsterTypeIds: ['goblin_linter'], createdBy: 'system', createdAt: '2024-01-01T00:00:00Z', hitCount: 11, implementation: '' },
+];
 
 function makeQuest(overrides: Partial<HallOfReturnsQuest> = {}): HallOfReturnsQuest {
   return {
@@ -33,6 +44,7 @@ function makeQuest(overrides: Partial<HallOfReturnsQuest> = {}): HallOfReturnsQu
     status: 'returned_to_town',
     adventurerId: 'adv-1',
     agentId: null,
+    equipment: { skillIds: [], toolIds: ['gh'], mcpServerIds: [] },
     failureSummary: null,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
@@ -42,22 +54,30 @@ function makeQuest(overrides: Partial<HallOfReturnsQuest> = {}): HallOfReturnsQu
   };
 }
 
+function makeClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
 function renderDialog(onClose = vi.fn(), onSuccess = vi.fn(), quest = makeQuest()) {
   const triggerRef = createRef<HTMLButtonElement>();
+  const client = makeClient();
   return render(
-    <RepostDialog
-      questId="quest-1"
-      quest={quest}
-      triggerRef={triggerRef}
-      onClose={onClose}
-      onSuccess={onSuccess}
-    />,
+    <QueryClientProvider client={client}>
+      <RepostDialog
+        questId="quest-1"
+        quest={quest}
+        triggerRef={triggerRef}
+        onClose={onClose}
+        onSuccess={onSuccess}
+      />
+    </QueryClientProvider>,
   );
 }
 
 describe('RepostDialog', () => {
   beforeEach(() => {
     mockRepost.mockResolvedValue({ newQuestId: 'new-1', newTitle: 'New Dragon Quest' });
+    mockSkillsList.mockResolvedValue(MOCK_SKILLS);
   });
 
   afterEach(() => {
@@ -130,14 +150,16 @@ describe('RepostDialog', () => {
     expect(onSuccess).toHaveBeenCalledWith({ newQuestId: 'new-1', newTitle: 'New Dragon Quest' });
   });
 
-  it('passes adjustments to API on submit', async () => {
+  it('passes ACs, edge cases, and equipment to API on submit', async () => {
     const user = userEvent.setup();
-    renderDialog();
+    const quest = makeQuest({ equipment: { skillIds: ['linters_bane'], toolIds: ['gh'], mcpServerIds: [] } });
+    renderDialog(vi.fn(), vi.fn(), quest);
     await user.click(screen.getByRole('button', { name: /re-post quest/i }));
-    expect(mockRepost).toHaveBeenCalledWith('quest-1', {
+    expect(mockRepost).toHaveBeenCalledWith('quest-1', expect.objectContaining({
       acceptanceCriteria: ['Dragon defeated', 'No casualties'],
       edgeCases: ['Dragon is sleeping'],
-    });
+      equipment: expect.objectContaining({ skillIds: ['linters_bane'] }),
+    }));
   });
 
   it('shows error on server failure', async () => {
@@ -170,14 +192,17 @@ describe('RepostDialog', () => {
     (triggerRef as React.MutableRefObject<HTMLButtonElement>).current = btn;
     btn.focus();
 
+    const client = makeClient();
     const { unmount } = render(
-      <RepostDialog
-        questId="quest-1"
-        quest={makeQuest()}
-        triggerRef={triggerRef}
-        onClose={vi.fn()}
-        onSuccess={vi.fn()}
-      />,
+      <QueryClientProvider client={client}>
+        <RepostDialog
+          questId="quest-1"
+          quest={makeQuest()}
+          triggerRef={triggerRef}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />
+      </QueryClientProvider>,
     );
     unmount();
     expect(document.activeElement).toBe(btn);
@@ -204,5 +229,48 @@ describe('RepostDialog', () => {
   it('renders empty AC list for quest with no ACs', () => {
     renderDialog(vi.fn(), vi.fn(), makeQuest({ acceptanceCriteria: [] }));
     expect(screen.getByRole('textbox', { name: 'Criterion 1' })).toBeDefined();
+  });
+
+  describe('skills equipment section', () => {
+    it('renders Skills fieldset', () => {
+      renderDialog();
+      expect(screen.getByRole('group', { name: /skills/i })).toBeDefined();
+    });
+
+    it('shows available skills as checkboxes when loaded', async () => {
+      renderDialog();
+      const checkbox = await screen.findByRole('checkbox', { name: /type whisperer/i });
+      expect(checkbox).toBeDefined();
+    });
+
+    it('pre-checks skills from quest equipment', async () => {
+      const quest = makeQuest({ equipment: { skillIds: ['linters_bane'], toolIds: [], mcpServerIds: [] } });
+      renderDialog(vi.fn(), vi.fn(), quest);
+      const lintersCheckbox = await screen.findByRole('checkbox', { name: /linter/i }) as HTMLInputElement;
+      expect(lintersCheckbox.checked).toBe(true);
+    });
+
+    it('can toggle a skill off then on', async () => {
+      const user = userEvent.setup();
+      const quest = makeQuest({ equipment: { skillIds: ['linters_bane'], toolIds: [], mcpServerIds: [] } });
+      renderDialog(vi.fn(), vi.fn(), quest);
+      const checkbox = await screen.findByRole('checkbox', { name: /linter/i }) as HTMLInputElement;
+      expect(checkbox.checked).toBe(true);
+      await user.click(checkbox);
+      expect(checkbox.checked).toBe(false);
+      await user.click(checkbox);
+      expect(checkbox.checked).toBe(true);
+    });
+
+    it('includes updated skills in the repost call', async () => {
+      const user = userEvent.setup();
+      renderDialog();
+      const whisperCheckbox = await screen.findByRole('checkbox', { name: /type whisperer/i }) as HTMLInputElement;
+      await user.click(whisperCheckbox);
+      await user.click(screen.getByRole('button', { name: /re-post quest/i }));
+      expect(mockRepost).toHaveBeenCalledWith('quest-1', expect.objectContaining({
+        equipment: expect.objectContaining({ skillIds: ['type_whisperer'] }),
+      }));
+    });
   });
 });

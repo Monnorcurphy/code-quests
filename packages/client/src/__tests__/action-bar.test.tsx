@@ -44,6 +44,7 @@ function makeQuest(overrides: Partial<HallOfReturnsQuest> = {}): HallOfReturnsQu
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
     adventurer: null,
+    equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
     fatalMonster: null,
     ...overrides,
   };

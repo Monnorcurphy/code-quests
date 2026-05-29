@@ -475,4 +475,37 @@ describe('autoMatch — scar penalty', () => {
       expect(logger).not.toHaveBeenCalled();
     });
   });
+
+  describe('showcase scenario: scar from JWT quest affects future matching', () => {
+    it('Brielle with JWT scar scores lower than a clean champion for a type-heavy quest', () => {
+      const jwtScar: ScarRecord = {
+        questId: 'quest-showcase-jwt',
+        failureSummary: 'Repeated type errors escalated to a Lich and the adventurer was defeated.',
+        monsterIdAtFatal: 'imp-jwt-01',
+        occurredAt: '2024-01-01T00:00:00.000Z',
+      };
+      const brielle = makeAdventurer({
+        id: 'adv-showcase-brielle',
+        class: 'champion',
+        stats: { questsWon: 8, questsLost: 1 },
+        scars: [jwtScar],
+      });
+      const newcomer = makeAdventurer({
+        id: 'adv-fresh-champion',
+        class: 'champion',
+        stats: { questsWon: 3, questsLost: 0 },
+        scars: [],
+      });
+      const typeHeavyQuest = makeQuest({
+        description: 'Migrate to JWT tokens and resolve all type errors in the auth module.',
+        equipment: { skillIds: ['s1', 's2', 's3'], toolIds: ['t1', 't2', 't3'], mcpServerIds: [] },
+      });
+      const monsters = [makeMonster('imp-jwt-01', 'imp_typecheck')];
+      const monsterTypes = [makeMonsterType('imp_typecheck', 'type error|TS\\d{4}')];
+
+      const result = autoMatch(typeHeavyQuest, [brielle, newcomer], [], { monsters, monsterTypes });
+      // The newcomer (no scars) should beat Brielle (relevant scar penalty) on this JWT quest
+      expect(result?.id).toBe('adv-fresh-champion');
+    });
+  });
 });
