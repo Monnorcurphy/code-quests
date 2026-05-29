@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import BestiaryEmptyState from './empty-state';
 import MonsterDetail from './monster-detail';
 import { DifficultyStars } from './difficulty-stars';
+import CoinMonsterTypeModal from './coin-monster-type-modal';
 import type { Monster, MonsterType, MonsterScope } from '@code-quests/shared';
 
 type SortCol = 'name' | 'type' | 'difficulty' | 'encounters' | 'defeats' | 'escapes' | 'lastSeen';
@@ -125,6 +126,8 @@ export default function Bestiary() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeScope, setActiveScope] = useState<MonsterScope>('project');
+  const [showCoinModal, setShowCoinModal] = useState(false);
+  const coinButtonRef = useRef<HTMLButtonElement>(null);
 
   const {
     data: monsters,
@@ -178,12 +181,14 @@ export default function Bestiary() {
     : undefined;
 
   return (
+    <>
     <div className="bestiary">
-      <div
-        role="tablist"
-        aria-label="Monster scope"
-        className="bestiary-scope-tabs"
-      >
+      <div className="bestiary-header">
+        <div
+          role="tablist"
+          aria-label="Monster scope"
+          className="bestiary-scope-tabs"
+        >
         <button
           type="button"
           role="tab"
@@ -201,6 +206,15 @@ export default function Bestiary() {
           onClick={() => { setActiveScope('guild'); setSelectedId(null); }}
         >
           Nemeses (Guild)
+        </button>
+        </div>
+        <button
+          ref={coinButtonRef}
+          type="button"
+          className="btn-secondary bestiary-coin-btn"
+          onClick={() => setShowCoinModal(true)}
+        >
+          + Coin New Type
         </button>
       </div>
 
@@ -261,5 +275,14 @@ export default function Bestiary() {
         </div>
       )}
     </div>
+
+    {showCoinModal && (
+      <CoinMonsterTypeModal
+        onClose={() => setShowCoinModal(false)}
+        onSuccess={() => { /* queries invalidated inside modal */ }}
+        triggerRef={coinButtonRef}
+      />
+    )}
+    </>
   );
 }

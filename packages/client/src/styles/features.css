@@ -2780,3 +2780,82 @@
 .skills-tab-error {
   color: #8b1a1a;
 }
+
+/* Bestiary header — scope tabs + coin button row */
+.bestiary-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.bestiary-header .bestiary-scope-tabs {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.bestiary-coin-btn {
+  white-space: nowrap;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+/* Coin Monster Type Modal */
+.coin-type-modal {
+  max-width: 540px;
+}
+
+/* Sprite picker grid */
+.sprite-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  padding: 0.5rem;
+  border: 2px solid var(--color-stone-border);
+  border-radius: 4px;
+  background: var(--color-parchment);
+}
+
+.sprite-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0.25rem;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.1s ease, background-color 0.1s ease;
+}
+
+.sprite-option:hover {
+  border-color: var(--color-stone-border);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.sprite-option:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.sprite-option--selected {
+  border-color: var(--color-banner-red);
+  background: rgba(180, 30, 30, 0.1);
+}
+
+.sprite-option-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprite-option {
+    transition: none;
+  }
+}
