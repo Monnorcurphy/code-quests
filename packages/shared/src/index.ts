@@ -20,3 +20,13 @@ export type { Agent, AgentEvent } from './agent';
 
 export { MonsterScopeSchema, MonsterTypeSchema, MonsterSchema, MonsterEncounterSchema } from './monster';
 export type { MonsterScope, MonsterType, Monster, MonsterEncounter } from './monster';
+
+export {
+  RepostAdjustmentsSchema,
+  RepostBodySchema,
+  SplitChildSchema,
+  SplitBodySchema,
+  FeedbackBodySchema,
+  FeedbackEntrySchema,
+} from './return-actions';
+export type { RepostBody, SplitChild, SplitBody, FeedbackBody, FeedbackEntry } from './return-actions';

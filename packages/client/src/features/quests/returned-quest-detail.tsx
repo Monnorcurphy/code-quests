@@ -31,6 +31,10 @@ function formatEventText(event: AgentEvent): string {
     case 'paused_input': return `⏸ Awaiting input: ${event.question}`;
     case 'resumed': return `▶ Resumed (${event.source === 'input_response' ? 'input received' : 'user unblocked'})`;
     case 'quest_returned': return `🏰 Quest returned to town`;
+    case 'quest_reposted': return `🔁 Quest reposted`;
+    case 'quest_retired': return `📦 Quest retired`;
+    case 'quest_split': return `✂ Quest split into sub-quests`;
+    case 'quest_feedback_added': return `💬 Feedback added`;
   }
 }
 

@@ -11,6 +11,8 @@ import { createToolsRouter } from './routes/tools';
 import { createMCPServersRouter } from './routes/mcp-servers';
 import { createTestEmitRouter } from './routes/test-emit';
 import { createMonstersRouter } from './routes/monsters';
+import { createHallOfReturnsRouter } from './routes/hall-of-returns';
+import { createQuestActionsRouter } from './routes/quest-actions';
 import { errorHandler } from './middleware/errors';
 import { attachQuestChannel, QuestChannel } from './realtime/quest-channel';
 
@@ -21,6 +23,8 @@ export function createApp(db: Database.Database) {
   app.use('/adventurers', createAdventurersRouter(db));
   app.use('/epics', createEpicsRouter(db));
   app.use('/quests', createQuestsRouter(db, () => _questChannel));
+  app.use('/quests', createQuestActionsRouter(db, () => _questChannel));
+  app.use('/hall-of-returns', createHallOfReturnsRouter(db));
   app.use('/skills', createSkillsRouter(db));
   app.use('/tools', createToolsRouter(db));
   app.use('/mcp-servers', createMCPServersRouter(db));
