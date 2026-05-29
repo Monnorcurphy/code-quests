@@ -20,6 +20,7 @@ export default defineConfig({
       '/adventurers': 'http://localhost:4001',
       '/epics': 'http://localhost:4001',
       '/quests': 'http://localhost:4001',
+      '/hall-of-returns': 'http://localhost:4001',
       '/monsters': 'http://localhost:4001',
       '/monster-types': 'http://localhost:4001',
       '/skills': 'http://localhost:4001',
