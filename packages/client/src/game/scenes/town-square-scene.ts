@@ -2,9 +2,14 @@ import { BaseTownScene } from './base-town-scene';
 import { QuestBoardInteractive } from '../interactives/quest-board';
 import { RecruitBannerInteractive } from '../interactives/recruit-banner';
 import { GuideNpc } from '../entities/guide-npc';
+import {
+  WanderingAdventurer,
+  WANDERER_CATCHPHRASES,
+} from '../entities/wandering-adventurer';
 import { registerScene } from '../scene-registry';
 import { sceneRouter } from '../scene-router';
 import { useTownStore } from '../../stores/town-store';
+import { useWanderersStore, type IdleAdventurer } from '../../stores/wanderers-store';
 import type { DoorConfig } from './base-town-scene';
 import type { SceneKey } from '../scene-registry';
 
@@ -38,9 +43,22 @@ const SIGN_STYLE = {
   padding: { x: 6, y: 2 },
 };
 
+// Wanderer placement — keep adventurers OUT of the central interactive
+// strip (Quest Board at 1420, Recruit Banner at 1780, GuideNpc at 1620).
+const MAX_WANDERERS = 6;
+const WANDERER_Y = 640;
+const WANDERER_ZONES: { min: number; max: number }[] = [
+  { min: 200, max: 1380 },  // left half
+  { min: 1900, max: 3000 }, // right half
+];
+// Minimum horizontal patrol range so wanderers don't pace in a 5px line
+const WANDERER_PATROL_RANGE = 200;
+
 export class TownSquareScene extends BaseTownScene {
   private questBoard!: QuestBoardInteractive;
   private recruitBanner!: RecruitBannerInteractive;
+  private wanderers: Map<string, WanderingAdventurer> = new Map();
+  private unsubscribeWanderers: (() => void) | null = null;
 
   constructor() {
     super({ key: 'town-square' });
@@ -106,9 +124,61 @@ export class TownSquareScene extends BaseTownScene {
       })),
     ]);
 
+    // Spawn initial wanderers from the store, then subscribe to changes
+    this._syncWanderers(useWanderersStore.getState().idleAdventurers);
+    this.unsubscribeWanderers = useWanderersStore.subscribe((state) => {
+      this._syncWanderers(state.idleAdventurers);
+    });
+
     this.events.once('shutdown', () => {
+      this.unsubscribeWanderers?.();
+      this.unsubscribeWanderers = null;
+      for (const w of this.wanderers.values()) w.destroy();
+      this.wanderers.clear();
       useTownStore.getState().setActiveModal(null);
     });
+  }
+
+  private _syncWanderers(idleList: IdleAdventurer[]): void {
+    const capped = idleList.slice(0, MAX_WANDERERS);
+    const nextIds = new Set(capped.map((a) => a.id));
+
+    // Remove wanderers no longer in the idle list (or trimmed by cap)
+    for (const [id, w] of this.wanderers) {
+      if (!nextIds.has(id)) {
+        w.destroy();
+        this.wanderers.delete(id);
+      }
+    }
+
+    // Spawn newcomers
+    const reducedMotion = this.player?.reducedMotion ?? false;
+    for (const adv of capped) {
+      if (this.wanderers.has(adv.id)) continue;
+      const bounds = this._pickWandererBounds();
+      const spawnX = bounds.min + Math.random() * (bounds.max - bounds.min);
+      this.wanderers.set(
+        adv.id,
+        new WanderingAdventurer(this, {
+          id: adv.id,
+          name: adv.name,
+          x: spawnX,
+          y: WANDERER_Y,
+          bounds,
+          catchphrases: WANDERER_CATCHPHRASES,
+          reducedMotion,
+        }),
+      );
+    }
+  }
+
+  private _pickWandererBounds(): { min: number; max: number } {
+    const zone = WANDERER_ZONES[Math.floor(Math.random() * WANDERER_ZONES.length)];
+    const zoneWidth = zone.max - zone.min;
+    if (zoneWidth <= WANDERER_PATROL_RANGE) return { ...zone };
+    // Pick a random sub-range so wanderers don't all overlap
+    const start = zone.min + Math.random() * (zoneWidth - WANDERER_PATROL_RANGE);
+    return { min: start, max: start + WANDERER_PATROL_RANGE };
   }
 
   override update(time: number, delta: number): void {
@@ -117,6 +187,7 @@ export class TownSquareScene extends BaseTownScene {
     const playerX = this.player.getX();
     this.questBoard.update(playerX);
     this.recruitBanner.update(playerX);
+    for (const w of this.wanderers.values()) w.update(delta);
   }
 }
 
