@@ -13,6 +13,7 @@ import { createTestEmitRouter } from './routes/test-emit';
 import { createMonstersRouter } from './routes/monsters';
 import { createHallOfReturnsRouter } from './routes/hall-of-returns';
 import { createQuestActionsRouter } from './routes/quest-actions';
+import { createShowcaseRouter } from './routes/showcase';
 import { errorHandler } from './middleware/errors';
 import { attachQuestChannel, QuestChannel } from './realtime/quest-channel';
 
@@ -29,6 +30,7 @@ export function createApp(db: Database.Database) {
   app.use('/tools', createToolsRouter(db));
   app.use('/mcp-servers', createMCPServersRouter(db));
   app.use('/', createMonstersRouter(db));
+  app.use('/showcase', createShowcaseRouter(db));
   if (process.env.NODE_ENV === 'test') {
     app.use('/test', createTestEmitRouter(() => _questChannel));
   }
