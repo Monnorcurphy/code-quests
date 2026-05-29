@@ -258,7 +258,7 @@ const NPC_CONTENT: Record<NpcKey, NpcContent> = {
   'master-eldra': {
     name: 'Master Eldra',
     role: 'Guild Master',
-    greeting: '"Come in. Close the door." *gestures to a chair.* "You want to understand the guild. Many treat their roster like a tool drawer — pick one, swap one out. They learn the hard way that&apos;s wrong. Sit. Let me tell you what an adventurer truly is."',
+    greeting: '"Come in. Close the door." *gestures to a chair.* "You want to understand the guild. Many treat their roster like a tool drawer — pick one, swap one out. They learn the hard way that\'s wrong. Sit. Let me tell you what an adventurer truly is."',
     sections: [
       {
         title: 'What they are',

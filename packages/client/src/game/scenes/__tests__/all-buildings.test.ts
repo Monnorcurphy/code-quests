@@ -41,7 +41,15 @@ import { sceneRouter } from '../../scene-router';
 type MockStoreFn = ReturnType<typeof vi.fn>;
 
 function makeText() {
-  return { setOrigin: vi.fn().mockReturnThis(), setDepth: vi.fn().mockReturnThis() };
+  const m: Record<string, unknown> = {
+    setOrigin: vi.fn(() => m),
+    setDepth: vi.fn(() => m),
+    setVisible: vi.fn(() => m),
+    setText: vi.fn(() => m),
+    setAlpha: vi.fn(() => m),
+    destroy: vi.fn(),
+  };
+  return m;
 }
 
 function makeRect() {
@@ -55,6 +63,9 @@ function makeRect() {
     setOrigin: vi.fn(() => m),
     setLineWidth: vi.fn(() => m),
     setDisplaySize: vi.fn(() => m),
+    setVisible: vi.fn(() => m),
+    setText: vi.fn(() => m),
+    destroy: vi.fn(),
   };
   return m;
 }
@@ -105,6 +116,7 @@ function attachMockContext(scene: object) {
       circle: vi.fn(() => makeRect()),
       line: vi.fn(() => makeRect()),
       triangle: vi.fn(() => makeRect()),
+      container: vi.fn(() => makeRect()),
     },
     textures: { exists: vi.fn(() => false) },
     tweens: { add: vi.fn() },
