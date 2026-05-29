@@ -260,18 +260,18 @@ export type PostMortemAttempt = z.infer<typeof PostMortemAttemptSchema>;
 // Re-export FailureSummary type for convenience
 export type { FailureSummary };
 
-const RepostResultSchema = z.object({
-  newQuestId: z.string(),
-  newTitle: z.string(),
+// Schemas that match the actual server response shapes
+const RepostServerResponseSchema = z.object({
+  id: z.string(),
+  title: z.string(),
 }).passthrough();
 
-const SplitResultSchema = z.object({
-  questIds: z.array(z.string()),
-  titles: z.array(z.string()),
+const SplitServerResponseSchema = z.object({
+  childQuests: z.array(z.object({ id: z.string(), title: z.string() }).passthrough()),
 }).passthrough();
 
-export type RepostResult = z.infer<typeof RepostResultSchema>;
-export type SplitResult = z.infer<typeof SplitResultSchema>;
+export type RepostResult = { newQuestId: string; newTitle: string };
+export type SplitResult = { questIds: string[]; titles: string[] };
 
 export const api = {
   adventurers: {
@@ -309,12 +309,17 @@ export const api = {
       ),
     submitFeedback: (id: string, text: string) =>
       postJson(FeedbackSuccessSchema, `/quests/${id}/actions/feedback`, { text }),
-    repost: (id: string, adjustments?: { acceptanceCriteria?: string[]; edgeCases?: string[] }) =>
-      postJson(RepostResultSchema, `/quests/${id}/actions/repost`, { adjustments }),
+    repost: (id: string, adjustments?: { acceptanceCriteria?: string[]; edgeCases?: string[] }): Promise<RepostResult> =>
+      postJson(RepostServerResponseSchema, `/quests/${id}/actions/repost`, { adjustments })
+        .then((q) => ({ newQuestId: q.id, newTitle: q.title })),
     retire: (id: string) =>
       postJson(z.object({}).passthrough(), `/quests/${id}/actions/retire`, {}),
-    split: (id: string, children: SplitChild[]) =>
-      postJson(SplitResultSchema, `/quests/${id}/actions/split`, { children }),
+    split: (id: string, children: SplitChild[]): Promise<SplitResult> =>
+      postJson(SplitServerResponseSchema, `/quests/${id}/actions/split`, { children })
+        .then(({ childQuests }) => ({
+          questIds: childQuests.map((q) => q.id),
+          titles: childQuests.map((q) => q.title),
+        })),
   },
   epics: {
     list: () => fetchJson(z.array(EpicSchema), '/epics'),

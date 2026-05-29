@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { FailureSummaryRecommendation } from '@code-quests/shared';
 import type { HallOfReturnsQuest, RepostResult, SplitResult } from '../../../lib/api';
+import { useTownStore } from '../../../stores/town-store';
 import RepostDialog from './repost-dialog';
 import RetireDialog from './retire-dialog';
 import SplitDialog from './split-dialog';
@@ -26,14 +28,30 @@ export default function ActionBar({ questId, quest, recommendation }: ActionBarP
   const [repostResult, setRepostResult] = useState<RepostResult | null>(null);
   const [splitResult, setSplitResult] = useState<SplitResult | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const setSelectedQuestId = useTownStore((s) => s.setSelectedQuestId);
 
   const repostBtnRef = useRef<HTMLButtonElement>(null);
   const retireBtnRef = useRef<HTMLButtonElement>(null);
   const splitBtnRef = useRef<HTMLButtonElement>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   function showToast(msg: string) {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
     setToast(msg);
-    setTimeout(() => setToast(null), 4000);
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, 4000);
   }
 
   function handleRepostSuccess(result: RepostResult) {
@@ -117,9 +135,13 @@ export default function ActionBar({ questId, quest, recommendation }: ActionBarP
       {repostResult && (
         <p className="action-bar-linkage">
           Re-posted as{' '}
-          <a href="/town/war-room" className="action-bar-link">
+          <Link
+            to="/town/war-room"
+            className="action-bar-link"
+            onClick={() => setSelectedQuestId(repostResult.newQuestId)}
+          >
             {repostResult.newTitle}
-          </a>
+          </Link>
         </p>
       )}
 
@@ -128,9 +150,13 @@ export default function ActionBar({ questId, quest, recommendation }: ActionBarP
           {'Split into: '}
           {splitResult.titles.map((title, i) => (
             <span key={splitResult.questIds[i]}>
-              <a href="/town/war-room" className="action-bar-link">
+              <Link
+                to="/town/war-room"
+                className="action-bar-link"
+                onClick={() => setSelectedQuestId(splitResult.questIds[i])}
+              >
                 {title}
-              </a>
+              </Link>
               {i < splitResult.titles.length - 1 ? ', ' : ''}
             </span>
           ))}
