@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { SceneKeyboardNav } from '../components/scene-keyboard-nav';
 import { HUDOverlayManager } from '../components/hud-overlay-manager';
 import { SettingsButton } from '../components/settings-button';
+import { BuildingsBar } from '../components/buildings-bar';
 import { sceneRouter } from '../game/scene-router';
 import { isTownSceneKey } from '../game/scene-registry';
 import type { SceneNavItem } from '../game/scene-router';
@@ -68,6 +69,7 @@ export function PhaserTown() {
         </h1>
       )}
       <SceneKeyboardNav items={navItems} />
+      <BuildingsBar current={validSceneKey} />
       <HUDOverlayManager />
       <SettingsButton />
       <Suspense fallback={null}>

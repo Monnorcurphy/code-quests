@@ -149,6 +149,8 @@ describe('Town — Phaser mode', () => {
   it('renders the aria-live heading for the current building', async () => {
     renderAtPath('/town/war-room');
     await screen.findByTestId('phaser-mount');
-    expect(screen.getByText('War Room')).toBeDefined();
+    // The aria-live h1 (visually hidden) announces the current scene; the
+    // BuildingsBar also renders a "War Room" button, so target by role+level.
+    expect(screen.getByRole('heading', { name: 'War Room', level: 1 })).toBeDefined();
   });
 });
