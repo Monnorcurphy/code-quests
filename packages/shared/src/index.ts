@@ -24,6 +24,9 @@ export type { MonsterScope, MonsterType, Monster, MonsterEncounter } from './mon
 export { ForgeSkillSchema, ConfirmCandidateSchema } from './skill-actions';
 export type { ForgeSkillInput, ConfirmCandidateInput } from './skill-actions';
 
+export { CreateMonsterTypeSchema } from './monster-type-actions';
+export type { CreateMonsterTypeInput } from './monster-type-actions';
+
 export {
   RepostAdjustmentsSchema,
   RepostBodySchema,
