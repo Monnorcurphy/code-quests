@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { autoMatch } from '../auto-match';
-import type { Adventurer, Agent, Quest } from '@code-quests/shared';
+import type { Adventurer, Agent, Quest, Monster, MonsterType, ScarRecord } from '@code-quests/shared';
 
 function makeAdventurer(overrides: Partial<Adventurer> & { id: string }): Adventurer {
   return {
@@ -255,6 +255,224 @@ describe('autoMatch', () => {
         equipment: { skillIds: ['s1', 's2'], toolIds: [], mcpServerIds: [] },
       });
       expect(autoMatch(quest, [a, b], [])?.id).toBe(autoMatch(quest, [b, a], [])?.id);
+    });
+  });
+});
+
+// ── Scar penalty helpers ──────────────────────────────────────────────────────
+
+function makeScar(overrides: Partial<ScarRecord> = {}): ScarRecord {
+  return {
+    questId: overrides.questId ?? 'q-old',
+    failureSummary: overrides.failureSummary ?? 'generic failure',
+    monsterIdAtFatal: overrides.monsterIdAtFatal ?? 'm-1',
+    occurredAt: overrides.occurredAt ?? '2024-01-01T00:00:00.000Z',
+  };
+}
+
+function makeMonster(id: string, typeId: string): Monster {
+  return {
+    id,
+    typeId,
+    name: `Monster ${id}`,
+    scope: 'project',
+    projectId: 'local',
+    firstSeenAt: '2024-01-01T00:00:00.000Z',
+    lastSeenAt: '2024-01-01T00:00:00.000Z',
+    encounters: 1,
+    defeats: 0,
+    escapes: 0,
+    calibratedDifficulty: 2,
+    notes: '',
+  };
+}
+
+function makeMonsterType(id: string, failureSignature: string): MonsterType {
+  return {
+    id,
+    name: id,
+    spritePath: `monsters/${id}.png`,
+    defaultDifficulty: 2,
+    failureSignature,
+    createdBy: 'system',
+  };
+}
+
+describe('autoMatch — scar penalty', () => {
+  describe('no-scar baseline', () => {
+    it('returns same score for adventurer with no scars (no penalty)', () => {
+      const withoutScar = makeAdventurer({ id: 'clean', class: 'ranger' });
+      const quest = makeQuest({ description: 'build failed compilation error' });
+      const result = autoMatch(quest, [withoutScar], []);
+      expect(result?.id).toBe('clean');
+    });
+  });
+
+  describe('token overlap matching', () => {
+    it('penalises adventurer whose scar summary overlaps >= 50% with quest text', () => {
+      const scarred = makeAdventurer({
+        id: 'scarred',
+        class: 'ranger',
+        stats: { questsWon: 5, questsLost: 0 },
+        scars: [makeScar({ failureSummary: 'build failed compilation' })],
+      });
+      const clean = makeAdventurer({
+        id: 'clean',
+        class: 'ranger',
+        stats: { questsWon: 5, questsLost: 0 },
+      });
+      // scar words {build, failed, compilation} all appear in quest description → 3/3 = 100% overlap
+      const quest = makeQuest({ description: 'build failed because compilation error occurred' });
+      const result = autoMatch(quest, [scarred, clean], []);
+      expect(result?.id).toBe('clean');
+    });
+
+    it('does not penalise adventurer whose scar summary overlaps < 50% with quest text', () => {
+      const scarred = makeAdventurer({
+        id: 'scarred',
+        class: 'ranger',
+        stats: { questsWon: 5, questsLost: 0 },
+        scars: [makeScar({ failureSummary: 'typescript import resolution error' })],
+      });
+      const clean = makeAdventurer({
+        id: 'clean',
+        class: 'scout',
+        stats: { questsWon: 5, questsLost: 0 },
+      });
+      // Use a ranger-preferred quest: 2 skills pushes equipment total > 1, description length > 200
+      const quest = makeQuest({
+        description: 'build compilation failed ' + 'x'.repeat(180),
+        equipment: { skillIds: ['s1', 's2'], toolIds: [], mcpServerIds: [] },
+      });
+      // scar words {typescript, import, resolution, error} vs quest text — no overlap
+      // No penalty: scarred wins on class match (ranger vs scout for ranger quest)
+      expect(autoMatch(quest, [scarred, clean], [])?.id).toBe('scarred');
+    });
+  });
+
+  describe('monster type matching', () => {
+    it('penalises adventurer whose scar monster type matches quest dominant type', () => {
+      const monsterTypes = [makeMonsterType('troll_build_fail', '\\b(build failed|compilation error)\\b')];
+      const monsters = [makeMonster('m-troll-1', 'troll_build_fail')];
+
+      const scarred = makeAdventurer({
+        id: 'scarred',
+        class: 'ranger',
+        stats: { questsWon: 10, questsLost: 0 },
+        scars: [makeScar({ monsterIdAtFatal: 'm-troll-1', failureSummary: 'unrelated text xyz' })],
+      });
+      const clean = makeAdventurer({
+        id: 'clean',
+        class: 'ranger',
+        stats: { questsWon: 10, questsLost: 0 },
+      });
+      // Quest triggers the troll type pattern; scarred adventurer has scar from troll
+      const quest = makeQuest({ description: 'resolve the build failed compilation error' });
+      const result = autoMatch(quest, [scarred, clean], [], { monsters, monsterTypes });
+      expect(result?.id).toBe('clean');
+    });
+
+    it('does not penalise adventurer whose scar monster is a different type than quest dominant', () => {
+      const monsterTypes = [
+        makeMonsterType('troll_build_fail', '\\b(build failed|compilation error)\\b'),
+        makeMonsterType('goblin_linter', '\\b(lint|eslint)\\b'),
+      ];
+      const monsters = [
+        makeMonster('m-goblin-1', 'goblin_linter'),
+        makeMonster('m-troll-1', 'troll_build_fail'),
+      ];
+
+      const adventurer = makeAdventurer({
+        id: 'goblin-scarred',
+        class: 'ranger',
+        stats: { questsWon: 5, questsLost: 0 },
+        // Scar from goblin (linter), but quest is a build/compilation quest → no match
+        scars: [makeScar({ monsterIdAtFatal: 'm-goblin-1', failureSummary: 'unrelated summary' })],
+      });
+      const rival = makeAdventurer({
+        id: 'rival',
+        class: 'scout',
+        stats: { questsWon: 5, questsLost: 0 },
+      });
+      // Use a ranger-preferred quest so goblin-scarred (ranger) wins on class match over rival (scout)
+      const quest = makeQuest({
+        description: 'resolve the build failed compilation error ' + 'x'.repeat(160),
+        equipment: { skillIds: ['s1', 's2'], toolIds: [], mcpServerIds: [] },
+      });
+      // No token overlap and wrong monster type → no penalty; goblin-scarred wins on class fit
+      const result = autoMatch(quest, [adventurer, rival], [], { monsters, monsterTypes });
+      expect(result?.id).toBe('goblin-scarred');
+    });
+  });
+
+  describe('cap behaviour', () => {
+    it('caps total penalty at -30 regardless of number of matching scars', () => {
+      const threeMatchingScars = [
+        makeScar({ failureSummary: 'build failed compilation', questId: 'q1' }),
+        makeScar({ failureSummary: 'build failed compilation', questId: 'q2' }),
+        makeScar({ failureSummary: 'build failed compilation', questId: 'q3' }),
+      ];
+      const scarred = makeAdventurer({
+        id: 'scarred',
+        class: 'ranger',
+        stats: { questsWon: 100, questsLost: 0 },
+        scars: threeMatchingScars,
+      });
+      const clean = makeAdventurer({
+        id: 'clean',
+        class: 'ranger',
+        stats: { questsWon: 0, questsLost: 0 },
+      });
+      // Three matching scars → penalty would be -45 without cap, but capped at -30
+      // clean has net 0 wins, scarred has net 100 wins
+      // Without scar penalty: scarred wins. With -30 cap scarred total score = 1 + (-30) = -29, clean = 1
+      // clean should win
+      const quest = makeQuest({ description: 'build failed because compilation error occurred' });
+      expect(autoMatch(quest, [scarred, clean], [])?.id).toBe('clean');
+    });
+
+    it('two matching scars apply -30 penalty (cap is 2 scars × 15)', () => {
+      const twoMatchingScars = [
+        makeScar({ failureSummary: 'build failed compilation', questId: 'q1' }),
+        makeScar({ failureSummary: 'build failed compilation', questId: 'q2' }),
+      ];
+      const scarred = makeAdventurer({
+        id: 'scarred',
+        class: 'ranger',
+        stats: { questsWon: 50, questsLost: 0 },
+        scars: twoMatchingScars,
+      });
+      const clean = makeAdventurer({
+        id: 'clean',
+        class: 'ranger',
+        stats: { questsWon: 0, questsLost: 0 },
+      });
+      const quest = makeQuest({ description: 'build failed because compilation error occurred' });
+      expect(autoMatch(quest, [scarred, clean], [])?.id).toBe('clean');
+    });
+  });
+
+  describe('logger callback', () => {
+    it('calls logger with scarPenalty when a scar matches', () => {
+      const logger = vi.fn();
+      const scarred = makeAdventurer({
+        id: 'scarred',
+        class: 'ranger',
+        scars: [makeScar({ failureSummary: 'build failed compilation' })],
+      });
+      const quest = makeQuest({ description: 'build failed because compilation error occurred' });
+      autoMatch(quest, [scarred], [], { logger });
+      expect(logger).toHaveBeenCalledWith(
+        expect.objectContaining({ adventurerId: 'scarred', scarPenalty: -15 }),
+      );
+    });
+
+    it('does not call logger when no scars match', () => {
+      const logger = vi.fn();
+      const clean = makeAdventurer({ id: 'clean', class: 'ranger' });
+      const quest = makeQuest({ description: 'some unrelated quest' });
+      autoMatch(quest, [clean], [], { logger });
+      expect(logger).not.toHaveBeenCalled();
     });
   });
 });
