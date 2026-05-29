@@ -45,7 +45,7 @@ const NPC_CONTENT: Record<NpcKey, NpcContent> = {
           <>
             <p style={{ marginTop: 0 }}>
               <strong>Title.</strong> Sharp. Seven words or fewer. Concrete nouns and
-              verbs. {C('Reset password 404s')} beats {C('Auth issue')}. If you
+              verbs. {C('Reset password 404s')} — NOT {C('Auth issue')}. If you
               can&apos;t write a sharp title, you don&apos;t understand the work yet.
               Go figure it out, then come back.
             </p>
@@ -57,9 +57,10 @@ const NPC_CONTENT: Record<NpcKey, NpcContent> = {
             </p>
             <p>
               <strong>Acceptance criteria.</strong> Facts the Oracle can verify. Hard
-              yes-or-no. {C('Returns 200 on a valid email')} — I can prove it on the
-              return. {C('Auth works well')} — what does that mean, soldier? Nothing.
-              It can be proven nothing.
+              yes-or-no. {C('Returns 200 on a valid email')} — I can prove that on
+              the return. {C('Auth works well')} — what does that even mean, soldier?
+              I can&apos;t prove it. I can&apos;t measure it. So it isn&apos;t a
+              criterion. It&apos;s a wish.
             </p>
           </>
         ),
@@ -107,7 +108,7 @@ const NPC_CONTENT: Record<NpcKey, NpcContent> = {
         ),
       },
       {
-        title: 'Think long. Then lock.',
+        title: 'Think long… then lock.',
         body: (
           <>
             Think long before you write a criterion. Sit with it. Test it against the
