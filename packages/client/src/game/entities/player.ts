@@ -97,6 +97,10 @@ export class Player {
     return this._facing;
   }
 
+  get followTarget(): Phaser.GameObjects.Sprite {
+    return this.sprite;
+  }
+
   onInteract(callback: () => void): void {
     this.interactCallbacks.push(callback);
   }

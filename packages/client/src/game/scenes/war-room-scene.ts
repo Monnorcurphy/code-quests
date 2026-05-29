@@ -39,7 +39,11 @@ export class WarRoomScene extends BaseBuildingScene {
     // Planning table
     this.tableBody = this.add
       .rectangle(TABLE_X, BUILDING_DOOR_Y, 90, 65, COLOR_TABLE_IDLE, ALPHA_IDLE)
-      .setDepth(0);
+      .setDepth(0)
+      .setInteractive({ useHandCursor: true });
+    this.tableBody.on('pointerdown', () =>
+      useTownStore.getState().setActiveModal('draft'),
+    );
     this.tableOutline = this.add
       .rectangle(TABLE_X, BUILDING_DOOR_Y, 96, 71)
       .setDepth(1)

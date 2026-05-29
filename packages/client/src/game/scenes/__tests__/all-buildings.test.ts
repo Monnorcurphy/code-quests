@@ -50,6 +50,8 @@ function makeRect() {
     setStrokeStyle: vi.fn().mockReturnThis(),
     setFillStyle: vi.fn().mockReturnThis(),
     setAlpha: vi.fn().mockReturnThis(),
+    setInteractive: vi.fn().mockReturnThis(),
+    on: vi.fn().mockReturnThis(),
   };
 }
 
@@ -76,6 +78,9 @@ function attachMockContext(scene: object) {
         fadeIn: vi.fn(),
         fadeOut: vi.fn(),
         once: vi.fn(),
+        setBounds: vi.fn(),
+        startFollow: vi.fn(),
+        height: 720,
       },
     },
     add: {

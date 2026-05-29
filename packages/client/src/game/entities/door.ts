@@ -40,13 +40,20 @@ export class Door {
 
     this.body = scene.add
       .rectangle(opts.x, opts.y, w, h, COLOR_DOOR, ALPHA_IDLE)
-      .setDepth(0);
+      .setDepth(0)
+      .setInteractive({ useHandCursor: true });
+
+    this.body.on('pointerdown', () => this.enter());
 
     this.outline = scene.add
       .rectangle(opts.x, opts.y, w + OUTLINE_STROKE * 2, h + OUTLINE_STROKE * 2)
       .setDepth(1)
       .setStrokeStyle(OUTLINE_STROKE, COLOR_HIGHLIGHT, 0)
       .setFillStyle(0, 0);
+  }
+
+  enter(): void {
+    sceneRouter.emitDoorEnter({ sceneKey: this.targetScene, spawnX: this.targetSpawnX });
   }
 
   get inRange(): boolean {
@@ -65,6 +72,6 @@ export class Door {
 
   tryEnter(): void {
     if (!this._inRange) return;
-    sceneRouter.emitDoorEnter({ sceneKey: this.targetScene, spawnX: this.targetSpawnX });
+    this.enter();
   }
 }

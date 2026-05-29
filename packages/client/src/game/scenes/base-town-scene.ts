@@ -61,6 +61,10 @@ export abstract class BaseTownScene extends Phaser.Scene {
 
     this.player = new Player(this, this._spawnX, PLAYER_Y, sceneBounds, { reducedMotion });
 
+    const camera = this.cameras.main;
+    camera.setBounds(0, 0, this.sceneWidth, camera.height);
+    camera.startFollow(this.player.followTarget, true, 0.15, 0.15);
+
     this.doors = this.doorConfigs.map(
       (cfg) =>
         new Door(this, {

@@ -24,7 +24,10 @@ export class RecruitBannerInteractive {
 
     this.body = scene.add
       .rectangle(x, y, WIDTH, HEIGHT, COLOR_IDLE, ALPHA_IDLE)
-      .setDepth(0);
+      .setDepth(0)
+      .setInteractive({ useHandCursor: true });
+
+    this.body.on('pointerdown', () => this.activate());
 
     this.outline = scene.add
       .rectangle(x, y, WIDTH + OUTLINE_STROKE * 2, HEIGHT + OUTLINE_STROKE * 2)

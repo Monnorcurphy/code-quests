@@ -16,6 +16,8 @@ function makeRect() {
     setStrokeStyle: vi.fn().mockReturnThis(),
     setFillStyle: vi.fn().mockReturnThis(),
     setAlpha: vi.fn().mockReturnThis(),
+    setInteractive: vi.fn().mockReturnThis(),
+    on: vi.fn().mockReturnThis(),
   };
 }
 

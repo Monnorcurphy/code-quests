@@ -43,7 +43,11 @@ export class GuildHallScene extends BaseBuildingScene {
     // Roster board
     this.rosterBody = this.add
       .rectangle(ROSTER_X, BUILDING_DOOR_Y, 90, 65, COLOR_IDLE, ALPHA_IDLE)
-      .setDepth(0);
+      .setDepth(0)
+      .setInteractive({ useHandCursor: true });
+    this.rosterBody.on('pointerdown', () =>
+      useTownStore.getState().setActiveModal('guild-hall'),
+    );
     this.rosterOutline = this.add
       .rectangle(ROSTER_X, BUILDING_DOOR_Y, 96, 71)
       .setDepth(1)

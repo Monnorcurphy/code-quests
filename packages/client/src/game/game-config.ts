@@ -36,7 +36,7 @@ export function getGameConfig(
     },
     parent,
     callbacks: {
-      postBoot: (game: Phaser.Game) => {
+      preBoot: (game: Phaser.Game) => {
         game.registry.set('initialScene', initialScene);
         if (questId) {
           game.registry.set('questId', questId);
