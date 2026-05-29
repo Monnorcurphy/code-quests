@@ -25,258 +25,272 @@ const NPC_CONTENT: Record<NpcKey, NpcContent> = {
   'commander-tyra': {
     name: 'Commander Tyra',
     role: 'War Room Officer',
-    greeting: '"You came to draft a quest. Good. Let me tell you what makes one worth dispatching."',
+    greeting: '*glances up from the map.* "You\'ve got something to dispatch. Sit. Briefing\'s three minutes."',
     sections: [
       {
-        title: 'What is a quest?',
+        title: 'What you\'re really doing here',
         body: (
           <>
-            A quest is a <strong>ticket</strong> — one well-scoped piece of work you want an
-            adventurer to complete. It is not a story, not a wishlist. Think:
-            &ldquo;Fix the login redirect loop,&rdquo; not &ldquo;Make auth better.&rdquo;
+            A quest is one ticket. One bit of broken thing. Not &ldquo;make auth
+            better&rdquo; — that&apos;s a campaign, and I don&apos;t dispatch adventurers
+            on campaigns. If your brief sprawls, split it. Two clean missions beat one
+            tangled one, every time. I&apos;ll brief two adventurers before I send one
+            confused.
           </>
         ),
       },
       {
-        title: 'A successful quest has three pillars',
+        title: 'The brief I want to see',
         body: (
-          <ol style={{ paddingLeft: 20, lineHeight: 1.7 }}>
-            <li>
-              <strong>A specific title.</strong> The adventurer reads this first. Concrete
-              nouns and verbs win. {C('"Reset password 404s"')} beats {C('"Auth issue"')}.
-            </li>
-            <li>
-              <strong>A mission (description) that names the why.</strong> What hurts today?
-              What changes when this ships? The mission lets the adventurer make judgment
-              calls when the spec is ambiguous.
-            </li>
-            <li>
-              <strong>Acceptance criteria the Oracle can verify.</strong> Measurable. Binary.
-              Each one is a checkbox: pass or fail, no opinion. {C('"Returns 200 on valid email"')}
-              not {C('"Auth works well"')}.
-            </li>
-          </ol>
+          <>
+            <p style={{ marginTop: 0 }}>
+              <strong>Title.</strong> Sharp. Seven words or fewer. Concrete nouns and
+              verbs. {C('Reset password 404s')} beats {C('Auth issue')}. If you
+              can&apos;t write a sharp title, you don&apos;t understand the work yet.
+              Go figure it out, then come back.
+            </p>
+            <p>
+              <strong>Mission.</strong> What problem are we solving? When the adventurer
+              hits something the spec didn&apos;t cover, the mission tells them which
+              way to lean. No mission, no judgment — they ship the letter and miss the
+              spirit.
+            </p>
+            <p>
+              <strong>Acceptance criteria.</strong> Facts the Oracle can verify. Hard
+              yes-or-no. {C('Returns 200 on a valid email')} — I can prove it on the
+              return. {C('Auth works well')} — what does that mean, soldier? Nothing.
+              It can be proven nothing.
+            </p>
+          </>
         ),
       },
       {
-        title: 'Common mistakes to avoid',
+        title: 'What I see fail most',
         body: (
-          <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>
-            <li>Two quests in one. Split them.</li>
-            <li>Vague ACs (&ldquo;is fast,&rdquo; &ldquo;feels right&rdquo;) — the adventurer can&apos;t prove they passed.</li>
-            <li>No mission. Adventurer ships the letter, misses the spirit.</li>
-            <li>Quest depends on something not in equipment. Visit the Armory first.</li>
-          </ul>
+          <>
+            Two quests crammed into one. Vague criteria. No mission, so the adventurer
+            freelances and ships the wrong thing well. And the worst — dispatching with
+            gear I haven&apos;t issued. Visit Smith Bran before you walk out that door,
+            or your adventurer comes home in pieces.
+          </>
         ),
       },
     ],
-    primaryAction: { label: 'Open the Planning Table', modal: 'draft' },
+    primaryAction: { label: 'Approach the Planning Table', modal: 'draft' },
   },
   'seer-caelis': {
     name: 'Seer Caelis',
     role: 'Oracle Priestess',
-    greeting: '"You wish to know the shape of success. Wise. Acceptance criteria are the prophecy your quest must fulfill."',
+    greeting: '"You enter to know the shape of victory. Sit. I find most do not have time for riddles — so I will speak plainly."',
     sections: [
       {
-        title: 'What are acceptance criteria?',
+        title: 'What a criterion is',
         body: (
           <>
-            ACs are the contract between you and the adventurer. Each one is a
-            <strong> testable statement</strong> about the finished work. If the AC passes,
-            success. If it fails, the work isn&apos;t done. No interpretation.
+            A criterion is a covenant. Words your adventurer carries into the field.
+            Words we read together when they return. If the words pass, the quest
+            passed. If they fail, the quest failed. The Oracle does not weigh feelings.
+            The Oracle confirms facts.
           </>
         ),
       },
       {
-        title: 'Good ACs vs. bad ACs',
+        title: 'Speak in things I can see',
         body: (
-          <div style={{ lineHeight: 1.6 }}>
-            <p style={{ margin: '4px 0' }}>
-              <strong>Bad:</strong> {C('"Code is clean"')} — Whose definition?
-            </p>
-            <p style={{ margin: '4px 0' }}>
-              <strong>Good:</strong> {C('"Lint passes with zero warnings"')} — Verifiable.
-            </p>
-            <p style={{ margin: '4px 0' }}>
-              <strong>Bad:</strong> {C('"Tests are good"')} — Vague.
-            </p>
-            <p style={{ margin: '4px 0' }}>
-              <strong>Good:</strong> {C('"Adds a test that fails before the fix and passes after"')} — Binary.
-            </p>
-          </div>
+          <>
+            Hear two covenants. &ldquo;Returns 200 for a valid email.&rdquo; I can read
+            this. I will know whether it passed or failed. Now hear this: &ldquo;Auth
+            works well.&rdquo; Whose &ldquo;well&rdquo;? Mine is not yours. Words like
+            these are clouds — beautiful, perhaps, but I cannot touch them. Write what
+            I can touch.
+          </>
         ),
       },
       {
-        title: 'Lock them before dispatch',
+        title: 'Think long. Then lock.',
         body: (
           <>
-            Once dispatched, ACs are immutable. Changing them mid-quest is moving the
-            target — the adventurer can&apos;t hit a moving target reliably. Lock now,
-            iterate next quest.
+            Think long before you write a criterion. Sit with it. Test it against the
+            edges. Once your adventurer departs, the covenant is sealed — and to change
+            it mid-quest is to move the mark while the arrow is in flight. The arrow
+            misses. The adventurer fails through no fault of their own. An arrow finds
+            a still mark. An arrow loses a moving one.
           </>
         ),
       },
     ],
-    primaryAction: { label: 'Open the Crystal Ball', modal: 'oracle' },
+    primaryAction: { label: 'Consult the Crystal Ball', modal: 'oracle' },
   },
   'sage-mireldine': {
     name: 'Sage Mireldine',
     role: 'Librarian',
-    greeting: '"Welcome to the stacks. The Library is where your adventurer learns the local rules — and remembers every monster they\'ve faced."',
+    greeting: '*peers over half-moon spectacles.* "Welcome to my stacks. Mind the dust. You\'ve come about context — or perhaps you\'ve heard the Bestiary muttering in your sleep. Either way. Pull up a chair. I have time."',
     sections: [
       {
-        title: 'What is context?',
+        title: 'What context is',
         body: (
           <>
-            Context is the <strong>lore</strong> of your codebase: which files to read first,
-            naming conventions, deprecated APIs, the &ldquo;we don&apos;t do that here&rdquo; rules.
-            Without it, an adventurer reinvents the wheel.
+            Context is the lore your codebase keeps but never writes down.
+            &ldquo;Imports are absolute, never relative past two levels.&rdquo;
+            &ldquo;The legacy module is haunted — don&apos;t touch it.&rdquo;
+            &ldquo;All errors flow through this handler.&rdquo; These are the rules the
+            village knows in its bones. Without them, your adventurer reinvents the
+            village every time they ride out. Costly. Slow. And they trample the herb
+            garden.
           </>
         ),
       },
       {
-        title: 'What goes in context?',
+        title: 'What goes in the satchel',
         body: (
-          <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>
-            <li>Paths to the relevant files (so the adventurer doesn&apos;t have to grep)</li>
-            <li>Pointers to design docs or ADRs</li>
-            <li>Conventions: &ldquo;all imports use absolute paths&rdquo;</li>
-            <li>What NOT to touch: shared infra, generated code</li>
-          </ul>
+          <>
+            Pointers to the right tomes — file paths the adventurer should read first.
+            Design documents. Conventions phrased plainly. And — this matters — what to
+            leave alone. The generated code. The shared infrastructure. The places
+            where dragons sleep. An adventurer who doesn&apos;t know what NOT to touch
+            will touch everything.
+          </>
         ),
       },
       {
         title: 'The Bestiary',
         body: (
           <>
-            Every monster (failure type) your adventurers have faced is logged here:
-            lint goblins, typecheck imps, flaky-test wraiths. Each entry shows how it
-            was defeated. Future quests get easier as the bestiary grows — the more
-            you&apos;ve fought, the less the new monsters surprise you.
+            Every monster your adventurers have faced is recorded in these volumes.
+            Lint goblins. Typecheck imps. Flaky-test wraiths. Each entry has its
+            weakness logged — what tool struck the killing blow, what skill held it at
+            bay. When new adventurers ride out, they read first what their forebears
+            wrote. The realm grows wiser, monster by monster.
           </>
         ),
       },
     ],
-    primaryAction: { label: 'Open the Ancient Tome', modal: 'library' },
+    primaryAction: { label: 'Consult the Ancient Tome', modal: 'library' },
   },
   'innkeep-rorek': {
     name: 'Innkeep Rorek',
     role: 'Tavernkeeper',
-    greeting: '"Every adventurer who comes through here has a story about a quest gone sideways. Edge cases. Let me tell you what they are."',
+    greeting: '*wipes a mug with a rag.* "Pull up a stool, friend. Every adventurer who\'s come through that door has a tale, and most of \'em start with \'I didn\'t expect that.\' Edge cases, that\'s what we call \'em. Let me pour you a story."',
     sections: [
       {
-        title: 'What are edge cases?',
+        title: 'What an edge case is',
         body: (
           <>
-            Edge cases are the <strong>weird paths</strong> your adventurer might walk.
-            They&apos;re what the happy-path spec doesn&apos;t cover but the real world hits
-            constantly: stale tokens, empty arrays, network timeouts, race conditions.
+            It&apos;s the weird turn in the road. The path that&apos;s not on any map.
+            Empty arrays where a list was promised. A user with no email — and trust me,
+            there&apos;s always a user with no email. A token that&apos;s expired but
+            says it isn&apos;t. The happy path&apos;s what&apos;s in your spec; the
+            edge case is what&apos;s in the field. Both are real. Only one&apos;s in the
+            brief.
           </>
         ),
       },
       {
-        title: 'Why pre-warn the adventurer?',
+        title: 'Why give them a heads-up',
         body: (
           <>
-            Without warning, the adventurer assumes the happy path and ships brittle
-            code. With warning, they handle it deliberately. Cost: a sentence. Payoff:
-            no 2am hot-fix.
+            Without one, the adventurer takes the easy road. Ships the brittle fix.
+            Sleeps eight hours. Wakes at 2am because the migration ran twice.{' '}
+            <em>*chuckles*</em> — I&apos;ve heard that one more times than I can count.
+            Costs you a sentence to pre-warn. Saves you the hot fix. Saves them their
+            honor.
           </>
         ),
       },
       {
-        title: 'Examples worth pre-warning',
+        title: 'Tales worth telling',
         body: (
-          <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>
-            <li>&ldquo;This migration breaks if you run it twice — make it idempotent.&rdquo;</li>
-            <li>&ldquo;The legacy API returns 200 with an error body — check {C('body.success')}.&rdquo;</li>
-            <li>&ldquo;Users without an email exist — handle null gracefully.&rdquo;</li>
-            <li>&ldquo;On Safari, the date input only accepts {C('YYYY-MM-DD')}.&rdquo;</li>
-          </ul>
+          <>
+            &ldquo;The migration breaks if you run it twice — make it idempotent,
+            lad.&rdquo; &ldquo;The legacy API returns 200 with errors in the body —
+            check the body, not the status.&rdquo; &ldquo;Users without an email
+            exist — handle the null kindly.&rdquo; Tales like these. Pour them
+            generously.
+          </>
         ),
       },
     ],
-    primaryAction: { label: 'Open the Ale Barrel', modal: 'tavern' },
+    primaryAction: { label: 'Tap the Ale Barrel', modal: 'tavern' },
   },
   'smith-bran': {
     name: 'Smith Bran',
     role: 'Blacksmith',
-    greeting: '"Every adventurer needs the right tools for the job. Let me show you what equipment is and how to pick well."',
+    greeting: '*hammer ringing.* "Hold a moment." *sets it down.* "Right, you\'re new. Equipment — what to give your adventurer before they march. Smart of you to ask. I\'ve buried too many for skipping this conversation."',
     sections: [
       {
-        title: 'What is equipment?',
+        title: 'What I forge here',
         body: (
           <>
-            Equipment is the <strong>capability bundle</strong> your adventurer carries:
+            <p style={{ marginTop: 0 }}>
+              Three kinds of gear. <strong>Skills</strong> — what they know how to do.
+              Linting. Migrations. Performance work. Skills get forged here from
+              monsters defeated three times the same way. Hard-won, slow to make, worth
+              their weight in silver.
+            </p>
+            <p>
+              <strong>Tools</strong> — what they wield. Code editor. Test runner. Build
+              system. Deploy scripts. Without tools they&apos;re swinging fists at
+              typecheck imps. They lose every time.
+            </p>
+            <p>
+              And <strong>MCP servers</strong> — what they can summon. Knowledge bases.
+              Cloud consoles. Remote APIs. Powers they call on from afar. Each one a
+              relationship with another realm.
+            </p>
           </>
         ),
       },
       {
-        title: 'Three slots',
-        body: (
-          <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>
-            <li>
-              <strong>Skills</strong> — what they know how to do. Linting. Migration writing.
-              Performance profiling. Skills are forged at the Library when monsters are
-              repeatedly defeated the same way.
-            </li>
-            <li>
-              <strong>Tools</strong> — what they can wield. Code editor, test runner, build
-              system, deploy scripts.
-            </li>
-            <li>
-              <strong>MCP servers</strong> — what they can summon. Knowledge bases, APIs,
-              cloud consoles. Each MCP server is a power they can call on remotely.
-            </li>
-          </ul>
-        ),
-      },
-      {
-        title: 'Why does it matter?',
+        title: 'Match the loadout to the work',
         body: (
           <>
-            A typescript-error quest with no typecheck tool is doomed. A migration quest
-            with no migration tool is doomed. Quests <strong>cannot</strong> succeed without
-            the equipment to do the work. Load up before dispatch — not mid-fight.
+            A typescript-bug quest with no typecheck tool? You&apos;re sending them into
+            the dragon&apos;s den unarmed. A migration quest with no migration tool?
+            Burying them yourself. Pick the gear for the road they&apos;re walking.{' '}
+            <em>*picks the hammer back up*</em> Now go choose.
           </>
         ),
       },
     ],
-    primaryAction: { label: 'Open the Loadout Workbench', modal: 'armory-loadout' },
+    primaryAction: { label: 'Stand at the Loadout Workbench', modal: 'armory-loadout' },
   },
   'master-eldra': {
     name: 'Master Eldra',
     role: 'Guild Master',
-    greeting: '"Each adventurer in your roster is a Claude Code agent — but each one carries different scars, different victories, different specialties."',
+    greeting: '"Come in. Close the door." *gestures to a chair.* "You want to understand the guild. Many treat their roster like a tool drawer — pick one, swap one out. They learn the hard way that&apos;s wrong. Sit. Let me tell you what an adventurer truly is."',
     sections: [
       {
-        title: 'What is an adventurer?',
+        title: 'What they are',
         body: (
           <>
-            An adventurer is a <strong>persistent agent identity</strong> across quests.
-            They accumulate experience: skills they&apos;ve forged, monsters they&apos;ve
-            slain, scars from failed quests. The roster is yours forever — recruit
-            once, dispatch many times.
+            Each adventurer in your roster is a persistent soul. They carry every quest
+            they&apos;ve ever taken. The skills they&apos;ve forged. The monsters
+            they&apos;ve slain. The scars they earned the first time they failed. Two
+            adventurers I trained the same way will, after a year, be different people.
+            So choose them with the care you&apos;d choose a friend.
           </>
         ),
       },
       {
-        title: 'When to recruit a new one',
+        title: 'When to recruit anew',
         body: (
-          <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>
-            <li>Specialty doesn&apos;t exist yet (frontend vs. backend vs. infra)</li>
-            <li>Existing adventurer is mid-quest and you need a parallel run</li>
-            <li>An adventurer has too many scars from one type of monster — fresh eyes</li>
-          </ul>
+          <>
+            When you need a kind of work no one in the guild knows yet — that is
+            reason. When you must run two quests in the same hour, and have no one
+            free — that is reason. When an adventurer carries scars from one kind of
+            monster so deep they flinch at the sight of it — that is reason. Otherwise,
+            dispatch the ones you have. Familiarity is its own kind of equipment.
+          </>
         ),
       },
       {
-        title: 'Picking who to dispatch',
+        title: 'Reading the roster',
         body: (
           <>
-            Read their record. The roster shows quests-won, monsters-slain per type, and
-            recent failure patterns. Match adventurer to quest. A dragon-slayer for a
-            dragon quest. A goblin-puncher for a lint quest.
+            Each name in the book has a history. Quests won. Monsters slain. Failures,
+            and what was learned from them. Read before you dispatch. A dragon-slayer
+            for dragon work. A goblin-puncher for lint work. Match the soul to the
+            road.
           </>
         ),
       },
@@ -285,51 +299,45 @@ const NPC_CONTENT: Record<NpcKey, NpcContent> = {
   },
   'keeper-vorn': {
     name: 'Keeper Vorn',
-    role: 'Hall of Returns',
-    greeting: '"Every quest, win or lose, returns here. Read these scrolls and your next quest will be wiser."',
+    role: 'Hall of Returns Undertaker',
+    greeting: '*looks up slowly. Lowers his voice.* "Quietly, please. The scrolls rest here." *gestures to the shelves* "Every quest, ended in glory or in ruin, returns to me. I lay them in their place. You wish to read? Read."',
     sections: [
       {
-        title: 'Why review returned quests?',
+        title: 'Why the scrolls matter',
         body: (
           <>
-            Returned quests are the <strong>most valuable scrolls in the realm</strong>.
-            They tell you what worked, what didn&apos;t, and why. The same mistake made
-            three times is a process bug. The same victory three times is a skill
-            candidate waiting to be forged.
+            They are the only honest record of the realm. The brief was a hope. The
+            quest was the work. The scroll is what happened. Read the scrolls and the
+            next quest goes wiser. Ignore them, and you will commission the same brief
+            in three months, with the same wording — and the same scroll will land on
+            my counter.
           </>
         ),
       },
       {
         title: 'What to look for',
         body: (
-          <ul style={{ paddingLeft: 20, lineHeight: 1.7 }}>
-            <li>
-              <strong>Failure summaries</strong> — what monster killed the run? Could a
-              tool, skill, or pre-warned edge case have prevented it?
-            </li>
-            <li>
-              <strong>Repeated victories</strong> — the same defeat-style across multiple
-              quests? Forge a skill in the Library.
-            </li>
-            <li>
-              <strong>Scars</strong> — mark a returned quest with a scar to remember.
-              Adventurers carry their scars; future quests benefit.
-            </li>
-          </ul>
+          <>
+            The failure summaries first. What monster ended the quest? Could a tool, or
+            a forewarning, have spared the adventurer? Then the victories — the same
+            defeat three times is no longer luck. It is a skill, waiting to be forged
+            at Sage Mireldine&apos;s tables. And the scars. Mark a scroll with a scar,
+            so the adventurers who follow will remember.
+          </>
         ),
       },
       {
-        title: 'Closing the loop',
+        title: 'Closing the circle',
         body: (
           <>
-            Read a scroll → identify a pattern → either forge a skill, equip a tool, or
-            pre-warn an edge case → next quest goes better. This is how the realm
-            improves.
+            Read. Identify. Forge a skill. Equip a tool. Send a forewarning to Rorek.
+            The next quest is better. <em>*folds hands*</em> That is how this realm
+            grows wiser. Slowly. With humility. Scroll by scroll.
           </>
         ),
       },
     ],
-    primaryAction: { label: 'Open the Returned Scrolls', modal: 'hall-of-returns' },
+    primaryAction: { label: 'Walk among the Returned Scrolls', modal: 'hall-of-returns' },
   },
 };
 
