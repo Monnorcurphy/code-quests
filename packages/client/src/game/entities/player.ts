@@ -89,7 +89,15 @@ export class Player {
   }
 
   setX(x: number): void {
-    this._x = Math.max(this.bounds.min, Math.min(this.bounds.max, x));
+    // Wraparound: walking off either edge loops to the opposite side.
+    const range = this.bounds.max - this.bounds.min;
+    if (range > 0) {
+      let wrapped = x - this.bounds.min;
+      wrapped = ((wrapped % range) + range) % range;
+      this._x = wrapped + this.bounds.min;
+    } else {
+      this._x = x;
+    }
     this.sprite.x = this._x;
   }
 

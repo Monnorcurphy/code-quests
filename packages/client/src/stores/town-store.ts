@@ -27,7 +27,7 @@ interface TownState {
   currentScene: SceneKey;
   playerX: number;
   facing: 'left' | 'right';
-  activeModal: 'recruit' | 'draft' | 'quest-board' | 'guild-hall' | 'coming-soon' | 'armory-loadout' | 'oracle' | 'library' | 'tavern' | 'hall-of-returns' | null;
+  activeModal: 'recruit' | 'draft' | 'quest-board' | 'guild-hall' | 'coming-soon' | 'armory-loadout' | 'oracle' | 'library' | 'tavern' | 'hall-of-returns' | 'help' | null;
   selectedQuestId: string | null;
   hasOpenedLibrary: boolean;
   libraryInitialTab: 'bestiary' | 'skills';

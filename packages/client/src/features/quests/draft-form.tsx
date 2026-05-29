@@ -28,6 +28,10 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
   const [epicId, setEpicId] = useState<string>('');
   const [titleError, setTitleError] = useState<string | null>(null);
   const [acErrors, setAcErrors] = useState<(string | null)[]>([null]);
+  const [newEpicOpen, setNewEpicOpen] = useState(false);
+  const [newEpicTitle, setNewEpicTitle] = useState('');
+  const [newEpicGoal, setNewEpicGoal] = useState('');
+  const [newEpicError, setNewEpicError] = useState<string | null>(null);
 
   const onSuccessRef = useRef(onSuccess);
   useEffect(() => {
@@ -46,6 +50,23 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
     mutationFn: api.quests.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quests'] });
+    },
+  });
+
+  const epicMutation = useMutation({
+    mutationFn: api.epics.create,
+    onSuccess: (epic) => {
+      queryClient.invalidateQueries({ queryKey: ['epics'] });
+      setEpicId(epic.id);
+      setNewEpicOpen(false);
+      setNewEpicTitle('');
+      setNewEpicGoal('');
+      setNewEpicError(null);
+    },
+    onError: (err) => {
+      setNewEpicError(
+        err instanceof Error ? err.message : 'Failed to create epic',
+      );
     },
   });
 
@@ -225,14 +246,15 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
           </button>
         </fieldset>
 
-        {epics.length > 0 && (
-          <div className="form-field">
-            <label htmlFor="quest-epic">Epic (optional)</label>
+        <div className="form-field">
+          <label htmlFor="quest-epic">Epic (optional)</label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <select
               id="quest-epic"
               value={epicId}
               onChange={(e) => setEpicId(e.target.value)}
               disabled={disabled}
+              style={{ flex: 1 }}
             >
               <option value="">— None —</option>
               {epics.map((epic) => (
@@ -241,8 +263,74 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setNewEpicOpen((v) => !v)}
+              disabled={disabled}
+              aria-expanded={newEpicOpen}
+              aria-controls="new-epic-form"
+            >
+              {newEpicOpen ? 'Cancel new epic' : '+ New Epic'}
+            </button>
           </div>
-        )}
+          {newEpicOpen && (
+            <div
+              id="new-epic-form"
+              style={{
+                marginTop: 8,
+                padding: 12,
+                border: '1px solid #b5a07a',
+                borderRadius: 4,
+                background: '#f5ecd6',
+              }}
+            >
+              <div className="form-field">
+                <label htmlFor="new-epic-title">Epic title</label>
+                <input
+                  id="new-epic-title"
+                  type="text"
+                  value={newEpicTitle}
+                  onChange={(e) => setNewEpicTitle(e.target.value)}
+                  disabled={epicMutation.isPending}
+                  maxLength={200}
+                  placeholder="e.g. Auth Migration"
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="new-epic-goal">Goal</label>
+                <textarea
+                  id="new-epic-goal"
+                  value={newEpicGoal}
+                  onChange={(e) => setNewEpicGoal(e.target.value)}
+                  disabled={epicMutation.isPending}
+                  rows={2}
+                  placeholder="What this epic accomplishes"
+                />
+              </div>
+              {newEpicError && (
+                <p role="alert" style={{ color: '#a00', fontSize: '0.85rem', margin: '4px 0' }}>
+                  {newEpicError}
+                </p>
+              )}
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  setNewEpicError(null);
+                  const t = newEpicTitle.trim();
+                  const g = newEpicGoal.trim();
+                  if (!t) return setNewEpicError('Epic title is required');
+                  if (!g) return setNewEpicError('Goal is required');
+                  epicMutation.mutate({ title: t, goal: g });
+                }}
+                disabled={epicMutation.isPending}
+              >
+                {epicMutation.isPending ? 'Creating…' : 'Create Epic'}
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="form-actions">
           <button

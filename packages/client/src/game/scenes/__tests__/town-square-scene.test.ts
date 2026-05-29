@@ -56,7 +56,16 @@ function makeRect() {
 }
 
 function makeSprite() {
-  return { setFlipX: vi.fn(), play: vi.fn(), x: 0 };
+  const m: Record<string, unknown> = {
+    setFlipX: vi.fn(),
+    play: vi.fn(),
+    x: 0,
+    setDepth: vi.fn(() => m),
+    setInteractive: vi.fn(() => m),
+    on: vi.fn(() => m),
+    setOrigin: vi.fn(() => m),
+  };
+  return m;
 }
 
 function buildMockStore(extra: Partial<Record<string, unknown>> = {}) {
@@ -90,8 +99,10 @@ function attachMockContext(scene: object) {
       text: vi.fn(() => makeText()),
       ellipse: vi.fn(() => makeRect()),
       image: vi.fn(() => makeRect()),
+      triangle: vi.fn(() => makeRect()),
     },
     textures: { exists: vi.fn(() => false) },
+    tweens: { add: vi.fn() },
     anims: {
       exists: vi.fn(() => false),
       create: vi.fn(),

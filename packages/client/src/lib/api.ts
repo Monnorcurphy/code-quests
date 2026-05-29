@@ -361,6 +361,8 @@ export const api = {
   },
   epics: {
     list: () => fetchJson(z.array(EpicSchema), '/epics'),
+    create: (body: { title: string; goal: string }) =>
+      postJson(EpicSchema, '/epics', body),
   },
   skills: {
     list: (opts?: { status?: 'active' | 'candidate' | 'retired' }) => {

@@ -1,6 +1,7 @@
 import { BaseTownScene } from './base-town-scene';
 import { QuestBoardInteractive } from '../interactives/quest-board';
 import { RecruitBannerInteractive } from '../interactives/recruit-banner';
+import { GuideNpc } from '../entities/guide-npc';
 import { registerScene } from '../scene-registry';
 import { sceneRouter } from '../scene-router';
 import { useTownStore } from '../../stores/town-store';
@@ -28,7 +29,14 @@ const DOOR_CONFIGS: DoorConfig[] = [
   { x: 2650, targetScene: 'hall-of-returns', targetSpawnX: 200, label: 'Door: Hall of Returns' },
 ];
 
-const SIGN_STYLE = { fontSize: '11px', color: '#2c1810', align: 'center' as const };
+const SIGN_STYLE = {
+  fontSize: '12px',
+  color: '#fef9e7',
+  align: 'center' as const,
+  fontStyle: 'bold',
+  backgroundColor: '#1a0e08',
+  padding: { x: 6, y: 2 },
+};
 
 export class TownSquareScene extends BaseTownScene {
   private questBoard!: QuestBoardInteractive;
@@ -62,6 +70,14 @@ export class TownSquareScene extends BaseTownScene {
 
     this.recruitBanner = new RecruitBannerInteractive(this, RECRUIT_BANNER_X, DOOR_Y);
     this.recruitBanner.registerWithPlayer(this.player);
+
+    // Elder Hawthorne — friendly guide NPC near the spawn point
+    new GuideNpc(this, {
+      x: 1620,
+      y: DOOR_Y + 4,
+      textureKey: 'character/npc-villager',
+      onActivate: () => useTownStore.getState().setActiveModal('help'),
+    });
 
     for (const cfg of DOOR_CONFIGS) {
       const shortName = cfg.label.replace('Door: ', '');

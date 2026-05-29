@@ -54,28 +54,30 @@ describe('Player', () => {
     expect(player.getX()).toBe(300);
   });
 
-  it('movement is clamped to min bound', () => {
+  it('walking past min wraps around to the right edge', () => {
+    // BOUNDS={min:0,max:2400}: moving left by 400 from x=50 yields -350 → 2050
     const player = new Player(scene, 50, 500, BOUNDS, { speed: 200, reducedMotion: false });
     player.moveLeft(2000);
-    expect(player.getX()).toBe(0);
+    expect(player.getX()).toBe(2050);
   });
 
-  it('movement is clamped to max bound', () => {
+  it('walking past max wraps around to the left edge', () => {
+    // moving right by 400 from x=2350 yields 2750 → 350
     const player = new Player(scene, 2350, 500, BOUNDS, { speed: 200, reducedMotion: false });
     player.moveRight(2000);
-    expect(player.getX()).toBe(2400);
+    expect(player.getX()).toBe(350);
   });
 
-  it('setX() clamps below min to min', () => {
+  it('setX() below min wraps to the right edge', () => {
     const player = new Player(scene, 100, 500, BOUNDS, { reducedMotion: false });
     player.setX(-100);
-    expect(player.getX()).toBe(0);
+    expect(player.getX()).toBe(2300);
   });
 
-  it('setX() clamps above max to max', () => {
+  it('setX() above max wraps to the left edge', () => {
     const player = new Player(scene, 100, 500, BOUNDS, { reducedMotion: false });
     player.setX(9999);
-    expect(player.getX()).toBe(2400);
+    expect(player.getX()).toBe(9999 % 2400);
   });
 
   it('moveRight sets facing to right', () => {

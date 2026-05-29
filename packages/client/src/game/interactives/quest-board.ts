@@ -44,12 +44,15 @@ export class QuestBoardInteractive {
 
     scene.add
       .text(x, y + TEXT_Y_OFFSET, 'Quest\nBoard', {
-        fontSize: '11px',
-        color: '#f0e6d2',
+        fontSize: '12px',
+        color: '#fef9e7',
         align: 'center',
+        fontStyle: 'bold',
+        backgroundColor: '#1a0e08',
+        padding: { x: 6, y: 2 },
       })
       .setOrigin(0.5)
-      .setDepth(2);
+      .setDepth(3);
   }
 
   registerWithPlayer(player: Player): void {
