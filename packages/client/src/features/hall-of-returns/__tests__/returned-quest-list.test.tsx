@@ -68,7 +68,7 @@ function makeItem(overrides: Partial<HallOfReturnsList['items'][number]> = {}): 
 }
 
 function makePage(items: HallOfReturnsList['items']): HallOfReturnsList {
-  return { items, nextCursor: null };
+  return { items, nextCursor: null, total: items.length };
 }
 
 function renderList(status: 'returned_to_town' | 'complete' = 'returned_to_town') {

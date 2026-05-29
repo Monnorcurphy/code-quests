@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import type { FailureSummaryRecommendation } from '@code-quests/shared';
 import type { HallOfReturnsQuest, RepostResult, SplitResult } from '../../../lib/api';
 import { useTownStore } from '../../../stores/town-store';
@@ -29,6 +30,7 @@ export default function ActionBar({ questId, quest, recommendation }: ActionBarP
   const [splitResult, setSplitResult] = useState<SplitResult | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const setSelectedQuestId = useTownStore((s) => s.setSelectedQuestId);
+  const queryClient = useQueryClient();
 
   const repostBtnRef = useRef<HTMLButtonElement>(null);
   const retireBtnRef = useRef<HTMLButtonElement>(null);
@@ -56,17 +58,20 @@ export default function ActionBar({ questId, quest, recommendation }: ActionBarP
 
   function handleRepostSuccess(result: RepostResult) {
     setRepostResult(result);
+    void queryClient.invalidateQueries({ queryKey: ['hall-of-returns'] });
     showToast(`New quest posted: ${result.newTitle}`);
     setOpenDialog(null);
   }
 
   function handleRetireSuccess() {
+    void queryClient.invalidateQueries({ queryKey: ['hall-of-returns'] });
     showToast('Quest retired');
     setOpenDialog(null);
   }
 
   function handleSplitSuccess(result: SplitResult) {
     setSplitResult(result);
+    void queryClient.invalidateQueries({ queryKey: ['hall-of-returns'] });
     showToast(`Split into ${result.questIds.length} quests`);
     setOpenDialog(null);
   }

@@ -1,16 +1,25 @@
 # Progress — Phase 9
 
-Previous task progress archived to metrics/progress-before-elder.md
+Previous task progress archived to metrics/progress-before-ginkgo.md
 
-## elder — Quest remedy actions (complete)
+## ginkgo — Hall of Returns capstone (Phase 9 capstone)
 
-**Delivered:**
-- `packages/client/src/features/hall-of-returns/actions/action-bar.tsx` — three action buttons (Re-post, Retire, Break into Smaller Quests); recommended action gets badge + `aria-current="true"`; toast region with 4s auto-dismiss; linkage display after successful re-post or split
-- `packages/client/src/features/hall-of-returns/actions/repost-dialog.tsx` — modal pre-filling quest ACs and edge cases; submit disabled when all ACs cleared; loading/error states; focus trap + Escape to close; focus returns to trigger button
-- `packages/client/src/features/hall-of-returns/actions/retire-dialog.tsx` — confirmation modal with permanent-action warning; Cancel button focused on mount (safest action); focus trap + Escape; loading/error states
-- `packages/client/src/features/hall-of-returns/actions/split-dialog.tsx` — dynamic child quest stubs (min 2); Submit disabled until ≥2 valid children; add/remove child quests and ACs; loading/error states; focus trap
-- `packages/client/src/features/hall-of-returns/actions/__tests__/*.test.tsx` — 58 tests covering all dialogs: open/close, validation, happy path, server error, focus management
-- `packages/client/src/lib/api.ts` — added `quests.repost`, `quests.retire`, `quests.split` with Zod-validated response types
-- `packages/client/src/features/hall-of-returns/post-mortem.tsx` — renders ActionBar below FailureSummaryCard
+**Status:** Done
 
-**Verify:** 910 tests pass, typecheck clean, lint clean
+**What was built:**
+- `packages/server/src/lib/quest-failure-detector.ts` — `detectAndHandleFailure()` helper: when a quest is in `failed` status, automatically calls `returnQuestToTown()` to transition to `returned_to_town`
+- `packages/server/src/lib/__tests__/quest-failure-detector.test.ts` — 5 unit/integration tests including the "non-zero exit" simulation the spec requires
+- `packages/server/src/services/quest-runner.ts` — hooked `detectAndHandleFailure` into both the `failed` event path and the catch-block error recovery path
+- `packages/server/src/scripts/seed-dev-phase9.ts` — dev-only seed creating one returned quest (Hydra × 2, `repost_with_clarification`) and one scarred adventurer ("Vance the Scarred")
+- `packages/server/package.json` — added `seed:phase9` script
+- `packages/client/src/features/guild/scar-list.tsx` — new component: "Scars (N)" badge that expands to show `ScarRecord` entries; each entry deep-links to the originating post-mortem via `navigate()`
+- `packages/client/src/features/guild/roster.tsx` — added `<ScarList>` per roster row
+- `packages/client/src/features/town-square.tsx` — updated `ReturnedQuestsBadge` to query `api.hallOfReturns.listQuests({ status: 'returned_to_town' })` (correct endpoint) and subscribe to active quests' WebSocket channels for `quest_returned` events to invalidate in real time
+- `packages/client/tests/e2e/phase-9-capstone.spec.ts` — Playwright E2E test covering: list view a11y, post-mortem rendering, feedback form, re-post/retire/split dialogs, Guild Hall scar badge
+- `assets/CREDITS.md` — Phase 9 note (no new third-party assets)
+- `README.md` — Phase 9 walkthrough section + updated phase roadmap table
+
+**Fixes:**
+- `packages/server/src/__tests__/quest-runner.test.ts` — updated test assertion for error recovery path: Phase 9 failure detector means quests now end in `returned_to_town` rather than `failed` after an unhandled error
+
+**Tests:** 476 server + 918 client + 83 shared = 1477 total, all green. Lint clean, typecheck clean.

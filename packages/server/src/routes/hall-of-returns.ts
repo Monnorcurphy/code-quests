@@ -143,7 +143,8 @@ export function createHallOfReturnsRouter(db: Database.Database): Router {
     }));
 
     const nextCursor = hasNextPage ? items[items.length - 1].updated_at : null;
-    res.json({ items: result, nextCursor });
+    const totalRow = db.prepare(`SELECT COUNT(*) AS cnt FROM quests WHERE status = ?`).get(status) as { cnt: number };
+    res.json({ items: result, nextCursor, total: totalRow.cnt });
   });
 
   router.get('/quests/:questId/post-mortem', (req, res) => {
