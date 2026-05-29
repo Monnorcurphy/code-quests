@@ -8,7 +8,7 @@ import Tavern from '../features/tavern';
 import Library from '../features/library';
 import GuildHall from '../features/guild/guild-hall';
 import LoadoutPanel from '../features/armory/loadout-panel';
-import HallOfReturns from '../features/hall-of-returns';
+import HallOfReturns from '../features/hall-of-returns/hall-of-returns';
 import ComingSoonPanel from './coming-soon-panel';
 import { sceneRouter } from '../game/scene-router';
 import { isTownSceneKey } from '../game/scene-registry';

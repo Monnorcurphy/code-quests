@@ -5,10 +5,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import HallOfReturns from '../features/hall-of-returns';
 import { useTownStore } from '../stores/town-store';
-import type { ReturnedQuest, ReturnedQuestsPage } from '../lib/api';
+import type { HallOfReturnsList } from '../lib/api';
 
-const { mockReturnedQuests } = vi.hoisted(() => ({
-  mockReturnedQuests: vi.fn(),
+const navigateMock = vi.fn();
+
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return { ...actual, useNavigate: () => navigateMock };
+});
+
+const { mockListQuests, mockSubscribe } = vi.hoisted(() => ({
+  mockListQuests: vi.fn(),
+  mockSubscribe: vi.fn(() => vi.fn()),
 }));
 
 vi.mock('../lib/api', async (importOriginal) => {
@@ -17,86 +25,59 @@ vi.mock('../lib/api', async (importOriginal) => {
     ...actual,
     api: {
       ...actual.api,
-      quests: {
-        ...actual.api.quests,
-        returned: mockReturnedQuests,
+      hallOfReturns: {
+        ...actual.api.hallOfReturns,
+        listQuests: mockListQuests,
       },
     },
   };
 });
 
-function makeCompleteQuest(overrides: Partial<ReturnedQuest> = {}): ReturnedQuest {
+vi.mock('../lib/quest-socket', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/quest-socket')>();
+  return { ...actual, subscribe: mockSubscribe };
+});
+
+function makeItem(overrides: Partial<HallOfReturnsList['items'][number]> = {}): HallOfReturnsList['items'][number] {
   return {
-    id: 'q-complete',
+    id: 'quest-1',
     epicId: null,
     title: 'Slay the Dragon',
     description: '',
     acceptanceCriteria: [],
     edgeCases: [],
     context: '',
-    status: 'complete',
+    status: 'returned_to_town',
     adventurerId: 'adv-1',
-    agentId: 'ag-1',
-    failureSummary: null,
-    createdAt: '2024-01-01T10:00:00.000Z',
-    updatedAt: '2024-01-01T11:00:00.000Z',
-    adventurer: { id: 'adv-1', name: 'Aldric', class: 'champion' },
-    agent: {
-      id: 'ag-1',
-      startedAt: '2024-01-01T10:00:00.000Z',
-      endedAt: '2024-01-01T10:30:00.000Z',
-      events: [
-        { type: 'progress', timestamp: '2024-01-01T10:01:00.000Z', message: 'Entered the cave' },
-        { type: 'combat', timestamp: '2024-01-01T10:10:00.000Z', message: 'Battle joined' },
-        { type: 'completed', timestamp: '2024-01-01T10:30:00.000Z' },
-      ],
-    },
-    ...overrides,
-  };
-}
-
-function makeFailedQuest(overrides: Partial<ReturnedQuest> = {}): ReturnedQuest {
-  return {
-    id: 'q-failed',
-    epicId: null,
-    title: 'Retrieve the Artifact',
-    description: '',
-    acceptanceCriteria: [],
-    edgeCases: [],
-    context: '',
-    status: 'failed',
-    adventurerId: 'adv-2',
-    agentId: 'ag-2',
+    agentId: null,
     failureSummary: {
-      reason: 'The artifact was trapped',
       recommendation: 'repost_with_clarification',
+      reason: 'AC was unclear',
+      notes: 'Ambiguous objectives.',
     },
-    createdAt: '2024-01-02T10:00:00.000Z',
-    updatedAt: '2024-01-02T10:45:00.000Z',
-    adventurer: { id: 'adv-2', name: 'Mira', class: 'rogue' },
-    agent: {
-      id: 'ag-2',
-      startedAt: '2024-01-02T10:00:00.000Z',
-      endedAt: '2024-01-02T10:45:00.000Z',
-      events: [
-        { type: 'progress', timestamp: '2024-01-02T10:05:00.000Z', message: 'Found the vault' },
-        { type: 'failed', timestamp: '2024-01-02T10:45:00.000Z', reason: 'Trapped' },
-      ],
+    createdAt: '2024-01-01T10:00:00.000Z',
+    updatedAt: '2024-01-01T10:30:00.000Z',
+    adventurer: { id: 'adv-1', name: 'Aldric', class: 'champion' },
+    fatalMonster: {
+      monsterId: 'monster-1',
+      monsterName: 'Shadow Drake',
+      spritePath: '/sprites/drake.png',
+      difficulty: 3,
     },
     ...overrides,
   };
 }
 
-function makePage(items: ReturnedQuest[]): ReturnedQuestsPage {
-  return { items, total: items.length, limit: 20, offset: 0 };
+function makePage(items: HallOfReturnsList['items']): HallOfReturnsList {
+  return { items, nextCursor: null };
 }
 
-function renderPanel() {
+function renderPanel(initialPath = '/town/hall-of-returns') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
-    <MemoryRouter initialEntries={['/town/hall-of-returns']}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <Routes>
         <Route
           path="/town/:sceneKey"
@@ -114,7 +95,8 @@ function renderPanel() {
 describe('HallOfReturns', () => {
   beforeEach(() => {
     useTownStore.setState({ activeModal: 'hall-of-returns' });
-    mockReturnedQuests.mockResolvedValue(makePage([]));
+    navigateMock.mockReset();
+    mockListQuests.mockResolvedValue(makePage([]));
   });
 
   afterEach(() => {
@@ -129,160 +111,68 @@ describe('HallOfReturns', () => {
     expect(screen.getByText('Hall of Returns')).toBeDefined();
   });
 
-  it('shows loading state while fetching', () => {
-    mockReturnedQuests.mockImplementation(() => new Promise(() => {}));
+  it('renders tablist with Returned and Completed tabs', async () => {
     renderPanel();
-    expect(screen.getByText(/loading returned quests/i)).toBeDefined();
+    await screen.findByRole('dialog');
+    expect(screen.getByRole('tab', { name: /returned/i })).toBeDefined();
+    expect(screen.getByRole('tab', { name: /completed/i })).toBeDefined();
+  });
+
+  it('Returned tab is selected by default', async () => {
+    renderPanel();
+    await screen.findByRole('dialog');
+    const returnedTab = screen.getByRole('tab', { name: /returned/i });
+    expect(returnedTab.getAttribute('aria-selected')).toBe('true');
+    const completedTab = screen.getByRole('tab', { name: /completed/i });
+    expect(completedTab.getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('shows loading state while fetching', () => {
+    mockListQuests.mockImplementation(() => new Promise(() => {}));
+    renderPanel();
+    const list = document.querySelector('[aria-busy="true"]');
+    expect(list).not.toBeNull();
   });
 
   it('shows error state when fetch fails', async () => {
-    mockReturnedQuests.mockRejectedValue(new Error('network error'));
+    mockListQuests.mockRejectedValue(new Error('network error'));
     renderPanel();
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toMatch(/could not load/i);
+    expect(screen.getByRole('button', { name: /retry/i })).toBeDefined();
   });
 
   it('shows empty state when no quests have returned', async () => {
     renderPanel();
-    await screen.findByText(/no quests have returned yet/i);
+    await screen.findByText(/no returned quests yet — the guild has been victorious/i);
   });
 
-  it('shows both columns when quests exist', async () => {
-    mockReturnedQuests.mockResolvedValue(
-      makePage([makeCompleteQuest(), makeFailedQuest()]),
-    );
-    renderPanel();
-    await screen.findByText('Victorious');
-    expect(screen.getByText('Returned in Defeat')).toBeDefined();
-  });
-
-  it('renders complete quest card with adventurer name and class', async () => {
-    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
+  it('renders quest rows when data exists', async () => {
+    mockListQuests.mockResolvedValue(makePage([makeItem()]));
     renderPanel();
     await screen.findByText('Slay the Dragon');
     expect(screen.getByText('Aldric')).toBeDefined();
     expect(screen.getByText('champion')).toBeDefined();
   });
 
-  it('renders failed quest card with failure recommendation', async () => {
-    mockReturnedQuests.mockResolvedValue(makePage([makeFailedQuest()]));
-    renderPanel();
-    await screen.findByText('Retrieve the Artifact');
-    expect(screen.getByText('Mira')).toBeDefined();
-    expect(screen.getByText(/repost with clarification/i)).toBeDefined();
-  });
-
-  it('renders last log lines in the card', async () => {
-    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
-    renderPanel();
-    await screen.findByText('Entered the cave');
-    expect(screen.getByText(/battle joined/i)).toBeDefined();
-  });
-
-  it('clicking a card opens the detail view', async () => {
+  it('clicking a row navigates to /hall-of-returns/:questId', async () => {
     const user = userEvent.setup();
-    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
+    mockListQuests.mockResolvedValue(makePage([makeItem()]));
     renderPanel();
-    const btn = await screen.findByRole('button', { name: /view details for slay the dragon/i });
-    await user.click(btn);
-    expect(screen.getByRole('list', { name: /quest event log/i })).toBeDefined();
-    expect(screen.getByRole('button', { name: /back to hall of returns/i })).toBeDefined();
+    const row = await screen.findByRole('button', { name: /slay the dragon — view post-mortem/i });
+    await user.click(row);
+    expect(navigateMock).toHaveBeenCalledWith('/hall-of-returns/quest-1');
   });
 
-  it('clicking a card moves focus to the Back button', async () => {
+  it('clicking the Completed tab switches aria-selected', async () => {
     const user = userEvent.setup();
-    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
     renderPanel();
-    const card = await screen.findByRole('button', { name: /view details for slay the dragon/i });
-    await user.click(card);
-    const backBtn = screen.getByRole('button', { name: /back to hall of returns/i });
-    expect(document.activeElement).toBe(backBtn);
-  });
-
-  it('back button in detail view returns to list', async () => {
-    const user = userEvent.setup();
-    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
-    renderPanel();
-    const card = await screen.findByRole('button', { name: /view details for slay the dragon/i });
-    await user.click(card);
-    const backBtn = screen.getByRole('button', { name: /back to hall of returns/i });
-    await user.click(backBtn);
-    await screen.findByText('Victorious');
-  });
-
-  it('back button returns focus to the originating card', async () => {
-    const user = userEvent.setup();
-    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
-    renderPanel();
-    const card = await screen.findByRole('button', { name: /view details for slay the dragon/i });
-    await user.click(card);
-    const backBtn = screen.getByRole('button', { name: /back to hall of returns/i });
-    await user.click(backBtn);
-    const cardAgain = await screen.findByRole('button', { name: /view details for slay the dragon/i });
-    expect(document.activeElement).toBe(cardAgain);
-  });
-
-  it('detail view shows failure summary for failed quests', async () => {
-    const user = userEvent.setup();
-    mockReturnedQuests.mockResolvedValue(makePage([makeFailedQuest()]));
-    renderPanel();
-    const card = await screen.findByRole('button', { name: /view details for retrieve the artifact/i });
-    await user.click(card);
-    expect(screen.getByText(/the artifact was trapped/i)).toBeDefined();
-    expect(screen.getByText(/repost with clarification/i)).toBeDefined();
-  });
-
-  it('detail view shows Phase 9 coming-soon note — no Re-post or Retire buttons', async () => {
-    const user = userEvent.setup();
-    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
-    renderPanel();
-    const card = await screen.findByRole('button', { name: /view details for slay the dragon/i });
-    await user.click(card);
-    expect(screen.getByText(/coming in phase 9/i)).toBeDefined();
-    const buttons = screen.getAllByRole('button');
-    const hasNoOpButton = buttons.some((b) => /re-post|retire/i.test(b.textContent ?? ''));
-    expect(hasNoOpButton).toBe(false);
-  });
-
-  it('detail view shows full combat log in a list', async () => {
-    const user = userEvent.setup();
-    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
-    renderPanel();
-    const card = await screen.findByRole('button', { name: /view details for slay the dragon/i });
-    await user.click(card);
-    const logList = screen.getByRole('list', { name: /quest event log/i });
-    expect(logList.querySelectorAll('li').length).toBe(3);
-  });
-
-  it('detail view shows empty log message when quest has no events', async () => {
-    const user = userEvent.setup();
-    mockReturnedQuests.mockResolvedValue(
-      makePage([
-        makeCompleteQuest({
-          agent: {
-            id: 'ag-1',
-            startedAt: '2024-01-01T10:00:00.000Z',
-            endedAt: '2024-01-01T11:00:00.000Z',
-            events: [],
-          },
-        }),
-      ]),
-    );
-    renderPanel();
-    const card = await screen.findByRole('button', { name: /view details for slay the dragon/i });
-    await user.click(card);
-    expect(screen.getByText(/no events recorded/i)).toBeDefined();
-  });
-
-  it('handles quest with no agent gracefully', async () => {
-    const user = userEvent.setup();
-    mockReturnedQuests.mockResolvedValue(
-      makePage([makeCompleteQuest({ agent: null, adventurer: null })]),
-    );
-    renderPanel();
-    const card = await screen.findByRole('button', { name: /view details for slay the dragon/i });
-    await user.click(card);
-    expect(screen.getByText(/no events recorded/i)).toBeDefined();
+    await screen.findByRole('dialog');
+    const completedTab = screen.getByRole('tab', { name: /completed/i });
+    await user.click(completedTab);
+    expect(completedTab.getAttribute('aria-selected')).toBe('true');
+    const returnedTab = screen.getByRole('tab', { name: /returned/i });
+    expect(returnedTab.getAttribute('aria-selected')).toBe('false');
   });
 
   it('close button sets activeModal to null in the store', async () => {
@@ -294,30 +184,18 @@ describe('HallOfReturns', () => {
     expect(useTownStore.getState().activeModal).toBeNull();
   });
 
-  it('outcome uses both text and a CSS class — not color alone', async () => {
-    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest(), makeFailedQuest()]));
+  it('tabpanels exist in DOM for screen readers', async () => {
     renderPanel();
-    await screen.findByText('Slay the Dragon');
-    const victoryBadge = screen.getByText('Victory');
-    const defeatBadge = screen.getByText('Defeat');
-    expect(victoryBadge.className).toContain('quest-badge--complete');
-    expect(defeatBadge.className).toContain('quest-badge--failed');
+    await screen.findByRole('dialog');
+    expect(document.getElementById('hall-panel-returned')).not.toBeNull();
+    expect(document.getElementById('hall-panel-completed')).not.toBeNull();
   });
 
-  it('card accessible name includes the quest outcome', async () => {
-    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest(), makeFailedQuest()]));
-    renderPanel();
-    await screen.findByRole('button', { name: /slay the dragon — victorious/i });
-    expect(screen.getByRole('button', { name: /retrieve the artifact — defeated/i })).toBeDefined();
-  });
-
-  it('reduced-motion: card uses data attribute class for transition suppression', async () => {
-    document.documentElement.setAttribute('data-reduced-motion', 'true');
-    mockReturnedQuests.mockResolvedValue(makePage([makeCompleteQuest()]));
-    renderPanel();
-    await screen.findByText('Slay the Dragon');
-    const card = screen.getByRole('button', { name: /view details/i });
-    expect(card.classList.contains('return-card')).toBe(true);
-    document.documentElement.removeAttribute('data-reduced-motion');
+  it('tab state preserved via URL search param when tab=complete', async () => {
+    mockListQuests.mockResolvedValue(makePage([]));
+    renderPanel('/town/hall-of-returns?tab=complete');
+    await screen.findByRole('dialog');
+    const completedTab = screen.getByRole('tab', { name: /completed/i });
+    expect(completedTab.getAttribute('aria-selected')).toBe('true');
   });
 });

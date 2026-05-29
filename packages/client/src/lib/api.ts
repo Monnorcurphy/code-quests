@@ -5,6 +5,7 @@ import {
   QuestSchema,
   QuestSceneKeySchema,
   QuestStatusSchema,
+  FailureSummarySchema,
   EpicSchema,
   SkillSchema,
   ToolSchema,
@@ -15,7 +16,7 @@ import {
   MonsterSchema,
   MonsterEncounterSchema,
 } from '@code-quests/shared';
-import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope } from '@code-quests/shared';
+import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope } from '@code-quests/shared';
 
 const ReturnedAgentSchema = z.object({
   id: z.string(),
@@ -193,6 +194,47 @@ const AdvanceSceneResponseSchema = z.object({
 
 export type AdvanceSceneResponse = z.infer<typeof AdvanceSceneResponseSchema>;
 
+const FatalMonsterSchema = z.object({
+  monsterId: z.string(),
+  monsterName: z.string(),
+  spritePath: z.string(),
+  difficulty: z.number(),
+});
+
+export const HallOfReturnsQuestSchema = z.object({
+  id: z.string(),
+  epicId: z.string().nullable(),
+  title: z.string(),
+  description: z.string(),
+  acceptanceCriteria: z.array(z.string()),
+  edgeCases: z.array(z.string()),
+  context: z.string(),
+  status: QuestStatusSchema,
+  adventurerId: z.string().nullable(),
+  agentId: z.string().nullable(),
+  failureSummary: FailureSummarySchema.nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  adventurer: z.object({
+    id: z.string(),
+    name: z.string(),
+    class: AdventurerClassSchema,
+  }).nullable(),
+  fatalMonster: FatalMonsterSchema.nullable(),
+}).passthrough();
+
+const HallOfReturnsListSchema = z.object({
+  items: z.array(HallOfReturnsQuestSchema),
+  nextCursor: z.string().nullable(),
+});
+
+export type HallOfReturnsQuest = z.infer<typeof HallOfReturnsQuestSchema>;
+export type HallOfReturnsList = z.infer<typeof HallOfReturnsListSchema>;
+export type FatalMonster = z.infer<typeof FatalMonsterSchema>;
+
+// Re-export FailureSummary type for convenience
+export type { FailureSummary };
+
 export const api = {
   adventurers: {
     list: () => fetchJson(z.array(AdventurerSchema), '/adventurers'),
@@ -254,5 +296,14 @@ export const api = {
       fetchJson(z.array(MonsterEncounterSchema), `/quests/${questId}/encounters`),
     promoteNemesis: (id: string, name?: string): Promise<Monster> =>
       postJson(MonsterSchema, `/monsters/${id}/promote-nemesis`, name !== undefined ? { name } : {}),
+  },
+  hallOfReturns: {
+    listQuests: (opts?: { status?: 'returned_to_town' | 'complete'; cursor?: string; limit?: number }) => {
+      const params = new URLSearchParams();
+      params.set('status', opts?.status ?? 'returned_to_town');
+      params.set('limit', String(opts?.limit ?? 20));
+      if (opts?.cursor) params.set('cursor', opts.cursor);
+      return fetchJson(HallOfReturnsListSchema, `/hall-of-returns/quests?${params.toString()}`);
+    },
   },
 };

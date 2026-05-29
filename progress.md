@@ -1,21 +1,20 @@
 # Progress — Phase 9
 
-Previous task progress archived to metrics/progress-before-catalpa.md
+Previous task progress archived to metrics/progress-before-cedar.md
 
-## catalpa — Auto-match scar-aware scoring (backend)
+## cedar — Hall of Returns view + returned-quest list (frontend)
 
-- Extended `packages/server/src/services/auto-match.ts` with scar-aware scoring
-  - Added `AutoMatchOptions` interface (`monsters`, `monsterTypes`, `logger` callback)
-  - Added `predictDominantMonsterTypeId` — tests quest text against `MonsterType.failureSignature` patterns
-  - Added `tokenOverlapRatio` — bag-of-words overlap ratio
-  - Added `scarMatchesQuest` — matches via monster type OR ≥50% token overlap
-  - Added `computeScarPenalty` — -15 per matching scar, capped at -30
-  - `autoMatch` accepts optional 4th `options` parameter; calls `logger` with `{ adventurerId, scarPenalty }` when penalty is non-zero
-- Updated `packages/server/src/routes/quests.ts` auto-match call site to fetch monsters + monsterTypes from DB and pass with a `process.stdout.write` logger
-- Extended `packages/server/src/services/__tests__/auto-match.test.ts` with scar penalty test suite:
-  - No-scar baseline (no penalty)
-  - Token overlap matching (penalises) and non-matching (no penalty)
-  - Monster type matching (penalises) and wrong type (no penalty)
-  - Cap behaviour (3 scars → -30, not -45)
-  - Logger callback called/not-called correctly
-- All 470 tests pass; typecheck and lint clean
+**Status:** DONE
+
+**What was built:**
+- `packages/client/src/features/hall-of-returns/hall-of-returns.tsx` — modal view with two tabs (Returned/Completed); tab state preserved as URL query param (`?tab=...`)
+- `packages/client/src/features/hall-of-returns/returned-quest-list.tsx` — list component with loading skeleton (3 rows), error banner + retry button, empty state, and quest rows (title, adventurer, fatal monster sprite+name, relative time, recommendation badge)
+- `packages/client/src/features/hall-of-returns/use-returned-quests.ts` — TanStack Query hook calling `GET /hall-of-returns/quests`; subscribes to quest WS channels for real-time invalidation
+- `packages/client/src/features/hall-of-returns/__tests__/returned-quest-list.test.tsx` — 12 tests covering render, empty state, error state, click navigation, keyboard navigation, edge cases
+- `packages/client/src/lib/api.ts` — added `api.hallOfReturns.listQuests()`, `HallOfReturnsQuest`, `HallOfReturnsList` types
+- `packages/client/src/features/hall-of-returns.tsx` — re-exports from new folder (keeps old import path working)
+- `packages/client/src/components/hud-overlay-manager.tsx` — updated import to new explicit path
+- `packages/client/src/app.tsx` — added `/hall-of-returns/:questId` placeholder route (redirects back to town until TASK ebony implements post-mortem)
+- `packages/client/src/__tests__/hall-of-returns.test.tsx` — updated tests for new component (13 tests; old Phase 2 tests removed/replaced)
+
+**All tests pass:** 825 client tests, 470 server tests, 83 shared tests. Typecheck + lint clean.
