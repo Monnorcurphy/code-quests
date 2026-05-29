@@ -232,7 +232,7 @@ describe('DispatchButton', () => {
 
     await waitFor(() => {
       expect(mockDispatch).toHaveBeenCalledTimes(2);
-      expect(mockDispatch).toHaveBeenLastCalledWith('q-dispatch', true);
+      expect(mockDispatch).toHaveBeenLastCalledWith('q-dispatch', true, undefined);
     });
   });
 

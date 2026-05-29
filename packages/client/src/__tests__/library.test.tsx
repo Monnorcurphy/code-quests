@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import Library from '../features/library';
 import { useTownStore } from '../stores/town-store';
 
@@ -32,14 +33,16 @@ vi.mock('../lib/api', async (importOriginal) => {
   };
 });
 
-function renderLibrary() {
+function renderLibrary(initialEntries = ['/town/library']) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <Library />
-    </QueryClientProvider>,
+    <MemoryRouter initialEntries={initialEntries}>
+      <QueryClientProvider client={queryClient}>
+        <Library />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 

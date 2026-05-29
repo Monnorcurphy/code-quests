@@ -62,9 +62,9 @@ export default function FailureSummaryCard({
             height={24}
           />
           <Link
-            to="/town/library"
+            to={`/town/library?typeId=${encodeURIComponent(fatalMonster.monsterTypeId)}`}
             className="failure-summary-monster-link"
-            aria-label={`View ${fatalMonster.monsterName} in Bestiary`}
+            aria-label={`Browse Library for ${fatalMonster.monsterName} monsters`}
           >
             {fatalMonster.monsterName}
           </Link>

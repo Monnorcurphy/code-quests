@@ -338,6 +338,47 @@ The Playwright spec (`packages/client/tests/e2e/phase-9-capstone.spec.ts`) mocks
 
 ---
 
+## Showcase Demo (Phase 11)
+
+Phase 11 is the end-to-end capstone: three adventurers tackle three parallel quests in the "Modernize the Auth System" epic, exercising every feature built across all prior phases in one scripted demo.
+
+### Quick start
+
+```bash
+# Start dev servers in demo mode
+CODE_QUESTS_ENV=demo pnpm dev
+```
+
+Visit `http://localhost:5173` and click **Start Showcase Demo** in the Town Square panel.
+
+### What happens
+
+1. Town Square → click **Start Showcase Demo** (seeds DB, resets to fresh state)
+2. War Room shows the epic with 3 stories, all audited and ready
+3. Armory auto-match previews Brielle/Tess/Rook assigned to their matching quests
+4. Dispatch all 3 → Party Map shows three simultaneous quest scenes
+5. Tess defeats Grognak the Lint Goblin (known adversary, `linters_bane` zero-shots it)
+6. Rook encounters a fresh Imp and banishes it with `wraith_banisher`
+7. Brielle hits `PAUSED_INPUT` — "Which JWT library? jose or jsonwebtoken?" — bell rings, user picks
+8. Brielle's quest escalates to a Lich (repeated type errors) → fails → Hall of Returns
+9. Open failure summary → click **Re-post with new equipment** → equip `type_whisperer` → re-dispatch
+10. Brielle's second attempt succeeds — victory fanfare plays
+11. Library surfaces `ac_cartographer` as a skill candidate for confirmation
+12. Hall of Returns shows all 3 quests victorious; epic complete
+
+See [specs/done/phase-11-walkthrough.md](specs/done/phase-11-walkthrough.md) for the full step-by-step narrative with screenshots.
+
+### Capture screenshots
+
+```bash
+# Requires dev servers running (any mode)
+pnpm test:e2e --grep "Showcase walkthrough"
+```
+
+Screenshots are written to `assets/screenshots/phase-11/`.
+
+---
+
 ## Phase roadmap
 
 | Phase | Status | Content |

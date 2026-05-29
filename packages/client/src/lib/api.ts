@@ -10,6 +10,7 @@ import {
   SkillSchema,
   ToolSchema,
   MCPServerSchema,
+  EquipmentSchema,
   SpecAuditSchema,
   AgentEventSchema,
   MonsterTypeSchema,
@@ -217,6 +218,7 @@ export type AdvanceSceneResponse = z.infer<typeof AdvanceSceneResponseSchema>;
 const FatalMonsterSchema = z.object({
   monsterId: z.string(),
   monsterName: z.string(),
+  monsterTypeId: z.string(),
   spritePath: z.string(),
   difficulty: z.number(),
 });
@@ -232,6 +234,7 @@ export const HallOfReturnsQuestSchema = z.object({
   status: QuestStatusSchema,
   adventurerId: z.string().nullable(),
   agentId: z.string().nullable(),
+  equipment: EquipmentSchema.default({ skillIds: [], toolIds: [], mcpServerIds: [] }),
   failureSummary: FailureSummarySchema.nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -311,8 +314,22 @@ export const api = {
       patchJson(QuestSchema, `/quests/${id}`, body),
     audit: (id: string) =>
       postJson(SpecAuditSchema, `/quests/${id}/audit`, {}),
-    dispatch: (id: string, bypass = false) =>
-      postJson(QuestSchema, `/quests/${id}/dispatch${bypass ? '?bypass=true' : ''}`, {}),
+    dispatch: (id: string, bypass = false, adventurerId?: string | null) =>
+      postJson(
+        QuestSchema,
+        `/quests/${id}/dispatch${bypass ? '?bypass=true' : ''}`,
+        adventurerId ? { adventurerId } : {},
+      ),
+    autoMatch: (id: string) =>
+      fetchJson(
+        z.object({
+          adventurerId: z.string().nullable(),
+          adventurerName: z.string().nullable(),
+          adventurerClass: AdventurerClassSchema.nullable(),
+          reason: z.string(),
+        }),
+        `/quests/${id}/auto-match`,
+      ),
     cancel: (id: string) =>
       postJson(QuestSchema, `/quests/${id}/cancel`, {}),
     advanceScene: (id: string, expectedFrom: QuestSceneKey) =>
@@ -330,7 +347,7 @@ export const api = {
       ),
     submitFeedback: (id: string, text: string) =>
       postJson(FeedbackSuccessSchema, `/quests/${id}/actions/feedback`, { text }),
-    repost: (id: string, adjustments?: { acceptanceCriteria?: string[]; edgeCases?: string[] }): Promise<RepostResult> =>
+    repost: (id: string, adjustments?: { acceptanceCriteria?: string[]; edgeCases?: string[]; equipment?: Equipment }): Promise<RepostResult> =>
       postJson(RepostServerResponseSchema, `/quests/${id}/actions/repost`, { adjustments })
         .then((q) => ({ newQuestId: q.id, newTitle: q.title })),
     retire: (id: string) =>
@@ -393,5 +410,9 @@ export const api = {
     },
     getPostMortem: (questId: string) =>
       fetchJson(PostMortemResponseSchema, `/hall-of-returns/quests/${questId}/post-mortem`),
+  },
+  showcase: {
+    reset: () =>
+      postJson(z.object({ epicId: z.string() }), '/showcase/reset', {}),
   },
 };

@@ -9,9 +9,10 @@ import type { Quest, SpecAudit } from '@code-quests/shared';
 
 interface DispatchButtonProps {
   quest: Quest;
+  adventurerId?: string | null;
 }
 
-export default function DispatchButton({ quest }: DispatchButtonProps) {
+export default function DispatchButton({ quest, adventurerId }: DispatchButtonProps) {
   const [blockAudit, setBlockAudit] = useState<SpecAudit | null>(null);
   const [showBypassConfirm, setShowBypassConfirm] = useState(false);
   const [bypassCountdown, setBypassCountdown] = useState(2);
@@ -28,7 +29,7 @@ export default function DispatchButton({ quest }: DispatchButtonProps) {
   const panelRef = useFocusTrap(handleCancelBypass);
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (bypass: boolean) => api.quests.dispatch(quest.id, bypass),
+    mutationFn: (bypass: boolean) => api.quests.dispatch(quest.id, bypass, adventurerId),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: ['quests'] });
       void queryClient.invalidateQueries({ queryKey: ['quest', updated.id] });

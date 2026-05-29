@@ -51,7 +51,14 @@ export function PausedInputModal({ questId }: PausedInputModalProps) {
   useEffect(() => {
     if (visible) {
       textareaRef.current?.focus();
+      // Pause all CSS animations globally so background activity doesn't distract
+      document.body.setAttribute('data-quest-paused', 'true');
+    } else {
+      document.body.removeAttribute('data-quest-paused');
     }
+    return () => {
+      document.body.removeAttribute('data-quest-paused');
+    };
   }, [visible]);
 
   const handleEscape = useCallback(() => {

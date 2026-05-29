@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useFocusTrap } from '../lib/use-focus-trap';
@@ -6,20 +6,29 @@ import { useTownStore } from '../stores/town-store';
 import DraftForm from './quests/draft-form';
 import SpecAuditPanel from './quests/spec-audit-panel';
 import DispatchButton from './quests/dispatch-button';
+import AutoMatchPreview from './quests/auto-match-preview';
 import ActiveQuestPanel from './quests/active-quest-panel';
 import CancelButton from './quests/cancel-button';
 import { useRunAudit } from './quests/use-run-audit';
 import { api } from '../lib/api';
-import type { Quest } from '@code-quests/shared';
+import type { Adventurer, Quest } from '@code-quests/shared';
 
 type WarRoomMode = 'quest' | 'form' | 'success';
 
 function QuestDetailSection({
   questId,
+  adventurers,
+  adventurersLoading,
+  selectedAdventurerId,
+  onSelectAdventurer,
   onDraftAnother,
   onClose,
 }: {
   questId: string;
+  adventurers: Adventurer[];
+  adventurersLoading: boolean;
+  selectedAdventurerId: string | null;
+  onSelectAdventurer: (id: string | null) => void;
   onDraftAnother: () => void;
   onClose: () => void;
 }) {
@@ -135,7 +144,14 @@ function QuestDetailSection({
         runError={runError}
         runSuccess={runSuccess}
       />
-      <DispatchButton quest={quest} />
+      <AutoMatchPreview
+        questId={questId}
+        adventurers={adventurers}
+        adventurersLoading={adventurersLoading}
+        selectedAdventurerId={selectedAdventurerId}
+        onSelectAdventurer={onSelectAdventurer}
+      />
+      <DispatchButton quest={quest} adventurerId={selectedAdventurerId} />
       <div className="form-actions">
         <button
           type="button"
@@ -163,10 +179,26 @@ export default function WarRoom() {
   const selectedQuestId = useTownStore((s) => s.selectedQuestId);
   const setSelectedQuestId = useTownStore((s) => s.setSelectedQuestId);
   const [mode, setMode] = useState<WarRoomMode>(selectedQuestId ? 'quest' : 'form');
+  const [selectedAdventurerId, setSelectedAdventurerId] = useState<string | null>(null);
   const panelRef = useFocusTrap(() => setActiveModal(null));
+
+  const { data: rawAdventurers, isLoading: adventurersLoading } = useQuery({
+    queryKey: ['adventurers'],
+    queryFn: api.adventurers.list,
+  });
+  const adventurers: Adventurer[] = (rawAdventurers as Adventurer[] | undefined) ?? [];
+
+  const handleSelectAdventurer = useCallback((id: string | null) => {
+    setSelectedAdventurerId(id);
+  }, []);
 
   useEffect(() => {
     if (selectedQuestId) setMode('quest');
+  }, [selectedQuestId]);
+
+  // Reset adventurer selection when the quest changes
+  useEffect(() => {
+    setSelectedAdventurerId(null);
   }, [selectedQuestId]);
 
   function handleClose() {
@@ -193,6 +225,10 @@ export default function WarRoom() {
         {mode === 'quest' && selectedQuestId ? (
           <QuestDetailSection
             questId={selectedQuestId}
+            adventurers={adventurers}
+            adventurersLoading={adventurersLoading}
+            selectedAdventurerId={selectedAdventurerId}
+            onSelectAdventurer={handleSelectAdventurer}
             onDraftAnother={handleDraftAnother}
             onClose={handleClose}
           />

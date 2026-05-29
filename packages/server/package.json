@@ -9,7 +9,9 @@
     "test": "vitest run",
     "lint": "eslint \"src/**/*.ts\"",
     "dev": "tsx watch src/index.ts",
-    "seed:phase9": "tsx src/scripts/seed-dev-phase9.ts"
+    "seed:phase9": "tsx src/scripts/seed-dev-phase9.ts",
+    "seed:showcase": "tsx src/scripts/seed-showcase.ts",
+    "reset:showcase": "tsx src/scripts/reset-showcase.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.99.0",

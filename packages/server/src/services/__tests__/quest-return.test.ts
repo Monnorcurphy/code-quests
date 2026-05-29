@@ -280,4 +280,64 @@ describe('returnQuestToTown', () => {
       }).toThrow();
     });
   });
+
+  describe('showcase seed scenario', () => {
+    it('appends a scar to Brielle when the JWT quest fails with a retire recommendation', () => {
+      // Seed Brielle (8 wins qualifies her for scars; scars list starts empty)
+      const brielleStats = JSON.stringify({ questsWon: 8, questsLost: 0 });
+      db.prepare(
+        `INSERT OR IGNORE INTO adventurers (id, name, class, model_id, stats_json, specializations_json, scars_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run('adv-showcase-brielle', 'Brielle the Bold', 'champion', 'claude-opus-4-7', brielleStats, '[]', '[]');
+
+      insertMonsterType(db, 'imp_typecheck');
+      insertMonster(db, 'imp-jwt-01', 'imp_typecheck');
+
+      // Add 2 completed quests so lifetimeQuestCount >= 3 (bypasses scar grace period)
+      for (let i = 1; i <= 2; i++) {
+        db.prepare(
+          `INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json,
+            status, adventurer_id, equipment_json)
+           VALUES (?, ?, ?, '[]', '[]', 'complete', ?, '{}')`,
+        ).run(`quest-brielle-prior-${i}`, `Prior Quest ${i}`, 'Prior quest', 'adv-showcase-brielle');
+      }
+
+      // Insert 2 prior agents to simulate a 2nd attempt → recommendation = 'retire' (not repost_with_clarification)
+      db.prepare(
+        `INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json,
+          status, adventurer_id, equipment_json)
+         VALUES (?, ?, ?, ?, ?, 'failed', ?, ?)`,
+      ).run(
+        'quest-showcase-jwt-scar-test',
+        'Migrate to JWT',
+        'A description long enough to satisfy audit checks',
+        JSON.stringify(['AC1', 'AC2']),
+        JSON.stringify([]),
+        'adv-showcase-brielle',
+        JSON.stringify({ skillIds: [], toolIds: [], mcpServerIds: [] }),
+      );
+      insertAgent(db, 'ag-prior', 'quest-showcase-jwt-scar-test', 'adv-showcase-brielle');
+      insertAgent(db, 'ag-current', 'quest-showcase-jwt-scar-test', 'adv-showcase-brielle');
+      insertEncounter(db, 'enc-jwt-1', { questId: 'quest-showcase-jwt-scar-test', monsterId: 'imp-jwt-01', outcome: 'defeat' });
+
+      returnQuestToTown('quest-showcase-jwt-scar-test', db);
+
+      const row = db.prepare('SELECT scars_json FROM adventurers WHERE id = ?').get('adv-showcase-brielle') as {
+        scars_json: string;
+      };
+      const scars = JSON.parse(row.scars_json) as Array<{
+        questId: string;
+        failureSummary: string;
+        monsterIdAtFatal: string;
+        occurredAt: string;
+      }>;
+
+      expect(scars).toHaveLength(1);
+      expect(scars[0].questId).toBe('quest-showcase-jwt-scar-test');
+      expect(typeof scars[0].failureSummary).toBe('string');
+      expect(scars[0].failureSummary.length).toBeGreaterThan(0);
+      expect(scars[0].monsterIdAtFatal).toBe('imp-jwt-01');
+      expect(scars[0].occurredAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    });
+  });
 });

@@ -17,8 +17,8 @@ export default function ReturnToTownButton() {
   return (
     <button
       onClick={handleClick}
-      className="text-gray-100"
       style={{
+        color: '#f9fafb',
         padding: '6px 14px',
         background: 'rgba(80, 60, 30, 0.9)',
         border: '1px solid rgba(200,160,80,0.6)',

@@ -57,9 +57,11 @@ function makeItem(overrides: Partial<HallOfReturnsList['items'][number]> = {}): 
     createdAt: '2024-01-01T10:00:00.000Z',
     updatedAt: '2024-01-01T10:30:00.000Z',
     adventurer: { id: 'adv-1', name: 'Aldric', class: 'champion' },
+    equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
     fatalMonster: {
       monsterId: 'monster-1',
       monsterName: 'Shadow Drake',
+      monsterTypeId: 'drake_shadow',
       spritePath: '/sprites/drake.png',
       difficulty: 3,
     },

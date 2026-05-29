@@ -8,13 +8,21 @@ import { queryClient } from './lib/query-client';
 import { applyReducedMotionPreference } from './components/settings-button';
 import { AudioProvider } from './audio/audio-provider';
 import { useTownStore } from './stores/town-store';
+import { useQuestStore } from './stores/quest-store';
+import { useEncounterStore } from './stores/encounter-store';
+import { useTourStore } from './stores/tour-store';
 import './styles/global.css';
 import './styles/features.css';
 
 applyReducedMotionPreference();
 
 if (import.meta.env.DEV) {
-  Object.assign(window, { __townStore: useTownStore });
+  Object.assign(window, {
+    __townStore: useTownStore,
+    __questStore: useQuestStore,
+    __encounterStore: useEncounterStore,
+    __tourStore: useTourStore,
+  });
 }
 
 const rootElement = document.getElementById('root');

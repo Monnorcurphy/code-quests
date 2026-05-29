@@ -8,6 +8,7 @@ import { useTownStore } from '../stores/town-store';
 import Roster from './guild/roster';
 import RecruitModal from './guild/recruit-modal';
 import QuestBoard from './quests/quest-board';
+import ShowcaseButton from './town-square/showcase-button';
 
 function LibraryNewsRibbon() {
   const setActiveModal = useTownStore((s) => s.setActiveModal);
@@ -260,6 +261,7 @@ function QuestBoardPanel({ onClose, onRecruit }: { onClose: () => void; onRecrui
             >
               Recruit an Adventurer
             </button>
+            <ShowcaseButton />
             <button className="btn-secondary" onClick={onClose}>
               Close
             </button>
