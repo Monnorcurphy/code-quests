@@ -420,9 +420,17 @@ function drawRecruitBanner(g: Phaser.GameObjects.Graphics): void {
   g.fillCircle(cx, cy, 3); // boss/pommel
 }
 
-// Building facade — drawn above each door to add walls + roof + windows.
+// Building facade — drawn behind each door. Wall extends from roof down to
+// floor with a door-shaped opening cut into the lower-center, so the door
+// sprite (64×96) sits INSIDE the doorway with wall framing it on three sides.
 const FACADE_W = 110;
-const FACADE_H = 140;
+const FACADE_H = 240;
+// Door opening cut into the facade — matches the door sprite display size so
+// the door slots in neatly. Centered horizontally, flush with facade bottom.
+const FACADE_DOOR_W = 64;
+const FACADE_DOOR_H = 96;
+const FACADE_DOOR_X = (FACADE_W - FACADE_DOOR_W) / 2; // left edge of opening
+const FACADE_DOOR_Y = FACADE_H - FACADE_DOOR_H; // top edge of opening
 
 interface FacadeSpec {
   wall: number;
@@ -444,7 +452,7 @@ const FACADES: Record<string, FacadeSpec> = {
 };
 
 function drawFacade(g: Phaser.GameObjects.Graphics, spec: FacadeSpec): void {
-  // Wall body
+  // Wall body — extends from below the roof all the way to the floor
   g.fillStyle(spec.wall);
   g.fillRect(0, 30, FACADE_W, FACADE_H - 30);
   // Wall stone texture (subtle vertical lines)
@@ -452,7 +460,8 @@ function drawFacade(g: Phaser.GameObjects.Graphics, spec: FacadeSpec): void {
   for (let x = 8; x < FACADE_W; x += 18) {
     g.fillRect(x, 32, 1, FACADE_H - 34);
   }
-  // Foundation
+  // Foundation course (bottom band of darker stone) — drawn before doorway
+  // so the doorway cutout punches through it cleanly
   g.fillStyle(spec.wallDark);
   g.fillRect(0, FACADE_H - 8, FACADE_W, 8);
   // Pitched roof
@@ -465,7 +474,7 @@ function drawFacade(g: Phaser.GameObjects.Graphics, spec: FacadeSpec): void {
   // Roof shadow line under eave
   g.fillStyle(0x1a0a04);
   g.fillRect(0, 30, FACADE_W, 2);
-  // Windows
+  // Windows — sit in the upper portion of the wall, well above the doorway
   g.fillStyle(spec.window);
   g.fillRect(14, 50, 18, 22);
   g.fillRect(FACADE_W - 32, 50, 18, 22);
@@ -474,11 +483,42 @@ function drawFacade(g: Phaser.GameObjects.Graphics, spec: FacadeSpec): void {
   g.fillRect(14, 60, 18, 2);
   g.fillRect(FACADE_W - 32, 60, 18, 2);
   g.fillRect(FACADE_W - 24, 50, 2, 22);
-  // Optional trim accent (banner, crest, dome, etc.)
+  // Optional trim accent (banner, crest, dome, etc.) — sits between windows
   if (spec.trim !== undefined) {
     g.fillStyle(spec.trim);
-    g.fillRect(FACADE_W / 2 - 4, 16, 8, 14);
+    g.fillRect(FACADE_W / 2 - 4, 50, 8, 22);
   }
+  // ---- Doorway opening ---------------------------------------------------
+  // Cut a door-shaped recess into the lower-center of the wall. The actual
+  // door sprite is drawn on top of this in base-town-scene; the dark fill
+  // here means any gap between sprite edge and opening reads as shadow.
+  const dx = FACADE_DOOR_X;
+  const dy = FACADE_DOOR_Y;
+  const dw = FACADE_DOOR_W;
+  const dh = FACADE_DOOR_H;
+  // Deep shadow inside the opening
+  g.fillStyle(0x100a06);
+  g.fillRect(dx, dy, dw, dh);
+  // Stone door-frame: a slightly lighter ring of stones around the opening
+  // (left jamb, right jamb, lintel above). Two-pixel highlight + one-pixel
+  // dark shadow gives the recess depth.
+  g.fillStyle(spec.wall);
+  // Lintel above the opening
+  g.fillRect(dx - 4, dy - 4, dw + 8, 4);
+  // Left jamb extension (sits flush with wall but framed)
+  g.fillRect(dx - 4, dy, 4, dh);
+  // Right jamb extension
+  g.fillRect(dx + dw, dy, 4, dh);
+  // Dark shadow line on inside edges of the frame (sells the "set into wall")
+  g.fillStyle(spec.wallDark);
+  g.fillRect(dx, dy, dw, 2); // shadow under lintel
+  g.fillRect(dx, dy, 2, dh); // shadow on left inside jamb
+  g.fillRect(dx + dw - 2, dy, 2, dh); // shadow on right inside jamb
+  // Highlight band on the outside of the frame to catch the eye
+  g.fillStyle(0x000000);
+  g.fillRect(dx - 5, dy - 5, dw + 10, 1); // top edge of lintel
+  g.fillRect(dx - 5, dy - 4, 1, dh + 4); // left edge of jamb
+  g.fillRect(dx + dw + 4, dy - 4, 1, dh + 4); // right edge of jamb
 }
 
 /**

@@ -148,10 +148,12 @@ export abstract class BaseTownScene extends Phaser.Scene {
   }
 
   protected drawFacades(): void {
-    // Each facade sits with its base flush against the top of its door so
-    // the door reads as part of the building rather than floating below it.
-    // DOOR_Y is the door center, so door TOP = DOOR_Y - DOOR_HEIGHT/2.
-    const facadeBaseY = DOOR_Y - DOOR_HEIGHT / 2 + 8; // overlap slightly into door for seamless join
+    // Each facade extends from roof down to the ground floor with a doorway
+    // opening cut into its lower-center. The facade texture is FACADE_H tall
+    // (240) and its bottom 96px hosts the doorway. We align the facade bottom
+    // with the ground surface so the doorway opening exactly overlaps the
+    // door sprite (which is also 96 tall, sitting on the ground).
+    const facadeBaseY = GROUND_SURFACE_Y;
     for (const cfg of this.doorConfigs) {
       const facadeKey = `town-facade-${cfg.targetScene}`;
       if (!this.textures.exists(facadeKey)) continue;
