@@ -1,5 +1,5 @@
 import path from 'path';
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 // ---------------------------------------------------------------------------
 // Phase 11 Showcase Walkthrough — screenshot capture
@@ -77,8 +77,8 @@ const MOCK_SHOWCASE_QUESTS = [
     status: 'idle',
     adventurerId: null,
     agentId: null,
-    currentScene: null,
-    specAudit: { gaps: [] },
+    currentScene: 'quest-forest',
+    specAudit: { runAt: '2026-05-28T10:00:00.000Z', gaps: [], bypassed: false },
     equipment: { skillIds: ['type_whisperer', 'linters_bane'], toolIds: [], mcpServerIds: [] },
     failureSummary: null,
     createdAt: '2026-05-28T10:00:00.000Z',
@@ -98,8 +98,8 @@ const MOCK_SHOWCASE_QUESTS = [
     status: 'idle',
     adventurerId: null,
     agentId: null,
-    currentScene: null,
-    specAudit: { gaps: [] },
+    currentScene: 'quest-forest',
+    specAudit: { runAt: '2026-05-28T10:00:00.000Z', gaps: [], bypassed: false },
     equipment: { skillIds: ['linters_bane'], toolIds: [], mcpServerIds: [] },
     failureSummary: null,
     createdAt: '2026-05-28T10:00:00.000Z',
@@ -120,8 +120,8 @@ const MOCK_SHOWCASE_QUESTS = [
     status: 'idle',
     adventurerId: null,
     agentId: null,
-    currentScene: null,
-    specAudit: { gaps: [] },
+    currentScene: 'quest-forest',
+    specAudit: { runAt: '2026-05-28T10:00:00.000Z', gaps: [], bypassed: false },
     equipment: { skillIds: ['wraith_banisher'], toolIds: [], mcpServerIds: [] },
     failureSummary: null,
     createdAt: '2026-05-28T10:00:00.000Z',
@@ -130,9 +130,9 @@ const MOCK_SHOWCASE_QUESTS = [
 ];
 
 const MOCK_QUESTS_ACTIVE = [
-  { ...MOCK_SHOWCASE_QUESTS[0], status: 'active', adventurerId: ADV_BRIELLE, agentId: 'agent-brielle', currentScene: 'dungeon' },
-  { ...MOCK_SHOWCASE_QUESTS[1], status: 'active', adventurerId: ADV_TESS, agentId: 'agent-tess', currentScene: 'cave' },
-  { ...MOCK_SHOWCASE_QUESTS[2], status: 'active', adventurerId: ADV_ROOK, agentId: 'agent-rook', currentScene: 'forest' },
+  { ...MOCK_SHOWCASE_QUESTS[0], status: 'active', adventurerId: ADV_BRIELLE, agentId: 'agent-brielle', currentScene: 'quest-dungeon' },
+  { ...MOCK_SHOWCASE_QUESTS[1], status: 'active', adventurerId: ADV_TESS, agentId: 'agent-tess', currentScene: 'quest-cave' },
+  { ...MOCK_SHOWCASE_QUESTS[2], status: 'active', adventurerId: ADV_ROOK, agentId: 'agent-rook', currentScene: 'quest-forest' },
 ];
 
 const MOCK_SKILLS = [
@@ -178,7 +178,7 @@ const MOCK_JWT_FAILED = {
   failureSummary: {
     fatalEncounterId: 'enc-lich-brielle',
     retries: 2,
-    recommendation: 'repost_with_new_equipment',
+    recommendation: 'repost_with_clarification',
     notes: 'Repeated TypeScript type errors escalated to a Lich. Equip type_whisperer on the next attempt.',
   },
 };
@@ -311,6 +311,7 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
   await page.goto('/town/town-square');
   await page.waitForSelector('.phaser-scene-canvas, canvas', { timeout: 10000 }).catch(() => {});
   await page.waitForTimeout(1200);
+  await expect(page).toHaveURL(/\/town\/town-square/);
   await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'step-01-town-square.png'), fullPage: false });
 
   // ------------------------------------------------------------------
@@ -319,6 +320,7 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
   await page.goto('/town/war-room');
   await page.waitForSelector('[role="dialog"]', { timeout: 8000 }).catch(() => {});
   await page.waitForTimeout(600);
+  await expect(page.getByText(/Modernize the Auth System/i)).toBeVisible();
   await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'step-02-war-room-epic.png'), fullPage: false });
 
   // ------------------------------------------------------------------
@@ -340,6 +342,7 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
   await page.goto('/town/armory');
   await page.waitForSelector('[role="dialog"]', { timeout: 8000 }).catch(() => {});
   await page.waitForTimeout(800);
+  await expect(page.getByText(/Brielle the Bold/i)).toBeVisible();
   await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'step-03-armory-auto-match.png'), fullPage: false });
 
   // ------------------------------------------------------------------
@@ -360,6 +363,7 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
 
   await page.goto('/town/town-square');
   await page.waitForTimeout(1200);
+  await expect(page).toHaveURL(/\/town\/town-square/);
   // Open Party Map overlay
   const partyMapToggle = page.getByRole('button', { name: /party map/i });
   const hasPartyMap = await partyMapToggle.isVisible().catch(() => false);
@@ -372,13 +376,14 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
   // ------------------------------------------------------------------
   // STEP 5: Tess quest — Grognak the Lint Goblin (known monster, defeated)
   // ------------------------------------------------------------------
-  const tessCopyActive = { ...MOCK_QUESTS_ACTIVE[1], currentScene: 'cave' };
+  const tessCopyActive = { ...MOCK_QUESTS_ACTIVE[1], currentScene: 'quest-cave' };
   await page.route(`**/quests/${QUEST_COPY}`, (route) =>
     route.fulfill({ contentType: 'application/json', body: JSON.stringify(tessCopyActive) }),
   );
 
   await page.goto(`/quest/${QUEST_COPY}`);
   await page.waitForTimeout(1200);
+  await expect(page).toHaveURL(new RegExp(`/quest/${QUEST_COPY}`));
 
   // Inject encounter state — Grognak defeated by linters_bane
   await page.evaluate(
@@ -388,7 +393,7 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
         | undefined;
       store?.getState().handleAgentEvent(questId, {
         type: 'monster_appeared',
-        questId,
+        encounterId: 'enc-grognak-tess',
         monsterId: 'grognak-the-lint-goblin',
         monsterName: 'Grognak the Lint Goblin',
         monsterTypeId: 'goblin_linter',
@@ -405,13 +410,14 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
   // ------------------------------------------------------------------
   // STEP 6: Rook quest — fresh Imp encounter (wraith_banisher defeats it)
   // ------------------------------------------------------------------
-  const rookMeterActive = { ...MOCK_QUESTS_ACTIVE[2], currentScene: 'forest' };
+  const rookMeterActive = { ...MOCK_QUESTS_ACTIVE[2], currentScene: 'quest-forest' };
   await page.route(`**/quests/${QUEST_METER}`, (route) =>
     route.fulfill({ contentType: 'application/json', body: JSON.stringify(rookMeterActive) }),
   );
 
   await page.goto(`/quest/${QUEST_METER}`);
   await page.waitForTimeout(1200);
+  await expect(page).toHaveURL(new RegExp(`/quest/${QUEST_METER}`));
 
   await page.evaluate(
     ({ questId }) => {
@@ -420,7 +426,7 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
         | undefined;
       store?.getState().handleAgentEvent(questId, {
         type: 'monster_appeared',
-        questId,
+        encounterId: 'enc-imp-rook',
         monsterId: 'imp-of-type-errors',
         monsterName: 'Imp of Type Errors',
         monsterTypeId: 'imp_typecheck',
@@ -437,13 +443,14 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
   // ------------------------------------------------------------------
   // STEP 7: Brielle quest — PAUSED_INPUT modal (JWT library question)
   // ------------------------------------------------------------------
-  const brielleJwtActive = { ...MOCK_QUESTS_ACTIVE[0], currentScene: 'dungeon' };
+  const brielleJwtActive = { ...MOCK_QUESTS_ACTIVE[0], currentScene: 'quest-dungeon' };
   await page.route(`**/quests/${QUEST_JWT}`, (route) =>
     route.fulfill({ contentType: 'application/json', body: JSON.stringify(brielleJwtActive) }),
   );
 
   await page.goto(`/quest/${QUEST_JWT}`);
   await page.waitForTimeout(1200);
+  await expect(page).toHaveURL(new RegExp(`/quest/${QUEST_JWT}`));
 
   await page.evaluate(
     ({ questId }) => {
@@ -452,8 +459,8 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
         | undefined;
       store?.getState().setStatus(questId, 'paused_input');
       store?.getState().setInputRequest(questId, {
-        prompt: 'Which JWT library should I use — jose or jsonwebtoken? The ADR mentions both but does not specify.',
-        requestedAt: new Date().toISOString(),
+        question: 'Which JWT library should I use — jose or jsonwebtoken? The ADR mentions both but does not specify.',
+        awaitingSince: new Date().toISOString(),
       });
     },
     { questId: QUEST_JWT },
@@ -482,6 +489,7 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
   await page.goto('/town/hall-of-returns');
   await page.waitForSelector('[role="dialog"]', { timeout: 8000 }).catch(() => {});
   await page.waitForTimeout(600);
+  await expect(page.getByText(/Migrate to JWT/i)).toBeVisible();
   await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'step-08-hall-of-returns-returned.png'), fullPage: false });
 
   // ------------------------------------------------------------------
@@ -494,6 +502,7 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
     await returnedQuestLink.click();
     await page.waitForTimeout(500);
   }
+  await expect(page).toHaveURL(/\/town\/hall-of-returns/);
   await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'step-09-repost-panel.png'), fullPage: false });
 
   // ------------------------------------------------------------------
@@ -505,6 +514,7 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
 
   await page.goto(`/quest/${QUEST_JWT_REPOST}`);
   await page.waitForTimeout(1200);
+  await expect(page).toHaveURL(new RegExp(`/quest/${QUEST_JWT_REPOST}`));
 
   await page.evaluate(
     ({ questId }) => {
@@ -524,6 +534,7 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
   await page.goto('/town/library');
   await page.waitForSelector('[role="dialog"]', { timeout: 8000 }).catch(() => {});
   await page.waitForTimeout(600);
+  await expect(page).toHaveURL(/\/town\/library/);
 
   // Click the Skills tab if it exists
   const skillsTab = page.getByRole('tab', { name: /skills/i });
@@ -552,6 +563,7 @@ test('Showcase walkthrough — capture 12 screenshots', async ({ page }) => {
   await page.goto('/town/hall-of-returns');
   await page.waitForSelector('[role="dialog"]', { timeout: 8000 }).catch(() => {});
   await page.waitForTimeout(600);
+  await expect(page).toHaveURL(/\/town\/hall-of-returns/);
 
   // Switch to Completed tab
   const completedTab = page.getByRole('tab', { name: /completed/i });
