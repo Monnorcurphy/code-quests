@@ -87,10 +87,49 @@ describe('TourOverlay', () => {
     expect(useTourStore.getState().active).toBe(false);
   });
 
-  it('has role=dialog with aria-modal=true', () => {
+  it('has role=region without aria-modal (non-modal overlay, review-4)', () => {
     useTourStore.getState().startTour();
     renderOverlay();
-    const dialog = screen.getByRole('dialog');
-    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    const region = screen.getByRole('region');
+    expect(region.getAttribute('aria-modal')).toBeNull();
+  });
+
+  it('ArrowRight advances step (review-2)', () => {
+    useTourStore.getState().startTour();
+    renderOverlay();
+    expect(useTourStore.getState().step).toBe(1);
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(useTourStore.getState().step).toBe(2);
+  });
+
+  it('ArrowLeft goes back a step (review-2)', () => {
+    useTourStore.setState({ active: true, step: 3 });
+    renderOverlay();
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    expect(useTourStore.getState().step).toBe(2);
+  });
+
+  it('ArrowLeft is no-op on first step (review-2)', () => {
+    useTourStore.getState().startTour();
+    renderOverlay();
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    expect(useTourStore.getState().step).toBe(1);
+  });
+
+  it('restores focus to trigger element on exit (review-3)', () => {
+    const trigger = document.createElement('button');
+    trigger.textContent = 'Open Tour';
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    useTourStore.getState().startTour();
+    const { unmount } = renderOverlay();
+
+    expect(document.activeElement).not.toBe(trigger);
+
+    unmount();
+
+    expect(document.activeElement).toBe(trigger);
+    document.body.removeChild(trigger);
   });
 });

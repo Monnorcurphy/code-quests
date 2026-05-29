@@ -534,6 +534,47 @@ test.describe('Phase 11 capstone — full 12-step showcase walkthrough', () => {
     });
   });
 
+  test('Audio — TOWN theme plays on load (AudioBackend spy)', async ({ page }) => {
+    // Install spy BEFORE page load so the setter fires when AudioProvider sets __audioBackend__
+    await page.addInitScript(() => {
+      const w = window as Record<string, unknown>;
+      const log: string[] = [];
+      w.__audioPlayLog__ = log;
+      let _backend: { play: (...args: unknown[]) => void } | null = null;
+      Object.defineProperty(w, '__audioBackend__', {
+        get() {
+          return _backend;
+        },
+        set(b: { play: (...args: unknown[]) => void } | null) {
+          _backend = b;
+          if (!b) return;
+          const orig = b.play.bind(b);
+          b.play = (...args: unknown[]) => {
+            log.push(args[0] as string);
+            orig(...args);
+          };
+        },
+        configurable: true,
+      });
+    });
+
+    await page.goto('/town/town-square');
+
+    // Wait for the TOWN loop event to be recorded by the spy
+    await page.waitForFunction(
+      () => {
+        const log = (window as Record<string, unknown>).__audioPlayLog__ as string[] | undefined;
+        return Array.isArray(log) && log.includes('TOWN');
+      },
+      { timeout: 8000 },
+    );
+
+    const playLog = await page.evaluate(
+      () => (window as Record<string, unknown>).__audioPlayLog__ as string[],
+    );
+    expect(playLog).toContain('TOWN');
+  });
+
   test('Showcase button is hidden when not in demo mode', async ({ page }) => {
     // Do NOT set __DEMO_MODE__ in this test — override the beforeEach init
     await page.addInitScript(() => {
