@@ -1,12 +1,23 @@
 # Progress — Phase 10
 
-Previous task progress archived to metrics/progress-before-ganges.md
+Previous task progress archived to metrics/progress-before-indus.md
 
-## Task ganges — Custom monster type forge UI
+## task-indus (capstone) — DONE
 
-- Created `packages/client/src/assets/monster-sprites-manifest.ts` — static manifest of 10 CC0 monster sprites
-- Created `packages/client/src/features/library/coin-monster-type-modal.tsx` — full modal with name (1–60 chars), sprite picker (keyboard nav via roving tabindex + arrow keys), difficulty select (1★–5★), regex signature field with inline validation, 409/field-error handling, success toast with type id
-- Updated `packages/client/src/features/library/bestiary.tsx` — added `bestiary-header` wrapper + "+ Coin New Type" button above scope tabs; renders `CoinMonsterTypeModal` and invalidates queries on success
-- Added CSS in `features.css` — `.bestiary-header`, `.bestiary-coin-btn`, `.coin-type-modal`, `.sprite-picker-grid`, `.sprite-option`, `.sprite-option--selected`, `.sprite-option-img` with `prefers-reduced-motion` support
-- Created `packages/client/src/features/library/__tests__/coin-monster-type-modal.test.tsx` — 20 tests covering submit disabled state, invalid regex inline error, arrow-key + Enter keyboard nav, 409 duplicate name, happy path, dismiss
-- All 973 client tests + 515 server tests pass; typecheck + lint clean
+**Town Square ribbon:** Added `LibraryNewsRibbon` component to `town-square.tsx` that shows when `candidateCount >= 1 || !hasOpenedLibrary`. Clicking opens Library on Skills tab.
+
+**Town Store:** Added `hasOpenedLibrary` (localStorage-persisted), `libraryInitialTab`, `markLibraryOpened()`, and `setLibraryInitialTab()` to `town-store.ts`.
+
+**Library:** Updated `library.tsx` to read `libraryInitialTab` from store for initial tab state, call `markLibraryOpened()` on mount, and reset `libraryInitialTab` to `'bestiary'`.
+
+**Armory loadout:** Added "🔓 New skill available" chip beside Skills section heading in `loadout-panel.tsx`. Chip appears when there's at least one active skill not in equipment. Clicking scrolls to first unequipped skill (highlighted in green).
+
+**Seed script:** Extended `seed-dev.ts` with `--phase-10-demo` flag: creates adventurer "Aldric the Learned", epic, 2 complete quests, goblin_linter monster, 3 victory encounters, then calls `evaluateSkillCandidate` to create the candidate skill.
+
+**E2E test:** Created `phase-10-capstone.spec.ts` with 11 tests covering: ribbon, Library Skills tab, confirm flow, Armory chip, Coin New Type, Forge Skill, and axe-core a11y scans.
+
+**Docs:** Added Phase 10 walkthrough to `README.md`; created `specs/done/phase-10-walkthrough.md`.
+
+**CSS:** Added styles for `.library-news-ribbon`, `.armory-column-header`, `.armory-new-skill-chip`, `.armory-item--new`.
+
+All tests: 976 passed. Typecheck: clean. Lint: clean.
