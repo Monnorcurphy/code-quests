@@ -5,6 +5,7 @@ import BestiaryEmptyState from './empty-state';
 import MonsterDetail from './monster-detail';
 import { DifficultyStars } from './difficulty-stars';
 import CoinMonsterTypeModal from './coin-monster-type-modal';
+import { MonsterIcon, KNOWN_MONSTER_TYPE_IDS } from './monster-icon';
 import type { Monster, MonsterType, MonsterScope } from '@code-quests/shared';
 
 type SortCol = 'name' | 'type' | 'difficulty' | 'encounters' | 'defeats' | 'escapes' | 'lastSeen';
@@ -105,10 +106,12 @@ function MonsterRow({
       aria-label={`${monster.name} — view details`}
     >
       <td className="bestiary-cell bestiary-cell--sprite">
-        {monsterType?.spritePath
-          ? <img src={monsterType.spritePath} alt="" className="bestiary-sprite" />
-          : <span className="bestiary-sprite-placeholder" aria-hidden="true">?</span>
-        }
+        <MonsterIcon
+          monsterTypeId={monster.typeId}
+          size={28}
+          alt={monster.name}
+          background="#1a0e08"
+        />
       </td>
       <td className="bestiary-cell bestiary-cell--name">{monster.name}</td>
       <td className="bestiary-cell">{monsterType?.name ?? monster.typeId}</td>
@@ -231,6 +234,61 @@ export default function Bestiary({ initialTypeFilter }: BestiaryProps = {}) {
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {isLoading ? 'Loading bestiary…' : ''}
       </div>
+
+      {!isLoading && types.length > 0 && (
+        <section aria-label="All monster types" className="bestiary-gallery">
+          <h3 style={{ margin: '12px 0 8px', color: '#7a1818', fontSize: '0.95rem' }}>
+            Known monster types
+          </h3>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+              gap: 8,
+              marginBottom: 18,
+            }}
+          >
+            {KNOWN_MONSTER_TYPE_IDS.map((typeId) => {
+              const type = types.find((t) => t.id === typeId);
+              const encountered =
+                monsters?.some((m) => m.typeId === typeId) ?? false;
+              return (
+                <button
+                  key={typeId}
+                  type="button"
+                  className="bestiary-gallery-tile"
+                  aria-label={`${type?.name ?? typeId} — ${encountered ? 'encountered' : 'not yet faced'}`}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: 8,
+                    background: encountered ? '#f5ecd6' : '#e8dfc6',
+                    border: encountered ? '1px solid #8a6a3a' : '1px solid #b5a07a',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    opacity: encountered ? 1 : 0.65,
+                  }}
+                >
+                  <MonsterIcon
+                    monsterTypeId={typeId}
+                    size={48}
+                    alt={type?.name ?? typeId}
+                    background="#1a0e08"
+                  />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#3a1a08' }}>
+                    {type?.name ?? typeId}
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: '#5a3818', fontStyle: 'italic' }}>
+                    {encountered ? 'Encountered' : 'Not yet faced'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {isLoading && <SkeletonTable />}
 

@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { DifficultyStars } from './difficulty-stars';
 import ForgeSkillModal from './forge-skill-modal';
 import PromoteNemesisModal from './promote-nemesis-modal';
+import { MonsterIcon } from './monster-icon';
 import type { Monster, MonsterType, MonsterEncounter } from '@code-quests/shared';
 
 const OUTCOME_LABELS: Record<MonsterEncounter['outcome'], string> = {
@@ -102,13 +103,13 @@ export default function MonsterDetail({ monster: initialMonster, monsterType, on
         )}
 
         <div className="monster-detail-stats">
-          {monsterType?.spritePath && (
-            <img
-              src={monsterType.spritePath}
-              alt={currentMonster.name}
-              className="monster-detail-sprite"
-            />
-          )}
+          <MonsterIcon
+            monsterTypeId={currentMonster.typeId}
+            size={72}
+            alt={currentMonster.name}
+            className="monster-detail-sprite"
+            background="#1a0e08"
+          />
           <dl className="monster-detail-info">
             <div className="monster-detail-info-row">
               <dt>Type</dt>
