@@ -1,52 +1,42 @@
-# BUG: BuildingModal still uses inline focus trap instead of useFocusTrap hook
+# BUG: TourOverlay does not restore focus on dismiss
 
-**Severity:** LOW
-**File(s):** `packages/client/src/routes/town.tsx`
+**Severity:** HIGH
+**File(s):** packages/client/src/features/tour/tour-overlay.tsx,
+packages/client/src/features/town-square/showcase-button.tsx
 
 ## Problem
 
-`BuildingModal` contains a 25-line inline focus trap (Tab cycling + Escape handling) that is functionally identical to the `useFocusTrap` hook extracted in task bran. The hook was extracted because GuildHall and TownSquare were the 3rd occurrence of the same pattern — but the 1st occurrence (BuildingModal) was not migrated.
+`TourOverlay` is opened by the "Start Showcase Demo" button (via
+`startTour()` in `ShowcaseButton`). It is `role="dialog"` /
+`aria-modal="true"`, and the overlay manages focus on mount (it focuses
+the Next or Back button). But when the user dismisses the tour
+(Escape, Close button, or "Finish Tour"), the overlay simply unmounts
+and focus drops back to `<body>`. The triggering button is lost.
 
-This means two independent implementations now exist for the same behavior. If the Tab cycling logic or the Escape handler ever needs to change, it must be updated in two places, and they can silently diverge.
-
-Additionally, `BuildingModal` retains `onCloseRef` + its sync effect solely to pass the callback into the inline keydown handler — boilerplate the hook was designed to eliminate.
+This is also true for any future caller of `startTour()` — there is no
+mechanism to remember and restore the previously focused element.
 
 ## Expected
 
-`code-quality.md` Rule of Three: after extracting a shared helper, all occurrences should use it. The hook exists precisely for `BuildingModal`'s pattern.
+Per `.claude/rules/state-management.md` §"Focus Management in Modals and
+Panels":
+
+> 3. On dismiss, focus must return to the triggering element
+
+After the tour overlay unmounts, focus must return to whatever element
+was focused at the moment the tour started (typically the "Start
+Showcase Demo" button). Otherwise keyboard users are dropped into a
+context-free `<body>` focus and must Tab from scratch to find their
+place.
 
 ## Fix
 
-Refactor `BuildingModal` to use `useFocusTrap`:
+In `TourOverlayContent`:
+1. On mount, capture `document.activeElement as HTMLElement | null` into
+   a ref (the "trigger" element).
+2. On unmount (cleanup of a `useEffect` with `[]` deps), call
+   `trigger?.focus()` if the trigger is still in the DOM.
 
-```tsx
-function BuildingModal({ building, onClose }: BuildingModalProps) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useFocusTrap(onClose);
-
-  useEffect(() => {
-    closeRef.current?.focus();
-  }, []);
-
-  return (
-    <div
-      className="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-    >
-      <div ref={panelRef} className="modal-panel">
-        <h2 id="modal-title" className="modal-title">
-          {building.name}
-        </h2>
-        <p className="modal-body">Coming in Phase 2 — Phaser scene</p>
-        <button ref={closeRef} className="modal-close" onClick={onClose}>
-          Close
-        </button>
-      </div>
-    </div>
-  );
-}
-```
-
-Remove the `onCloseRef`, its sync effect, the entire 25-line keydown handler, and the `panelRef` declaration — all replaced by `useFocusTrap(onClose)`. Add `import { useFocusTrap } from '../lib/use-focus-trap';`.
+Add a test that uses `userEvent` (or `fireEvent.keyDown(document.body,
+{ key: 'Escape' })`) to verify focus returns to the trigger element
+after the tour exits.
