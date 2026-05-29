@@ -250,4 +250,20 @@ describe('PostMortem', () => {
     await screen.findByText('Slay the Dragon');
     expect(screen.queryByText('Aldric')).toBeNull();
   });
+
+  it('moves focus to back button after data loads', async () => {
+    let resolvePostMortem!: (v: ReturnType<typeof makePostMortem>) => void;
+    mockGetPostMortem.mockReturnValue(
+      new Promise<ReturnType<typeof makePostMortem>>((resolve) => {
+        resolvePostMortem = resolve;
+      }),
+    );
+    renderPostMortem();
+    // While loading, the back button is not in the DOM — focus must not have moved yet
+    expect(screen.queryByRole('button', { name: /back to hall of returns/i })).toBeNull();
+    // Resolve data — back button mounts
+    resolvePostMortem(makePostMortem());
+    const backBtn = await screen.findByRole('button', { name: /back to hall of returns/i });
+    expect(document.activeElement).toBe(backBtn);
+  });
 });

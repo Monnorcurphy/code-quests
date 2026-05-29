@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useReducedMotion } from '../../lib/use-reduced-motion';
 import { useTownStore } from '../../stores/town-store';
@@ -49,13 +49,15 @@ export default function PostMortem() {
   const navigate = useNavigate();
   const setActiveModal = useTownStore((s) => s.setActiveModal);
   const reducedMotion = useReducedMotion();
-  const backRef = useRef<HTMLButtonElement>(null);
+  const didFocusRef = useRef(false);
+  const setBackRef = useCallback((el: HTMLButtonElement | null) => {
+    if (el && !didFocusRef.current) {
+      el.focus();
+      didFocusRef.current = true;
+    }
+  }, []);
 
   const { data, isLoading, isError, error, refetch } = usePostMortem(questId ?? '');
-
-  useEffect(() => {
-    backRef.current?.focus();
-  }, []);
 
   function handleBack() {
     setActiveModal('hall-of-returns');
@@ -84,7 +86,7 @@ export default function PostMortem() {
     >
       <div className="post-mortem-header">
         <button
-          ref={backRef}
+          ref={setBackRef}
           type="button"
           className="btn-secondary post-mortem-back"
           onClick={handleBack}
