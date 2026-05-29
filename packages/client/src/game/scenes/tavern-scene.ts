@@ -1,6 +1,10 @@
 import { BaseBuildingScene, BUILDING_DOOR_Y } from './base-building-scene';
 import { GuideNpc } from '../entities/guide-npc';
-import { PatronNpc, PATRON_CATCHPHRASES } from '../entities/patron-npc';
+import {
+  PatronNpc,
+  PATRON_CATCHPHRASES,
+  createPatronChorus,
+} from '../entities/patron-npc';
 import { registerScene } from '../scene-registry';
 import { sceneRouter } from '../scene-router';
 import { useTownStore } from '../../stores/town-store';
@@ -91,7 +95,13 @@ export class TavernScene extends BaseBuildingScene {
         { x: 380, y: BUILDING_DOOR_Y },
         { x: 580, y: BUILDING_DOOR_Y, flipX: true },
       ];
-      for (const seat of seats) {
+      // Shared chorus — only one patron speaks at a time so bubbles don't
+      // overlap. Initial delays staggered across a wide window so the first
+      // wave doesn't fire simultaneously.
+      const chorus = createPatronChorus();
+      seats.forEach((seat, idx) => {
+        // Spread first bubbles across roughly 6-36s (idx * 7s base + jitter)
+        const initialDelayMs = 6_000 + idx * 7_000 + Math.random() * 4_000;
         this.patrons.push(
           new PatronNpc(this, {
             x: seat.x,
@@ -100,9 +110,11 @@ export class TavernScene extends BaseBuildingScene {
             catchphrases: PATRON_CATCHPHRASES,
             flipX: seat.flipX ?? false,
             reducedMotion,
+            chorus,
+            initialDelayMs,
           }),
         );
-      }
+      });
     }
 
     // Innkeep Rorek — tavernkeeper between the tables.

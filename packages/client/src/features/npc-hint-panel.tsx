@@ -114,7 +114,7 @@ const NPC_CONTENT: Record<NpcKey, NpcContent> = {
             edges. Once your adventurer departs, the covenant is sealed — and to change
             it mid-quest is to move the mark while the arrow is in flight. The arrow
             misses. The adventurer fails through no fault of their own. An arrow finds
-            a still mark. An arrow loses a moving one.
+            a still mark but misses a moving one.
           </>
         ),
       },
