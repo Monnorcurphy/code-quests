@@ -4,6 +4,8 @@ import { SceneKeyboardNav } from '../components/scene-keyboard-nav';
 import { HUDOverlayManager } from '../components/hud-overlay-manager';
 import { SettingsButton } from '../components/settings-button';
 import { BuildingsBar } from '../components/buildings-bar';
+import { useGuildHallData } from '../features/guild/use-guild-hall-data';
+import { useWanderersData } from '../features/town-square/use-wanderers-data';
 import { sceneRouter } from '../game/scene-router';
 import { isTownSceneKey } from '../game/scene-registry';
 import type { SceneNavItem } from '../game/scene-router';
@@ -38,6 +40,13 @@ export function PhaserTown() {
   const [navItems, setNavItems] = useState<SceneNavItem[]>([]);
 
   const currentBuilding = BUILDINGS.find((b) => b.id === validSceneKey);
+
+  // Guild Hall scene needs adventurer + quest data in a Zustand store so
+  // the Phaser scene can render sprite + status without React coupling.
+  useGuildHallData(validSceneKey === 'guild-hall');
+
+  // Town Square spawns wandering NPC sprites for any idle adventurers.
+  useWanderersData(validSceneKey === 'town-square');
 
   useEffect(() => {
     return sceneRouter.onInteractivesChange(setNavItems);

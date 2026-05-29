@@ -1,10 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render as rtlRender, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactElement } from 'react';
 import { PhaserTown } from '../routes/town';
 import { sceneRouter } from '../game/scene-router';
 import type { SceneNavItem } from '../game/scene-router';
+
+function makeQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+}
+
+function render(ui: ReactElement): ReturnType<typeof rtlRender> {
+  return rtlRender(
+    <QueryClientProvider client={makeQueryClient()}>{ui}</QueryClientProvider>,
+  );
+}
 
 vi.mock('../game/phaser-mount', () => ({
   default: ({ initialScene }: { initialScene: string }) => (
@@ -17,6 +31,17 @@ vi.mock('../game/scene-router', () => ({
     onDoorEnter: vi.fn().mockReturnValue(vi.fn()),
     goToScene: vi.fn(),
     onInteractivesChange: vi.fn().mockReturnValue(vi.fn()),
+  },
+}));
+
+// Stub the API so guild-hall/town-square data hooks don't hit the network.
+vi.mock('../lib/api', () => ({
+  api: {
+    adventurers: { list: vi.fn().mockResolvedValue([]) },
+    quests: {
+      list: vi.fn().mockResolvedValue([]),
+      active: vi.fn().mockResolvedValue([]),
+    },
   },
 }));
 
