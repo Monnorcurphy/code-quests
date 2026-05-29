@@ -1,17 +1,13 @@
 # Progress — Phase 10
 
-Previous task progress archived to metrics/progress-before-chattahoochee.md
+Previous task progress archived to metrics/progress-before-ebro.md
 
-## chattahoochee — Library Skills tab (active list + candidates panel)
+## task-ebro — Forge skill from a monster (manual flow)
 
-**Status:** Complete
-
-**What was built:**
-- `packages/client/src/features/library/skill-candidate-card.tsx` — parchment card for one candidate skill; states: idle, confirming (inline form), confirming-loading, dismissing, success. Success toast auto-dismisses via 3s setTimeout that calls `queryClient.invalidateQueries(['skills'])`.
-- `packages/client/src/features/library/skills-tab.tsx` — Skills tab component; queries `['skills']` and `['monster-types']`, renders Skill Candidates (top) and Unlocked Skills table (bottom), both with empty states. Includes `RetireButton` sub-component.
-- `packages/client/src/features/library.tsx` — replaced placeholder `<p>` with `<SkillsTab />`. Added `['skills']` query to derive `candidateCount`; Skills tab button shows a red dot indicator and updated `aria-label` when candidates ≥ 1.
-- `packages/client/src/features/library/__tests__/skills-tab.test.tsx` — 18 Vitest tests covering empty states, candidate confirm/dismiss flows (with vi.useFakeTimers for the 3s dismiss), inline name validation, error states, active-skill retire, and axe-core accessibility checks.
-- Updated `packages/client/src/__tests__/library.test.tsx` to mock `api.skills` and update the stale Skills-tab placeholder assertion.
-- Added CSS for all new components to `packages/client/src/styles/features.css`.
-
-**Verify:** 936 client tests pass, 515 server tests pass, typecheck and lint clean.
+- Created `packages/client/src/features/library/forge-skill-modal.tsx` — modal with name input, multi-select monster type checkboxes, implementation textarea, focus trap, overlay-click close, ESC close, loading/success/error states, 3s auto-dismiss on success.
+- Created `packages/client/src/features/library/promote-nemesis-modal.tsx` — extracted existing inline `PromoteNemesisModal` from monster-detail.tsx to keep component under 300-line limit.
+- Extended `packages/client/src/features/library/monster-detail.tsx` — added "⚒ Forge Skill" secondary button next to "Mark as Nemesis", shows toast on forge success.
+- Extended `packages/client/src/features/library/skills-tab.tsx` — empty active skills state now includes "⚒ Forge a Skill" button that opens ForgeSkillModal without preselection.
+- Added CSS for forge modal, type checkboxes, textarea, form-error, skills-empty-state to `features.css`.
+- Created `packages/client/src/features/library/__tests__/forge-skill-modal.test.tsx` — 14 tests covering rendering, validation, happy path (query invalidation, auto-dismiss), error handling (generic + field-specific), and dismiss flows. All 951 tests pass.
+- Typecheck and lint: clean.
