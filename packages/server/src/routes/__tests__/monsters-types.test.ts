@@ -73,6 +73,14 @@ describe('POST /monsters/types', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 when name has no ASCII alphanumerics', async () => {
+    const res = await request(app).post('/monsters/types').send({
+      ...validBody,
+      name: '***',
+    });
+    expect(res.status).toBe(400);
+  });
+
   it('CHECK constraint rejects created_by other than system/user', () => {
     expect(() => {
       db.prepare(
