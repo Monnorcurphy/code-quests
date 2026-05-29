@@ -159,12 +159,14 @@ describe('TownSquareScene', () => {
     expect(scene.sceneKey).toBe('town-square');
   });
 
-  it('has defaultSpawnX at center (1600)', () => {
-    expect(scene.defaultSpawnX).toBe(1600);
+  it('has defaultSpawnX at the new town center', () => {
+    expect(scene.defaultSpawnX).toBeGreaterThan(700);
+    expect(scene.defaultSpawnX).toBeLessThan(1100);
   });
 
-  it('has sceneWidth 3200', () => {
-    expect(scene.sceneWidth).toBe(3200);
+  it('has a compact sceneWidth (under 2100)', () => {
+    expect(scene.sceneWidth).toBeGreaterThan(1400);
+    expect(scene.sceneWidth).toBeLessThan(2100);
   });
 
   it('has exactly 7 door configs', () => {

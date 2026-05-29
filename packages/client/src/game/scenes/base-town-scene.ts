@@ -148,14 +148,15 @@ export abstract class BaseTownScene extends Phaser.Scene {
   }
 
   protected drawFacades(): void {
-    // Town square doors carry per-scene targets; map each door to a building
-    // facade texture (generated at boot). Doors without a matching facade
-    // simply get no decor (e.g. return-to-town doors in interior scenes).
+    // Each facade sits with its base flush against the top of its door so
+    // the door reads as part of the building rather than floating below it.
+    // DOOR_Y is the door center, so door TOP = DOOR_Y - DOOR_HEIGHT/2.
+    const facadeBaseY = DOOR_Y - DOOR_HEIGHT / 2 + 8; // overlap slightly into door for seamless join
     for (const cfg of this.doorConfigs) {
       const facadeKey = `town-facade-${cfg.targetScene}`;
       if (!this.textures.exists(facadeKey)) continue;
       this.add
-        .image(cfg.x, 500, facadeKey)
+        .image(cfg.x, facadeBaseY, facadeKey)
         .setDepth(-2)
         .setOrigin(0.5, 1);
     }

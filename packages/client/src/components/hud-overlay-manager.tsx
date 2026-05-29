@@ -44,7 +44,7 @@ export function HUDOverlayManager() {
 
   function handleComingSoonClose() {
     setActiveModal(null);
-    sceneRouter.emitDoorEnter({ sceneKey: 'town-square', spawnX: 1600 });
+    sceneRouter.emitDoorEnter({ sceneKey: 'town-square', spawnX: 1000 });
   }
 
   if (activeModal === 'quest-board' || activeModal === 'recruit') {

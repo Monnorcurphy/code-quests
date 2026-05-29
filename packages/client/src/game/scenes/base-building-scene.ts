@@ -16,7 +16,7 @@ export const BUILDING_SIGN_Y = BUILDING_DOOR_Y - DOOR_HEIGHT / 2 - 20;
 const RETURN_DOOR: DoorConfig = {
   x: 200,
   targetScene: 'town-square' as SceneKey,
-  targetSpawnX: 1600,
+  targetSpawnX: 1000,
   label: 'Return to Town Square',
 };
 
@@ -54,7 +54,7 @@ export abstract class BaseBuildingScene extends BaseTownScene {
       id: 'town-square' as const,
       label: 'Return to Town Square',
       onActivate: () =>
-        sceneRouter.emitDoorEnter({ sceneKey: 'town-square', spawnX: 1600 }),
+        sceneRouter.emitDoorEnter({ sceneKey: 'town-square', spawnX: 1000 }),
     };
   }
 

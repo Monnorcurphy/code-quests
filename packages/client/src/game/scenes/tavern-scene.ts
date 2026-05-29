@@ -46,24 +46,28 @@ export class TavernScene extends BaseBuildingScene {
       .setOrigin(0.5)
       .setDepth(2);
 
-    // Wooden tables with mugs
+    // Everything in the tavern sits BACK from the front floor row so the
+    // player has a clear walking strip and doesn't clip under the furniture.
+    const BACK_Y_OFFSET = -110;
+
+    // Wooden tables with mugs (pushed back into the room)
     for (const tx of [380, 580]) {
-      this.add.rectangle(tx, BUILDING_DOOR_Y + 30, 160, 14, 0x5a3014).setDepth(0);
-      this.add.rectangle(tx, BUILDING_DOOR_Y + 50, 14, 30, 0x3a1f08).setDepth(0);
+      this.add.rectangle(tx, BUILDING_DOOR_Y + 30 + BACK_Y_OFFSET, 160, 14, 0x5a3014).setDepth(0);
+      this.add.rectangle(tx, BUILDING_DOOR_Y + 50 + BACK_Y_OFFSET, 14, 30, 0x3a1f08).setDepth(0);
       // mug on the table
-      this.add.rectangle(tx - 30, BUILDING_DOOR_Y + 18, 16, 22, 0x8a5a28).setDepth(1);
-      this.add.rectangle(tx - 30, BUILDING_DOOR_Y + 10, 18, 4, 0xf5e7b5).setDepth(2);
-      this.add.rectangle(tx + 30, BUILDING_DOOR_Y + 18, 16, 22, 0x8a5a28).setDepth(1);
-      this.add.rectangle(tx + 30, BUILDING_DOOR_Y + 10, 18, 4, 0xf5e7b5).setDepth(2);
+      this.add.rectangle(tx - 30, BUILDING_DOOR_Y + 18 + BACK_Y_OFFSET, 16, 22, 0x8a5a28).setDepth(1);
+      this.add.rectangle(tx - 30, BUILDING_DOOR_Y + 10 + BACK_Y_OFFSET, 18, 4, 0xf5e7b5).setDepth(2);
+      this.add.rectangle(tx + 30, BUILDING_DOOR_Y + 18 + BACK_Y_OFFSET, 16, 22, 0x8a5a28).setDepth(1);
+      this.add.rectangle(tx + 30, BUILDING_DOOR_Y + 10 + BACK_Y_OFFSET, 18, 4, 0xf5e7b5).setDepth(2);
     }
 
-    // Bar counter on left
-    this.add.rectangle(200, BUILDING_DOOR_Y + 36, 240, 28, 0x6a3c14).setDepth(0);
-    this.add.rectangle(200, BUILDING_DOOR_Y + 56, 240, 16, 0x3a1f08).setDepth(0);
+    // Bar counter on left (pushed back)
+    this.add.rectangle(200, BUILDING_DOOR_Y + 36 + BACK_Y_OFFSET, 240, 28, 0x6a3c14).setDepth(0);
+    this.add.rectangle(200, BUILDING_DOOR_Y + 56 + BACK_Y_OFFSET, 240, 16, 0x3a1f08).setDepth(0);
 
-    // Ale barrel — interactive
+    // Ale barrel — interactive (pushed back to match furniture)
     const barrelX = 800;
-    const barrelY = BUILDING_DOOR_Y;
+    const barrelY = BUILDING_DOOR_Y + BACK_Y_OFFSET;
     // Barrel body
     const barrel = this.add
       .rectangle(barrelX, barrelY, 70, 80, 0x6a3c10)
@@ -89,11 +93,13 @@ export class TavernScene extends BaseBuildingScene {
     // Each occasionally surfaces a tavern-flavoured speech bubble.
     if (this.textures.exists('character/npc-villager')) {
       const reducedMotion = this.player?.reducedMotion ?? false;
+      // Patrons sit at their tables / at the bar — pushed back into the room
+      // so the player walks IN FRONT of them along the floor strip.
       const seats: Array<{ x: number; y: number; flipX?: boolean }> = [
-        { x: 160, y: BUILDING_DOOR_Y + 4 },
-        { x: 250, y: BUILDING_DOOR_Y + 4, flipX: true },
-        { x: 380, y: BUILDING_DOOR_Y },
-        { x: 580, y: BUILDING_DOOR_Y, flipX: true },
+        { x: 160, y: BUILDING_DOOR_Y + 4 + BACK_Y_OFFSET },
+        { x: 250, y: BUILDING_DOOR_Y + 4 + BACK_Y_OFFSET, flipX: true },
+        { x: 380, y: BUILDING_DOOR_Y + BACK_Y_OFFSET },
+        { x: 580, y: BUILDING_DOOR_Y + BACK_Y_OFFSET, flipX: true },
       ];
       // Shared chorus — only one patron speaks at a time so bubbles don't
       // overlap. Initial delays staggered across a wide window so the first
@@ -117,10 +123,10 @@ export class TavernScene extends BaseBuildingScene {
       });
     }
 
-    // Innkeep Rorek — tavernkeeper between the tables.
+    // Innkeep Rorek — tavernkeeper behind the bar, between the tables.
     new GuideNpc(this, {
       x: 480,
-      y: BUILDING_DOOR_Y + 4,
+      y: BUILDING_DOOR_Y + 4 + BACK_Y_OFFSET,
       textureKey: 'character/npc-villager',
       bubbleText: 'Innkeep Rorek — Tavernkeeper',
       bubbleWidth: 200,

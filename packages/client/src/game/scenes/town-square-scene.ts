@@ -13,25 +13,28 @@ import { useWanderersStore, type IdleAdventurer } from '../../stores/wanderers-s
 import type { DoorConfig } from './base-town-scene';
 import type { SceneKey } from '../scene-registry';
 
-const SCENE_WIDTH = 3200;
-const DEFAULT_SPAWN_X = 1600;
+// Town Square is now a tighter ~2000-wide arena so you can sprint across
+// it in seconds. Doors clustered into two groups of 3-4 around the central
+// Quest Board / Recruit Banner area.
+const SCENE_WIDTH = 1700;
+const DEFAULT_SPAWN_X = 850;
 const GROUND_Y = 680;
 const GROUND_HEIGHT = 80;
 const GROUND_SURFACE_Y = GROUND_Y - GROUND_HEIGHT / 2;
 const DOOR_HEIGHT = 96;
 const DOOR_Y = GROUND_SURFACE_Y - DOOR_HEIGHT / 2;
 const SIGN_Y = DOOR_Y - DOOR_HEIGHT / 2 - 14;
-const QUEST_BOARD_X = 1420;
-const RECRUIT_BANNER_X = 1780;
+const QUEST_BOARD_X = 760;
+const RECRUIT_BANNER_X = 940;
 
 const DOOR_CONFIGS: DoorConfig[] = [
-  { x: 250, targetScene: 'war-room', targetSpawnX: 200, label: 'Door: War Room' },
-  { x: 550, targetScene: 'oracle', targetSpawnX: 200, label: 'Door: Oracle' },
-  { x: 850, targetScene: 'library', targetSpawnX: 200, label: 'Door: Library' },
-  { x: 1150, targetScene: 'tavern', targetSpawnX: 200, label: 'Door: Tavern' },
-  { x: 2050, targetScene: 'armory', targetSpawnX: 200, label: 'Door: Armory' },
-  { x: 2350, targetScene: 'guild-hall', targetSpawnX: 200, label: 'Door: Guild Hall' },
-  { x: 2650, targetScene: 'hall-of-returns', targetSpawnX: 200, label: 'Door: Hall of Returns' },
+  { x: 130, targetScene: 'war-room', targetSpawnX: 200, label: 'Door: War Room' },
+  { x: 290, targetScene: 'oracle', targetSpawnX: 200, label: 'Door: Oracle' },
+  { x: 450, targetScene: 'library', targetSpawnX: 200, label: 'Door: Library' },
+  { x: 610, targetScene: 'tavern', targetSpawnX: 200, label: 'Door: Tavern' },
+  { x: 1090, targetScene: 'armory', targetSpawnX: 200, label: 'Door: Armory' },
+  { x: 1250, targetScene: 'guild-hall', targetSpawnX: 200, label: 'Door: Guild Hall' },
+  { x: 1410, targetScene: 'hall-of-returns', targetSpawnX: 200, label: 'Door: Hall of Returns' },
 ];
 
 const SIGN_STYLE = {
@@ -44,15 +47,14 @@ const SIGN_STYLE = {
 };
 
 // Wanderer placement — keep adventurers OUT of the central interactive
-// strip (Quest Board at 1420, Recruit Banner at 1780, GuideNpc at 1620).
-const MAX_WANDERERS = 6;
+// strip (Quest Board at 760, Recruit Banner at 940, GuideNpc at 850).
+const MAX_WANDERERS = 4;
 const WANDERER_Y = 640;
 const WANDERER_ZONES: { min: number; max: number }[] = [
-  { min: 200, max: 1380 },  // left half
-  { min: 1900, max: 3000 }, // right half
+  { min: 60, max: 660 },     // left of the central strip
+  { min: 1040, max: 1620 },  // right of the central strip
 ];
-// Minimum horizontal patrol range so wanderers don't pace in a 5px line
-const WANDERER_PATROL_RANGE = 200;
+const WANDERER_PATROL_RANGE = 140;
 
 export class TownSquareScene extends BaseTownScene {
   private questBoard!: QuestBoardInteractive;
@@ -91,7 +93,7 @@ export class TownSquareScene extends BaseTownScene {
 
     // Elder Hawthorne — friendly guide NPC near the spawn point
     new GuideNpc(this, {
-      x: 1620,
+      x: 850,
       y: DOOR_Y + 4,
       textureKey: 'character/npc-villager',
       onActivate: () => useTownStore.getState().setActiveModal('help'),
