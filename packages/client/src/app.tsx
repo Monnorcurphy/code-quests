@@ -11,6 +11,11 @@ export default function App() {
         <Route path="/town" element={<Navigate to="/town/town-square" replace />} />
         <Route path="/town/:sceneKey" element={<Town />} />
         <Route path="/quest/:questId" element={<QuestRoute />} />
+        {/* /hall-of-returns/:questId is rendered by TASK ebony (post-mortem panel) */}
+        <Route
+          path="/hall-of-returns/:questId"
+          element={<Navigate to="/town/hall-of-returns" replace />}
+        />
         <Route path="*" element={<Navigate to="/town/town-square" replace />} />
       </Routes>
     </>
