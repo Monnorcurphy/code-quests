@@ -1,11 +1,14 @@
 import { BaseBuildingScene, BUILDING_DOOR_Y } from './base-building-scene';
 import { GuideNpc } from '../entities/guide-npc';
+import { PatronNpc, PATRON_CATCHPHRASES } from '../entities/patron-npc';
 import { registerScene } from '../scene-registry';
 import { sceneRouter } from '../scene-router';
 import { useTownStore } from '../../stores/town-store';
 import type { SceneKey } from '../scene-registry';
 
 export class TavernScene extends BaseBuildingScene {
+  private patrons: PatronNpc[] = [];
+
   constructor() {
     super({ key: 'tavern' });
   }
@@ -78,10 +81,28 @@ export class TavernScene extends BaseBuildingScene {
       .setOrigin(0.5)
       .setDepth(3);
 
-    // Two patrons drinking at the bar (just sprites, idle)
+    // Patrons drinking around the room — two at the bar, two at tables.
+    // Each occasionally surfaces a tavern-flavoured speech bubble.
     if (this.textures.exists('character/npc-villager')) {
-      this.add.sprite(160, BUILDING_DOOR_Y + 4, 'character/npc-villager').setDepth(2);
-      this.add.sprite(250, BUILDING_DOOR_Y + 4, 'character/npc-villager').setDepth(2).setFlipX(true);
+      const reducedMotion = this.player?.reducedMotion ?? false;
+      const seats: Array<{ x: number; y: number; flipX?: boolean }> = [
+        { x: 160, y: BUILDING_DOOR_Y + 4 },
+        { x: 250, y: BUILDING_DOOR_Y + 4, flipX: true },
+        { x: 380, y: BUILDING_DOOR_Y },
+        { x: 580, y: BUILDING_DOOR_Y, flipX: true },
+      ];
+      for (const seat of seats) {
+        this.patrons.push(
+          new PatronNpc(this, {
+            x: seat.x,
+            y: seat.y,
+            textureKey: 'character/npc-villager',
+            catchphrases: PATRON_CATCHPHRASES,
+            flipX: seat.flipX ?? false,
+            reducedMotion,
+          }),
+        );
+      }
     }
 
     // Innkeep Rorek — tavernkeeper between the tables.
@@ -112,6 +133,8 @@ export class TavernScene extends BaseBuildingScene {
 
     this.events.once('shutdown', () => {
       useTownStore.getState().setActiveModal(null);
+      for (const p of this.patrons) p.destroy();
+      this.patrons = [];
     });
   }
 }

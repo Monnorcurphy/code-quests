@@ -20,18 +20,28 @@ const ALPHA_HIGHLIGHT = 0.95;
 const OUTLINE_STROKE = 3;
 const OUTLINE_COLOR = 0xffd700;
 
-// Adventurer sprite layout — left half of the scene (x 300-600), avoiding
-// the Guild Roster interactive at x=900.
+// Adventurer sprite layout — spread along a wider band (x 300-1000) so
+// labels don't overlap when 3+ adventurers are present. Capped at
+// MAX_VISIBLE_ADVENTURERS so we never crowd past the band.
 const ADVENTURER_REGION_MIN_X = 300;
-const ADVENTURER_REGION_MAX_X = 600;
+const ADVENTURER_REGION_MAX_X = 1000;
 const ADVENTURER_Y = BUILDING_DOOR_Y;
-const ADVENTURER_MIN_SPACING = 70;
+const ADVENTURER_MIN_SPACING = 100;
 const ADVENTURER_DEPTH_BODY = 1;
 const ADVENTURER_DEPTH_LABEL = 2;
 const ALPHA_ON_QUEST = 0.5;
 const ALPHA_ROSTER_IDLE = 1;
 const SCALE_ON_QUEST = 0.75;
 const SCALE_ROSTER_IDLE = 1;
+const MAX_VISIBLE_ADVENTURERS = 6;
+const NAME_MAX_CHARS = 14;
+
+function truncateName(name: string): string {
+  if (name.length <= NAME_MAX_CHARS) return name;
+  // Reserve one char for the ellipsis so the truncated label stays at
+  // NAME_MAX_CHARS visible characters.
+  return `${name.slice(0, NAME_MAX_CHARS - 1)}…`;
+}
 
 interface AdventurerSpriteHandles {
   sprite: Phaser.GameObjects.Sprite;
@@ -156,9 +166,10 @@ export class GuildHallScene extends BaseBuildingScene {
 
   private renderRoster(roster: GuildHallAdventurer[]): void {
     this.clearAdventurerSprites();
-    const xs = layoutXs(roster.length);
-    for (let i = 0; i < roster.length; i++) {
-      const adv = roster[i];
+    const visible = roster.slice(0, MAX_VISIBLE_ADVENTURERS);
+    const xs = layoutXs(visible.length);
+    for (let i = 0; i < visible.length; i++) {
+      const adv = visible[i];
       const x = xs[i];
       if (!adv || x === undefined) continue;
       this.adventurerSprites.push(this.createAdventurerSprite(adv, x));
@@ -184,7 +195,7 @@ export class GuildHallScene extends BaseBuildingScene {
     });
 
     const nameText = this.add
-      .text(x, ADVENTURER_Y - 38, adv.name, {
+      .text(x, ADVENTURER_Y - 38, truncateName(adv.name), {
         fontSize: '12px',
         color: '#fef9e7',
         fontStyle: 'bold',

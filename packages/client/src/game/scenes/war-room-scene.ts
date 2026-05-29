@@ -50,20 +50,56 @@ export class WarRoomScene extends BaseBuildingScene {
       .text(mapX, mapY - mapH / 2 + 14, 'MAP OF THE REALM', { fontSize: '12px', color: '#f0e0b0', fontStyle: 'bold' })
       .setOrigin(0.5)
       .setDepth(3);
-    // Coastline (left edge water)
-    this.add.rectangle(mapX - mapW / 2 + 50, mapY + 30, 80, 220, 0x3a72aa, 0.7).setDepth(2);
-    // Forests
-    for (let i = 0; i < 12; i++) {
-      const fx = mapX - 140 + (i * 33) % 320;
-      const fy = mapY - 60 + ((i * 47) % 220);
-      this.add.circle(fx, fy, 6, 0x4a6a28).setDepth(2);
-      this.add.circle(fx + 4, fy - 2, 5, 0x3a5a18).setDepth(3);
+    // Coastline (left edge water) — curved edge using stacked offset rectangles
+    // so the water doesn't look like a hard cut against the land.
+    const coastX = mapX - mapW / 2 + 50;
+    this.add.rectangle(coastX, mapY + 30, 80, 220, 0x3a72aa, 0.7).setDepth(2);
+    // Curved coastline edge: small offset rectangles trace a soft wavy outline
+    const coastEdges: Array<[number, number, number]> = [
+      [coastX + 38, mapY - 70, 10],
+      [coastX + 42, mapY - 50, 8],
+      [coastX + 46, mapY - 30, 10],
+      [coastX + 40, mapY - 10, 12],
+      [coastX + 44, mapY + 10, 10],
+      [coastX + 48, mapY + 30, 8],
+      [coastX + 42, mapY + 50, 12],
+      [coastX + 38, mapY + 70, 10],
+      [coastX + 44, mapY + 90, 8],
+      [coastX + 40, mapY + 110, 10],
+    ];
+    for (const [ex, ey, eh] of coastEdges) {
+      this.add.rectangle(ex, ey, 6, eh, 0x3a72aa, 0.7).setDepth(2);
     }
-    // Mountains
-    for (let i = 0; i < 5; i++) {
-      const mx = mapX + 80 + i * 28;
-      this.add.triangle(mx, mapY - 40, -14, 16, 14, 16, 0, -16, 0x807060).setDepth(2);
-      this.add.triangle(mx, mapY - 40, -8, 8, 8, 8, 0, -16, 0xffffff).setDepth(3);
+    // Forests — tree icons (dark green triangle canopy + brown trunk),
+    // scattered in small clusters rather than a polka-dot grid.
+    const treeClusters: Array<[number, number]> = [
+      [mapX - 110, mapY - 50], [mapX - 100, mapY - 38], [mapX - 118, mapY - 32],
+      [mapX - 60, mapY + 50], [mapX - 50, mapY + 60], [mapX - 70, mapY + 62],
+      [mapX - 20, mapY - 80], [mapX - 8, mapY - 72],
+      [mapX + 50, mapY + 60], [mapX + 62, mapY + 70], [mapX + 56, mapY + 82],
+      [mapX - 130, mapY + 80], [mapX - 118, mapY + 92],
+    ];
+    for (const [fx, fy] of treeClusters) {
+      // trunk
+      this.add.rectangle(fx, fy + 4, 2, 4, 0x4a2a0c).setDepth(2);
+      // canopy
+      this.add.triangle(fx, fy - 2, -5, 6, 5, 6, 0, -7, 0x2c4a18).setDepth(3);
+      this.add.triangle(fx, fy - 5, -3, 4, 3, 4, 0, -5, 0x1c3a0c).setDepth(4);
+    }
+    // Mountains — clusters of 2-3 with overlapping bases, scattered properly.
+    const mountainClusters: Array<{ cx: number; cy: number }> = [
+      { cx: mapX + 60, cy: mapY - 50 },
+      { cx: mapX + 130, cy: mapY - 30 },
+      { cx: mapX + 200, cy: mapY + 10 },
+    ];
+    for (const { cx, cy } of mountainClusters) {
+      // back-left peak (smaller, lower)
+      this.add.triangle(cx - 10, cy + 2, -10, 12, 10, 12, 0, -10, 0x6a5a4a).setDepth(2);
+      // center peak (larger)
+      this.add.triangle(cx, cy, -14, 16, 14, 16, 0, -16, 0x807060).setDepth(2);
+      this.add.triangle(cx, cy, -6, 6, 6, 6, 0, -14, 0xffffff).setDepth(3);
+      // back-right peak (smaller)
+      this.add.triangle(cx + 12, cy + 4, -9, 10, 9, 10, 0, -10, 0x6a5a4a).setDepth(2);
     }
     // River
     this.add.line(0, 0, mapX - 100, mapY + 90, mapX + 100, mapY + 70, 0x3a72aa).setLineWidth(3).setDepth(2);
@@ -81,18 +117,45 @@ export class WarRoomScene extends BaseBuildingScene {
         .text(c.x + 8, c.y - 4, c.name, { fontSize: '9px', color: '#3a1a08', fontStyle: 'bold' })
         .setDepth(4);
     }
-    // Compass rose
-    this.add.circle(mapX + mapW / 2 - 32, mapY - mapH / 2 + 40, 18, 0xe8d9a6).setStrokeStyle(2, 0x5a3a14).setDepth(2);
-    this.add.text(mapX + mapW / 2 - 32, mapY - mapH / 2 + 32, 'N', { fontSize: '11px', color: '#5a3a14', fontStyle: 'bold' }).setOrigin(0.5).setDepth(3);
-    this.add.text(mapX + mapW / 2 - 32, mapY - mapH / 2 + 48, 'S', { fontSize: '9px', color: '#5a3a14' }).setOrigin(0.5).setDepth(3);
+    // Compass rose — small circle in center with N/S/E/W at matching size & weight.
+    const compassX = mapX + mapW / 2 - 32;
+    const compassY = mapY - mapH / 2 + 40;
+    this.add.circle(compassX, compassY, 18, 0xe8d9a6).setStrokeStyle(2, 0x5a3a14).setDepth(2);
+    // Inner cross marks
+    this.add.line(0, 0, compassX - 6, compassY, compassX + 6, compassY, 0x5a3a14).setLineWidth(1).setDepth(3);
+    this.add.line(0, 0, compassX, compassY - 6, compassX, compassY + 6, 0x5a3a14).setLineWidth(1).setDepth(3);
+    // Small center dot
+    this.add.circle(compassX, compassY, 2, 0x5a3a14).setDepth(3);
+    const compassFont = { fontSize: '11px', color: '#5a3a14', fontStyle: 'bold' } as const;
+    this.add.text(compassX, compassY - 22, 'N', compassFont).setOrigin(0.5).setDepth(3);
+    this.add.text(compassX, compassY + 22, 'S', compassFont).setOrigin(0.5).setDepth(3);
+    this.add.text(compassX + 22, compassY, 'E', compassFont).setOrigin(0.5).setDepth(3);
+    this.add.text(compassX - 22, compassY, 'W', compassFont).setOrigin(0.5).setDepth(3);
 
-    // Hanging banners on the wall
-    for (const bx of [200, 1080]) {
-      this.add.rectangle(bx, 200, 50, 110, 0x7a1818).setDepth(0);
-      this.add.triangle(bx, 260, -25, -5, 25, -5, 0, 12, 0x7a1818).setDepth(0);
-      this.add.rectangle(bx, 200, 50, 4, 0xa07020).setDepth(1);
-      // Crossed-axes crest
-      this.add.text(bx, 220, '⚔', { fontSize: '24px', color: '#c4a050' }).setOrigin(0.5).setDepth(2);
+    // Hanging banners on the wall — two on each side at slightly different
+    // heights, with a thicker pole at the top, gold-trim left/right edges,
+    // and a "wave" effect from two adjacent offset panels.
+    const bannerSpots: Array<{ x: number; y: number }> = [
+      { x: 170, y: 195 }, { x: 240, y: 215 },
+      { x: 1040, y: 215 }, { x: 1110, y: 195 },
+    ];
+    for (const { x: bx, y: by } of bannerSpots) {
+      // Thick wooden pole at top
+      this.add.rectangle(bx, by - 60, 64, 8, 0x4a3018).setDepth(0);
+      this.add.rectangle(bx, by - 60, 64, 2, 0x6a4a28).setDepth(1);
+      // Pole end caps
+      this.add.circle(bx - 32, by - 60, 5, 0x6a4a28).setDepth(1);
+      this.add.circle(bx + 32, by - 60, 5, 0x6a4a28).setDepth(1);
+      // Banner body — two adjacent panels offset 2px for a wave effect
+      this.add.rectangle(bx - 12, by, 24, 110, 0x7a1818).setDepth(0);
+      this.add.rectangle(bx + 12, by + 2, 24, 110, 0x8a2020).setDepth(0);
+      // Gold trim on left + right edges
+      this.add.rectangle(bx - 24, by, 2, 110, 0xc4a050).setDepth(1);
+      this.add.rectangle(bx + 24, by + 2, 2, 110, 0xc4a050).setDepth(1);
+      // Triangular hem at bottom (slightly wider, two-tone to match wave)
+      this.add.triangle(bx, by + 64, -25, -8, 25, -8, 0, 14, 0x7a1818).setDepth(0);
+      // Crossed-axes crest centered on the banner
+      this.add.text(bx, by, '⚔', { fontSize: '22px', color: '#e4c060' }).setOrigin(0.5).setDepth(2);
     }
 
     // Planning table
