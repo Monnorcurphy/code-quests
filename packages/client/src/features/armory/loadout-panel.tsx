@@ -135,7 +135,7 @@ export default function LoadoutPanel({ onClose }: Props) {
               <div className="armory-columns">
                 <LoadoutColumn
                   heading="Skills"
-                  items={skills}
+                  items={activeSkills}
                   selectedIds={selectedSkillIds}
                   onChange={setSelectedSkillIds}
                   disabled={isSaving}

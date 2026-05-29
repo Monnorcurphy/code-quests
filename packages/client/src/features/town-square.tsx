@@ -34,7 +34,7 @@ function LibraryNewsRibbon() {
     : 'Library has news — visit the Skills tab';
 
   return (
-    <div className="library-news-ribbon" role="alert" aria-label={label}>
+    <aside className="library-news-ribbon" aria-live="polite">
       <span className="library-news-ribbon-text">{label}</span>
       <button
         type="button"
@@ -44,7 +44,7 @@ function LibraryNewsRibbon() {
       >
         Go to Library
       </button>
-    </div>
+    </aside>
   );
 }
 

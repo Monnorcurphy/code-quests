@@ -248,6 +248,29 @@ describe('LoadoutPanel', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('skills column only shows active skills, not candidates or retired', async () => {
+    const candidateSkill: Skill = {
+      id: 'cand-1',
+      name: 'Auto: Goblin (Linter)',
+      monsterTypeIds: [],
+      status: 'candidate',
+      createdBy: 'system',
+      createdAt: new Date().toISOString(),
+      hitCount: 3,
+      implementation: '',
+    };
+    vi.mocked(api.equipment.skills).mockResolvedValue([candidateSkill, mockSkills[0]]);
+    renderPanel();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Linter's Bane")).toBeDefined();
+    });
+    expect(screen.queryByLabelText('Auto: Goblin (Linter)')).toBeNull();
+    // The active skill is the first unequipped item — it gets the chip-scroll highlight class
+    const label = screen.getByLabelText("Linter's Bane").closest('label');
+    expect(label?.className).toContain('armory-item--new');
+  });
+
   it('moves focus inside the panel on mount', () => {
     renderPanel();
     const inner = document.querySelector('.modal-panel') as HTMLElement;

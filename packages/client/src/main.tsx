@@ -7,10 +7,15 @@ import AppShell from './components/app-shell';
 import { queryClient } from './lib/query-client';
 import { applyReducedMotionPreference } from './components/settings-button';
 import { AudioProvider } from './audio/audio-provider';
+import { useTownStore } from './stores/town-store';
 import './styles/global.css';
 import './styles/features.css';
 
 applyReducedMotionPreference();
+
+if (import.meta.env.DEV) {
+  Object.assign(window, { __townStore: useTownStore });
+}
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');

@@ -190,19 +190,17 @@ test.describe('Phase 10 capstone — Library learning loop', () => {
   // Step 2: Town Square renders with "Library has news" ribbon
   test('Town Square shows Library has news ribbon when candidates exist', async ({ page }) => {
     await page.goto('/town/town-square');
-    await page.getByRole('button', { name: /open town square/i }).click().catch(() => {});
+    await page.waitForLoadState('domcontentloaded');
 
-    // Open town square modal via keyboard nav or direct URL
-    await page.goto('/town/town-square');
+    // Inject quest-board modal state via the store exposed on window in dev builds
+    await page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const store = (window as any).__townStore;
+      if (store) store.setState({ activeModal: 'quest-board' });
+    });
 
-    // The ribbon should be visible after the town square modal opens
-    // Trigger the quest-board modal
-    const openBtn = page.getByRole('button', { name: /town square/i }).first();
-    if (await openBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await openBtn.click();
-    }
-
-    await expect(page.getByText(/library has news/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('dialog', { name: /town square/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/library has news/i)).toBeVisible({ timeout: 5000 });
   });
 
   // Step 3: Click ribbon → Library modal opens with Skills tab auto-selected
@@ -250,14 +248,49 @@ test.describe('Phase 10 capstone — Library learning loop', () => {
   test('Armory loadout shows new skill available chip when active skill not in equipment', async ({
     page,
   }) => {
-    await page.goto('/town/armory');
-    await expect(page.getByRole('dialog', { name: /armory/i })).toBeVisible({ timeout: 15000 });
+    // Mock the equipment save endpoint
+    await page.route(`**/quests/${DEMO_QUEST_ID}`, (route) => {
+      if (route.request().method() === 'PATCH') {
+        route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ...MOCK_QUESTS[0],
+            equipment: { skillIds: [DEMO_SKILL_ACTIVE_ID], toolIds: [], mcpServerIds: [] },
+          }),
+        });
+      } else {
+        route.continue();
+      }
+    });
 
-    // With no quest selected, there's a message about selecting a quest first
-    // That's the current behavior — no quest selected state shows the message
-    await expect(
-      page.getByText(/no quest selected|select a quest/i),
-    ).toBeVisible({ timeout: 5000 });
+    await page.goto('/town/armory');
+    await page.waitForLoadState('domcontentloaded');
+
+    // Inject quest selection and open the armory loadout modal via the store
+    await page.evaluate((qid) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const store = (window as any).__townStore;
+      if (store) store.setState({ selectedQuestId: qid, activeModal: 'armory-loadout' });
+    }, DEMO_QUEST_ID);
+
+    await expect(page.getByRole('dialog', { name: /armory/i })).toBeVisible({ timeout: 10000 });
+
+    // The chip should be visible because MOCK_SKILL_ACTIVE is not yet equipped
+    const chip = page.getByRole('button', { name: /new skill available/i });
+    await expect(chip).toBeVisible({ timeout: 5000 });
+
+    // Click the chip — it should scroll to / highlight the active skill
+    await chip.click();
+    const skillCheckbox = page.getByLabelText(MOCK_SKILL_ACTIVE.name);
+    await expect(skillCheckbox).toBeVisible({ timeout: 3000 });
+
+    // Toggle the new active skill on — chip disappears once the skill is selected
+    await skillCheckbox.click();
+    await expect(chip).not.toBeVisible({ timeout: 3000 });
+
+    // Save the loadout and verify success feedback
+    await page.getByRole('button', { name: /save loadout/i }).click();
+    await expect(page.getByText(/loadout saved/i)).toBeVisible({ timeout: 5000 });
   });
 
   // Step 6: Bestiary tab — Coin New Type modal
@@ -284,16 +317,13 @@ test.describe('Phase 10 capstone — Library learning loop', () => {
     await page.goto('/town/library');
     await expect(page.getByRole('dialog', { name: /library/i })).toBeVisible({ timeout: 15000 });
 
-    // Click on a monster in the bestiary
+    // MOCK_MONSTERS always contains Grimtooth — assert unconditionally
     const monsterBtn = page.getByRole('button', { name: /grimtooth|goblin/i }).first();
-    if (await monsterBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await monsterBtn.click();
-      const forgeBtn = page.getByRole('button', { name: /forge skill/i });
-      await expect(forgeBtn).toBeVisible({ timeout: 5000 });
-    } else {
-      // If no monster listed, the empty state is fine
-      await expect(page.getByText(/no monsters|empty/i).or(page.getByRole('button', { name: /coin new type/i }))).toBeVisible({ timeout: 5000 });
-    }
+    await expect(monsterBtn).toBeVisible({ timeout: 5000 });
+    await monsterBtn.click();
+
+    const forgeBtn = page.getByRole('button', { name: /forge skill/i });
+    await expect(forgeBtn).toBeVisible({ timeout: 5000 });
   });
 
   // Step 8: Accessibility — Library modal (Bestiary tab)
