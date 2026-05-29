@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import type Database from 'better-sqlite3';
-import { getMonsterType, listMonsterTypes, MONSTER_PROJECT_ID } from './monster-types';
+import { getMonsterType, listMonsterTypes, validateFailureSignature, MONSTER_PROJECT_ID } from './monster-types';
 import type { MonsterType } from './monster-types';
 import { generateMonsterName } from './monster-name-generator';
 import { evaluateSkillCandidate } from './skill-candidate-detection';
@@ -90,12 +90,20 @@ export function classifyCombatEvent(
   const types = listMonsterTypes(db);
   for (const t of types) {
     if (!t.failureSignature) continue;
-    try {
-      const re = new RegExp(t.failureSignature, 'i');
-      if (re.test(event.message)) return t;
-    } catch {
-      // invalid regex in DB — skip silently
+    if (!validateFailureSignature(t.failureSignature)) {
+      process.stderr.write(
+        JSON.stringify({
+          level: 'warn',
+          service: 'monster-detection',
+          event: 'invalid_failure_signature',
+          monsterTypeId: t.id,
+          pattern: t.failureSignature,
+        }) + '\n',
+      );
+      continue;
     }
+    const re = new RegExp(t.failureSignature, 'i');
+    if (re.test(event.message)) return t;
   }
 
   process.stderr.write(

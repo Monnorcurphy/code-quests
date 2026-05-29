@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import Database from 'better-sqlite3';
 import { z } from 'zod';
-import { MonsterScopeSchema } from '@code-quests/shared';
+import { MonsterScopeSchema, CreateMonsterTypeSchema } from '@code-quests/shared';
 import { listMonsterTypes } from '../services/monster-types';
 
 type MonsterRow = {
@@ -97,11 +97,58 @@ const MONSTER_FILTER_SQL = `
   ORDER BY first_seen_at DESC
 `.trim();
 
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/[\s]+/g, '-')
+    .replace(/-+/g, '-');
+}
+
 export function createMonstersRouter(db: Database.Database): Router {
   const router = Router();
 
   router.get('/monster-types', (_req, res) => {
     res.json(listMonsterTypes(db));
+  });
+
+  router.post('/monsters/types', (req, res) => {
+    const parsed = CreateMonsterTypeSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues });
+      return;
+    }
+
+    const { name, spritePath, defaultDifficulty, failureSignature } = parsed.data;
+    const id = `user:${slugify(name)}`;
+
+    const existing = db.prepare('SELECT id FROM monster_types WHERE id = ?').get(id);
+    if (existing) {
+      res.status(409).json({ error: 'A monster type with this name already exists', field: 'name' });
+      return;
+    }
+
+    db.prepare(
+      `INSERT INTO monster_types (id, name, sprite_path, default_difficulty, failure_signature, created_by)
+       VALUES (?, ?, ?, ?, ?, 'user')`,
+    ).run(id, name, spritePath, defaultDifficulty, failureSignature);
+
+    const row = db
+      .prepare(
+        'SELECT id, name, sprite_path, default_difficulty, failure_signature, created_by FROM monster_types WHERE id = ?',
+      )
+      .get(id) as Record<string, unknown>;
+
+    res.status(201).json({
+      id: row['id'],
+      name: row['name'],
+      spritePath: row['sprite_path'],
+      defaultDifficulty: row['default_difficulty'],
+      failureSignature: row['failure_signature'],
+      createdBy: row['created_by'],
+    });
   });
 
   router.get('/monsters', (req, res) => {

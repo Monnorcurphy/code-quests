@@ -17,8 +17,9 @@ import {
   MonsterEncounterSchema,
   ForgeSkillSchema,
   ConfirmCandidateSchema,
+  CreateMonsterTypeSchema,
 } from '@code-quests/shared';
-import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild, ForgeSkillInput, ConfirmCandidateInput } from '@code-quests/shared';
+import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild, ForgeSkillInput, ConfirmCandidateInput, CreateMonsterTypeInput } from '@code-quests/shared';
 
 const FeedbackSuccessSchema = z.object({}).passthrough();
 
@@ -278,7 +279,7 @@ export type PostMortemAttempt = z.infer<typeof PostMortemAttemptSchema>;
 // Re-export FailureSummary type for convenience
 export type { FailureSummary };
 
-export type { ForgeSkillInput, ConfirmCandidateInput };
+export type { ForgeSkillInput, ConfirmCandidateInput, CreateMonsterTypeInput };
 
 // Schemas that match the actual server response shapes
 const RepostServerResponseSchema = z.object({
@@ -379,6 +380,8 @@ export const api = {
       fetchJson(z.array(MonsterEncounterSchema), `/quests/${questId}/encounters`),
     promoteNemesis: (id: string, name?: string): Promise<Monster> =>
       postJson(MonsterSchema, `/monsters/${id}/promote-nemesis`, name !== undefined ? { name } : {}),
+    createType: (input: CreateMonsterTypeInput): Promise<MonsterType> =>
+      postJson(MonsterTypeSchema, '/monsters/types', CreateMonsterTypeSchema.parse(input)),
   },
   hallOfReturns: {
     listQuests: (opts?: { status?: 'returned_to_town' | 'complete'; cursor?: string; limit?: number }) => {
