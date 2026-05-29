@@ -18,6 +18,8 @@ import {
 } from '@code-quests/shared';
 import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope } from '@code-quests/shared';
 
+const FeedbackSuccessSchema = z.object({}).passthrough();
+
 const ReturnedAgentSchema = z.object({
   id: z.string(),
   startedAt: z.string(),
@@ -228,9 +230,32 @@ const HallOfReturnsListSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 
+const PostMortemAttemptSchema = z.object({
+  id: z.string(),
+  startedAt: z.string(),
+  endedAt: z.string().nullable(),
+  events: z.array(AgentEventSchema),
+});
+
+const PostMortemAdventurerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  class: AdventurerClassSchema,
+});
+
+export const PostMortemResponseSchema = z.object({
+  quest: HallOfReturnsQuestSchema,
+  attempts: z.array(PostMortemAttemptSchema),
+  encounters: z.array(MonsterEncounterSchema),
+  failureSummary: FailureSummarySchema.nullable(),
+  adventurer: PostMortemAdventurerSchema.nullable(),
+});
+
 export type HallOfReturnsQuest = z.infer<typeof HallOfReturnsQuestSchema>;
 export type HallOfReturnsList = z.infer<typeof HallOfReturnsListSchema>;
 export type FatalMonster = z.infer<typeof FatalMonsterSchema>;
+export type PostMortemResponse = z.infer<typeof PostMortemResponseSchema>;
+export type PostMortemAttempt = z.infer<typeof PostMortemAttemptSchema>;
 
 // Re-export FailureSummary type for convenience
 export type { FailureSummary };
@@ -269,6 +294,8 @@ export const api = {
         ReturnedQuestsPageSchema,
         `/quests/returned?limit=${opts?.limit ?? 20}&offset=${opts?.offset ?? 0}`,
       ),
+    submitFeedback: (id: string, text: string) =>
+      postJson(FeedbackSuccessSchema, `/quests/${id}/actions/feedback`, { text }),
   },
   epics: {
     list: () => fetchJson(z.array(EpicSchema), '/epics'),
@@ -305,5 +332,7 @@ export const api = {
       if (opts?.cursor) params.set('cursor', opts.cursor);
       return fetchJson(HallOfReturnsListSchema, `/hall-of-returns/quests?${params.toString()}`);
     },
+    getPostMortem: (questId: string) =>
+      fetchJson(PostMortemResponseSchema, `/hall-of-returns/quests/${questId}/post-mortem`),
   },
 };

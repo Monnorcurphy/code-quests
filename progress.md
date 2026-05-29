@@ -1,20 +1,22 @@
 # Progress — Phase 9
 
-Previous task progress archived to metrics/progress-before-cedar.md
+Previous task progress archived to metrics/progress-before-ebony.md
 
-## cedar — Hall of Returns view + returned-quest list (frontend)
+## TASK ebony — Post-mortem panel (frontend)
 
 **Status:** DONE
 
 **What was built:**
-- `packages/client/src/features/hall-of-returns/hall-of-returns.tsx` — modal view with two tabs (Returned/Completed); tab state preserved as URL query param (`?tab=...`)
-- `packages/client/src/features/hall-of-returns/returned-quest-list.tsx` — list component with loading skeleton (3 rows), error banner + retry button, empty state, and quest rows (title, adventurer, fatal monster sprite+name, relative time, recommendation badge)
-- `packages/client/src/features/hall-of-returns/use-returned-quests.ts` — TanStack Query hook calling `GET /hall-of-returns/quests`; subscribes to quest WS channels for real-time invalidation
-- `packages/client/src/features/hall-of-returns/__tests__/returned-quest-list.test.tsx` — 12 tests covering render, empty state, error state, click navigation, keyboard navigation, edge cases
-- `packages/client/src/lib/api.ts` — added `api.hallOfReturns.listQuests()`, `HallOfReturnsQuest`, `HallOfReturnsList` types
-- `packages/client/src/features/hall-of-returns.tsx` — re-exports from new folder (keeps old import path working)
-- `packages/client/src/components/hud-overlay-manager.tsx` — updated import to new explicit path
-- `packages/client/src/app.tsx` — added `/hall-of-returns/:questId` placeholder route (redirects back to town until TASK ebony implements post-mortem)
-- `packages/client/src/__tests__/hall-of-returns.test.tsx` — updated tests for new component (13 tests; old Phase 2 tests removed/replaced)
+- `use-post-mortem.ts` — TanStack Query hook for `GET /hall-of-returns/quests/:id/post-mortem`; invalidates on `quest_feedback_added` WebSocket event
+- `combat-log-replay.tsx` — semantic `<ol>` of `MonsterEncounter` rows; each row shows sprite, name, difficulty stars, outcome badge, and collapsible combat-log detail lines
+- `failure-summary-card.tsx` — shows `notes`/`reason`, `retries`, recommendation badge (styled per recommendation type), and fatal monster with bestiary link
+- `feedback-form.tsx` — textarea with visible label, char counter (0/2000), submit disabled until ≥1 char, 3 mutation states (loading / success-toast auto-dismiss / error-persistent), field-named error messages
+- `post-mortem.tsx` — main page at `/hall-of-returns/:questId`; loading, 404, and server-error states; back button restores hall-of-returns modal via `useTownStore`; `prefers-reduced-motion` class applied
+- `app.tsx` — replaced redirect for `/hall-of-returns/:questId` with real `<PostMortem />` route
+- `api.ts` — added `PostMortemResponseSchema`, `api.hallOfReturns.getPostMortem`, `api.quests.submitFeedback`
+- Tests: `__tests__/post-mortem.test.tsx` (12 tests), `__tests__/feedback-form.test.tsx` (14 tests)
 
-**All tests pass:** 825 client tests, 470 server tests, 83 shared tests. Typecheck + lint clean.
+**Verify:**
+- 851 tests pass, 0 failures
+- TypeScript: clean
+- ESLint: clean
