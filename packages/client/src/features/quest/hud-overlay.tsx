@@ -41,9 +41,9 @@ function AdventurerName({ adventurerId }: { adventurerId: string | null }) {
     queryFn: () => (adventurerId ? api.adventurers.get(adventurerId) : Promise.resolve(null)),
     enabled: adventurerId !== null,
   });
-  if (!adventurerId) return <span className="text-gray-300 italic">No adventurer</span>;
-  if (!adventurer) return <span className="text-gray-200">Loading…</span>;
-  return <span className="text-gray-100 font-medium">{adventurer.name}</span>;
+  if (!adventurerId) return <span style={{ color: '#d1d5db', fontStyle: 'italic' }}>No adventurer</span>;
+  if (!adventurer) return <span style={{ color: '#e5e7eb' }}>Loading…</span>;
+  return <span style={{ color: '#f9fafb', fontWeight: 500 }}>{adventurer.name}</span>;
 }
 
 export default function HUDOverlay({
@@ -86,10 +86,10 @@ export default function HUDOverlay({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <h1 className="text-gray-100 font-bold" style={{ margin: 0, fontSize: '1rem' }}>
+          <h1 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#f9fafb' }}>
             {quest.title}
           </h1>
-          <span className="text-gray-300" style={{ fontSize: '0.875rem' }} aria-label="Adventurer">
+          <span style={{ fontSize: '0.875rem', color: '#d1d5db' }} aria-label="Adventurer">
             <AdventurerName adventurerId={quest.adventurerId} />
           </span>
           <span
@@ -103,7 +103,7 @@ export default function HUDOverlay({
             }}
             aria-label={`Status: ${statusLabel}`}
           >
-            <span className="text-gray-100">{statusLabel}</span>
+            <span style={{ color: '#f9fafb' }}>{statusLabel}</span>
           </span>
 
           {/* Connection status chip */}
@@ -115,6 +115,7 @@ export default function HUDOverlay({
               borderRadius: '4px',
               fontSize: '0.7rem',
               fontWeight: 600,
+              color: '#f9fafb',
               background:
                 connectionStatus === 'connected'
                   ? 'rgba(30,120,30,0.8)'
@@ -123,7 +124,7 @@ export default function HUDOverlay({
                     : 'rgba(120,90,20,0.8)',
             }}
           >
-            <span className="text-gray-100">{CONNECTION_LABELS[connectionStatus]}</span>
+            {CONNECTION_LABELS[connectionStatus]}
           </span>
         </div>
 
@@ -153,12 +154,12 @@ export default function HUDOverlay({
           }}
         >
           {advanceLoading && !advanceError && !parseError && (
-            <span className="text-gray-100" style={{ fontSize: '0.8rem' }}>
+            <span style={{ fontSize: '0.8rem', color: '#f9fafb' }}>
               Advancing scene…
             </span>
           )}
           {(advanceError || parseError) && (
-            <span className="text-gray-100" style={{ fontSize: '0.8rem' }}>
+            <span style={{ fontSize: '0.8rem', color: '#f9fafb' }}>
               {advanceError ?? parseError}
             </span>
           )}
