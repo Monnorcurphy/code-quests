@@ -56,6 +56,7 @@ const MATCH_RESPONSE = {
 function renderPreview(opts: {
   questId?: string;
   adventurers?: Adventurer[];
+  adventurersLoading?: boolean;
   selectedAdventurerId?: string | null;
   onSelectAdventurer?: (id: string | null) => void;
 } = {}) {
@@ -67,6 +68,7 @@ function renderPreview(opts: {
       <AutoMatchPreview
         questId={opts.questId ?? 'q-1'}
         adventurers={opts.adventurers ?? ADVENTURERS}
+        adventurersLoading={opts.adventurersLoading ?? false}
         selectedAdventurerId={opts.selectedAdventurerId ?? null}
         onSelectAdventurer={onSelectAdventurer}
       />
@@ -121,6 +123,17 @@ describe('AutoMatchPreview', () => {
     await waitFor(() => {
       expect(screen.getByText(/no adventurers in the guild/i)).toBeDefined();
     });
+  });
+
+  it('does not show empty-state when adventurers are still loading', async () => {
+    mockAutoMatch.mockResolvedValue(MATCH_RESPONSE);
+    renderPreview({ adventurers: [], adventurersLoading: true });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Champion class \+ 8 wins/)).toBeDefined();
+    });
+
+    expect(screen.queryByText(/no adventurers in the guild/i)).toBeNull();
   });
 
   it('calls onSelectAdventurer with the auto-matched id after load', async () => {

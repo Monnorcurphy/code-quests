@@ -18,6 +18,7 @@ type WarRoomMode = 'quest' | 'form' | 'success';
 function QuestDetailSection({
   questId,
   adventurers,
+  adventurersLoading,
   selectedAdventurerId,
   onSelectAdventurer,
   onDraftAnother,
@@ -25,6 +26,7 @@ function QuestDetailSection({
 }: {
   questId: string;
   adventurers: Adventurer[];
+  adventurersLoading: boolean;
   selectedAdventurerId: string | null;
   onSelectAdventurer: (id: string | null) => void;
   onDraftAnother: () => void;
@@ -145,6 +147,7 @@ function QuestDetailSection({
       <AutoMatchPreview
         questId={questId}
         adventurers={adventurers}
+        adventurersLoading={adventurersLoading}
         selectedAdventurerId={selectedAdventurerId}
         onSelectAdventurer={onSelectAdventurer}
       />
@@ -179,7 +182,7 @@ export default function WarRoom() {
   const [selectedAdventurerId, setSelectedAdventurerId] = useState<string | null>(null);
   const panelRef = useFocusTrap(() => setActiveModal(null));
 
-  const { data: rawAdventurers } = useQuery({
+  const { data: rawAdventurers, isLoading: adventurersLoading } = useQuery({
     queryKey: ['adventurers'],
     queryFn: api.adventurers.list,
   });
@@ -223,6 +226,7 @@ export default function WarRoom() {
           <QuestDetailSection
             questId={selectedQuestId}
             adventurers={adventurers}
+            adventurersLoading={adventurersLoading}
             selectedAdventurerId={selectedAdventurerId}
             onSelectAdventurer={handleSelectAdventurer}
             onDraftAnother={handleDraftAnother}

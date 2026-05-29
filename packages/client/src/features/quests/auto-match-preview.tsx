@@ -6,6 +6,7 @@ import type { Adventurer } from '@code-quests/shared';
 interface AutoMatchPreviewProps {
   questId: string;
   adventurers: Adventurer[];
+  adventurersLoading?: boolean;
   selectedAdventurerId: string | null;
   onSelectAdventurer: (id: string | null) => void;
 }
@@ -13,6 +14,7 @@ interface AutoMatchPreviewProps {
 export default function AutoMatchPreview({
   questId,
   adventurers,
+  adventurersLoading = false,
   selectedAdventurerId,
   onSelectAdventurer,
 }: AutoMatchPreviewProps) {
@@ -63,11 +65,15 @@ export default function AutoMatchPreview({
       {!isLoading && (
         <div className="form-field auto-match-override">
           <label htmlFor="auto-match-adventurer-select">
-            {adventurers.length === 0 ? 'Adventurer' : 'Adventurer (override)'}
+            {!adventurersLoading && adventurers.length === 0 ? 'Adventurer' : 'Adventurer (override)'}
           </label>
-          {adventurers.length === 0 ? (
+          {!adventurersLoading && adventurers.length === 0 ? (
             <p className="auto-match-no-adventurers">
               No adventurers in the guild — recruit one first.
+            </p>
+          ) : adventurersLoading ? (
+            <p className="auto-match-loading" aria-busy="true">
+              Loading adventurers…
             </p>
           ) : (
             <select
