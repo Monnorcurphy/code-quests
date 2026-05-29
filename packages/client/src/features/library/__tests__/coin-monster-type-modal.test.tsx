@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CoinMonsterTypeModal from '../coin-monster-type-modal';
@@ -342,5 +343,47 @@ describe('CoinMonsterTypeModal — dismiss', () => {
     const backdrop = screen.getByRole('dialog');
     await user.click(backdrop);
     expect(mockOnClose).toHaveBeenCalled();
+  });
+});
+
+describe('CoinMonsterTypeModal — success timer cleanup on unmount', () => {
+  it('does not call onSuccess if modal is unmounted before 3s elapse', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    vi.mocked(api.monsters.createType).mockResolvedValue(
+      makeMonsterType({ id: 'user:lint-goblin', name: 'Lint Goblin' }),
+    );
+
+    const { unmount } = renderModal();
+    await user.type(screen.getByLabelText(/^name/i), 'Lint Goblin');
+    await user.click(screen.getByRole('button', { name: MONSTER_SPRITE_OPTIONS[0].label }));
+    await user.type(screen.getByLabelText(/failure signature/i), 'eslint.*no-unused');
+    await user.click(screen.getByRole('button', { name: /coin monster type/i }));
+
+    await waitFor(() => screen.getByRole('status'));
+
+    unmount();
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(mockOnSuccess).not.toHaveBeenCalled();
+  });
+});
+
+describe('CoinMonsterTypeModal — accessibility', () => {
+  it('has no axe violations in initial state', async () => {
+    const { container } = renderModal();
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it('has no axe violations when an inline regex error is shown', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    const { container } = renderModal();
+    await user.type(screen.getByLabelText(/failure signature/i), '***');
+    await waitFor(() => screen.getByText(/must be a valid regular expression/i));
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

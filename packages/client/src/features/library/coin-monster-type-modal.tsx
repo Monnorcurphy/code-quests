@@ -27,6 +27,16 @@ export default function CoinMonsterTypeModal({ onClose, onSuccess, triggerRef }:
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current !== null) {
+        clearTimeout(successTimerRef.current);
+        successTimerRef.current = null;
+      }
+    };
+  }, []);
 
   function handleClose() {
     triggerRef.current?.focus();
@@ -124,7 +134,7 @@ export default function CoinMonsterTypeModal({ onClose, onSuccess, triggerRef }:
       setSuccessMsg(
         `Type '${type.name}' coined — keep watch on your next quest (id: ${type.id})`,
       );
-      setTimeout(() => {
+      successTimerRef.current = setTimeout(() => {
         onSuccess(type.name);
         handleClose();
       }, 3000);
