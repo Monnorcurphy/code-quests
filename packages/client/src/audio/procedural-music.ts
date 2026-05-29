@@ -1,108 +1,462 @@
 import type { AudioEvent } from './audio-events';
 import { LOOPING_EVENTS } from './audio-events';
 
-// Chiptune-style procedural music generated via OfflineAudioContext. Replaces
-// the 2-second WAV stubs with a ~3:30 composition per theme so the loop
-// doesn't sound like it repeats every two seconds.
+// Hand-composed chiptune. Each theme has actual melody data (note sequences,
+// not random scale notes), arranged in song form (intro → A → A' → B → A →
+// outro) and repeated to fill the requested duration. Lead voice + counter
+// voice + walking bass + drums (for action themes) sit in distinct registers
+// so it sounds like a song, not noodling.
 
 const SAMPLE_RATE = 22050;
-const TRACK_SECONDS = 210;
-const QUARTER_PER_MEASURE = 4;
+const SINGLE_TRACK_SECONDS = 300;
+const VARIATION_SECONDS = 300;
 
 type Wave = 'square' | 'triangle' | 'sawtooth' | 'sine';
 
+// Note format: [semitone offset from songRoot, duration in beats].
+// Use REST for silence. Negative offsets go below the root.
+type Note = [pitch: number, duration: number];
+const REST: Note = [-9999, 1];
+const isRest = (n: Note) => n[0] === REST[0];
+
 interface ThemeSpec {
   bpm: number;
-  // Root MIDI note for the bass register
-  bassRoot: number;
-  // Each chord is a list of MIDI offsets from bassRoot
-  chordProgression: number[][];
-  // Pentatonic-ish intervals used to pick melody notes (semitones from root)
-  scale: number[];
-  // Master gain so themes balance against each other
-  gain: number;
+  // Root MIDI note for the song's tonic (the "key" the song is in).
+  // Lead melody plays one octave above this; bass plays one octave below.
+  songRoot: number;
+  // Lead melody sections — composed phrases. Each section ideally totals 8 beats (2 bars 4/4).
+  leadA: Note[];
+  leadB: Note[];
+  // Counter-melody / harmony line, sits an octave below lead. Optional.
+  counterA?: Note[];
+  counterB?: Note[];
+  // Bass line — chord roots with walking passing tones. Should also be 8 beats per section.
+  bassA: Note[];
+  bassB: Note[];
+  // Song form pattern, each letter consumes one 8-beat section.
+  // Example: 'AABABAB' → A A B A B A B → 56 beats per song cycle.
+  songForm: string;
+  // Total composition length in seconds. Song form cycles repeat until this is filled.
+  durationSec: number;
+  // Voices.
   bassWave: Wave;
   leadWave: Wave;
+  counterWave: Wave;
   hasDrums: boolean;
-  feel: 'calm' | 'travel' | 'tense' | 'epic';
+  // Master gain so themes balance against each other.
+  gain: number;
+  subTheme: string;
 }
 
-const THEMES: Partial<Record<AudioEvent, ThemeSpec>> = {
-  // C major, slow, peaceful
-  TOWN: {
-    bpm: 88,
-    bassRoot: 36, // C2
-    chordProgression: [
-      [0, 7, 12, 16], // C
-      [-5, 2, 7, 11], // G
-      [-3, 4, 9, 12], // Am
-      [-7, 0, 5, 9], // F
-    ],
-    scale: [0, 2, 4, 7, 9], // C major pentatonic
-    gain: 0.18,
-    bassWave: 'triangle',
-    leadWave: 'square',
-    hasDrums: false,
-    feel: 'calm',
-  },
-  // D major, upbeat, walking
-  ROAD: {
-    bpm: 116,
-    bassRoot: 38, // D2
-    chordProgression: [
-      [0, 7, 12, 16], // D
-      [-5, 2, 7, 11], // A
-      [-3, 4, 9, 12], // Bm
-      [-7, 0, 5, 9], // G
-    ],
-    scale: [0, 2, 4, 7, 9],
-    gain: 0.18,
-    bassWave: 'triangle',
-    leadWave: 'square',
-    hasDrums: true,
-    feel: 'travel',
-  },
-  // E minor, urgent
-  COMBAT: {
-    bpm: 144,
-    bassRoot: 40, // E2
-    chordProgression: [
-      [0, 7, 12, 15], // Em
-      [-4, 3, 8, 12], // C
-      [-5, 2, 7, 11], // G
-      [-2, 5, 9, 12], // D
-    ],
-    scale: [0, 2, 3, 5, 7, 10], // E minor
-    gain: 0.2,
-    bassWave: 'sawtooth',
-    leadWave: 'square',
-    hasDrums: true,
-    feel: 'tense',
-  },
-  // A minor, slow heavy
-  BOSS: {
-    bpm: 80,
-    bassRoot: 33, // A1
-    chordProgression: [
-      [0, 7, 12, 15], // Am
-      [-2, 5, 10, 14], // G
-      [-4, 3, 8, 12], // F
-      [-5, 2, 7, 11], // E
-    ],
-    scale: [0, 2, 3, 5, 7, 8, 10], // A minor
-    gain: 0.22,
-    bassWave: 'sawtooth',
-    leadWave: 'sawtooth',
-    hasDrums: true,
-    feel: 'epic',
-  },
+// ============================================================================
+// COMPOSITIONS
+// All pitch numbers are semitones from songRoot.
+// Common intervals: 0=root, 2=2nd, 4=3rd, 5=4th, 7=5th, 9=6th, 11=7th, 12=octave
+// Minor 3rd = 3, minor 6th = 8, minor 7th = 10
+// ============================================================================
+
+// ------------ TOWN (peaceful village) — C major, 88 BPM ---------------------
+const TOWN_LEAD_A: Note[] = [
+  // bar 1: "Welcome home" — ascending arpeggio resolving on the 5th
+  [0, 0.5], [4, 0.5], [7, 0.5], [12, 0.5], [9, 0.5], [7, 0.5], [4, 1],
+  // bar 2: answer phrase descending
+  [7, 0.5], [4, 0.5], [2, 0.5], [0, 0.5], [-1, 0.5], [-3, 0.5], [0, 1],
+];
+const TOWN_LEAD_B: Note[] = [
+  // bar 1: bridge — bittersweet, goes to 6th and 4th
+  [9, 1], [7, 0.5], [4, 0.5], [5, 0.5], [4, 0.5], [2, 1],
+  // bar 2: contrast — leaps to high octave then walks down
+  [12, 0.5], [11, 0.5], [9, 0.5], [7, 0.5], [5, 0.5], [4, 0.5], [2, 0.5], [0, 0.5],
+];
+const TOWN_COUNTER_A: Note[] = [
+  // Harmony 3rds below lead
+  [-3, 1], [4, 1], [2, 1], [0, 1], [-3, 2], [0, 2],
+];
+const TOWN_COUNTER_B: Note[] = [
+  [5, 2], [2, 2], [7, 2], [-3, 2],
+];
+const TOWN_BASS_A: Note[] = [
+  // I - V - vi - IV (C - G - Am - F)
+  [0, 2], [7, 2], [9, 2], [5, 2],
+];
+const TOWN_BASS_B: Note[] = [
+  // vi - IV - I - V (Am - F - C - G)
+  [9, 2], [5, 2], [0, 2], [7, 2],
+];
+
+// ------------ ROAD: Forest Stroll — D major, 116 BPM ------------------------
+const ROAD1_LEAD_A: Note[] = [
+  // bar 1: stepping motif
+  [0, 0.5], [2, 0.5], [4, 0.5], [7, 0.5], [4, 0.5], [2, 0.5], [0, 1],
+  // bar 2: skip and resolve
+  [7, 0.5], [9, 0.5], [11, 0.5], [12, 0.5], [9, 0.5], [7, 0.5], [4, 1],
+];
+const ROAD1_LEAD_B: Note[] = [
+  // bar 1: contrasting jumpy motif
+  [12, 0.5], [9, 0.5], [12, 0.5], [9, 0.5], [11, 0.5], [9, 0.5], [7, 0.5], [4, 0.5],
+  // bar 2: sequence down
+  [9, 0.5], [7, 0.5], [4, 0.5], [2, 0.5], [4, 0.5], [2, 0.5], [0, 1],
+];
+const ROAD1_BASS_A: Note[] = [
+  // I - V - vi - IV walking (root, 5th, root, 5th)
+  [0, 1], [7, 1], [7, 1], [4, 1], [9, 1], [4, 1], [5, 1], [0, 1],
+];
+const ROAD1_BASS_B: Note[] = [
+  [4, 1], [0, 1], [5, 1], [0, 1], [0, 1], [7, 1], [7, 1], [-5, 1],
+];
+
+// ------------ ROAD: Mountain Pass — G major, 96 BPM, regal ------------------
+const ROAD2_LEAD_A: Note[] = [
+  // bar 1: fanfare-like leaps
+  [0, 1], [4, 0.5], [7, 0.5], [12, 1], [7, 0.5], [4, 0.5],
+  // bar 2: declamatory
+  [7, 0.5], [9, 0.5], [11, 1], [9, 0.5], [7, 0.5], [4, 1],
+];
+const ROAD2_LEAD_B: Note[] = [
+  // bar 1: dotted rhythm walking up
+  [0, 0.75], [2, 0.25], [4, 0.75], [5, 0.25], [7, 1], [4, 1],
+  // bar 2: descending sequence
+  [11, 0.5], [9, 0.5], [7, 0.5], [5, 0.5], [4, 0.5], [2, 0.5], [0, 1],
+];
+const ROAD2_BASS_A: Note[] = [
+  [0, 2], [9, 2], [5, 2], [0, 2],
+];
+const ROAD2_BASS_B: Note[] = [
+  [4, 2], [5, 2], [0, 2], [7, 2],
+];
+
+// ------------ ROAD: River Crossing — E minor, 104 BPM -----------------------
+const ROAD3_LEAD_A: Note[] = [
+  [0, 0.5], [3, 0.5], [7, 0.5], [10, 0.5], [12, 0.5], [10, 0.5], [7, 1],
+  [10, 0.5], [12, 0.5], [15, 0.5], [12, 0.5], [10, 0.5], [7, 0.5], [3, 1],
+];
+const ROAD3_LEAD_B: Note[] = [
+  [15, 1], [12, 0.5], [10, 0.5], [12, 0.5], [10, 0.5], [7, 1],
+  [10, 0.5], [7, 0.5], [3, 0.5], [0, 0.5], [3, 0.5], [7, 0.5], [3, 1],
+];
+const ROAD3_BASS_A: Note[] = [
+  [0, 2], [-2, 2], [-5, 2], [-7, 2],
+];
+const ROAD3_BASS_B: Note[] = [
+  [-5, 2], [0, 2], [3, 2], [-7, 2],
+];
+
+// ------------ ROAD: Twilight Ride — B minor, 88 BPM, contemplative ----------
+const ROAD4_LEAD_A: Note[] = [
+  // slow, expressive
+  [0, 1], [3, 1], [7, 1], [3, 1],
+  [10, 1], [7, 1], [5, 0.5], [3, 0.5], [0, 1],
+];
+const ROAD4_LEAD_B: Note[] = [
+  [12, 1], [10, 1], [7, 1], [3, 1],
+  [5, 0.5], [3, 0.5], [0, 0.5], [-2, 0.5], [0, 2],
+];
+const ROAD4_BASS_A: Note[] = [
+  [0, 2], [-5, 2], [-7, 2], [-2, 2],
+];
+const ROAD4_BASS_B: Note[] = [
+  [3, 2], [0, 2], [-7, 2], [-5, 2],
+];
+
+// ------------ ROAD: Open Plains — A major, 124 BPM, triumphant --------------
+const ROAD5_LEAD_A: Note[] = [
+  // ascending fanfare
+  [0, 0.25], [4, 0.25], [7, 0.5], [12, 0.5], [9, 0.5], [7, 0.5], [4, 0.5], [7, 1],
+  [4, 0.25], [7, 0.25], [9, 0.5], [12, 0.5], [9, 0.5], [7, 0.5], [4, 0.5], [0, 1],
+];
+const ROAD5_LEAD_B: Note[] = [
+  [12, 0.5], [11, 0.5], [9, 0.5], [7, 0.5], [12, 0.5], [11, 0.5], [9, 0.5], [7, 0.5],
+  [16, 1], [12, 1], [9, 1], [7, 1],
+];
+const ROAD5_BASS_A: Note[] = [
+  [0, 1], [4, 1], [7, 1], [4, 1], [0, 1], [-5, 1], [-3, 1], [0, 1],
+];
+const ROAD5_BASS_B: Note[] = [
+  [7, 1], [4, 1], [9, 1], [4, 1], [0, 1], [5, 1], [7, 1], [-5, 1],
+];
+
+// ------------ ROAD: Approaching Danger — F# minor, 108 BPM, tense ----------
+const ROAD6_LEAD_A: Note[] = [
+  // chromatic creeping motif
+  [0, 0.5], [3, 0.5], [5, 0.5], [3, 0.5], [0, 0.5], [-2, 0.5], [0, 1],
+  [7, 0.5], [10, 0.5], [12, 0.5], [10, 0.5], [7, 0.5], [3, 0.5], [0, 1],
+];
+const ROAD6_LEAD_B: Note[] = [
+  [12, 0.5], [11, 0.5], [10, 0.5], [12, 0.5], [10, 0.5], [9, 0.5], [7, 1],
+  [10, 0.5], [9, 0.5], [7, 0.5], [5, 0.5], [3, 0.5], [0, 0.5], [-2, 1],
+];
+const ROAD6_BASS_A: Note[] = [
+  [0, 2], [3, 2], [-2, 2], [-5, 2],
+];
+const ROAD6_BASS_B: Note[] = [
+  [-5, 2], [-7, 2], [0, 2], [-2, 2],
+];
+
+// ------------ COMBAT: Initial Skirmish — E minor, 144 BPM -------------------
+const C1_LEAD_A: Note[] = [
+  // driving riff
+  [0, 0.25], [3, 0.25], [7, 0.5], [3, 0.25], [0, 0.25], [7, 0.5], [3, 0.5], [0, 0.5],
+  [0, 0.25], [3, 0.25], [7, 0.5], [10, 0.25], [12, 0.25], [15, 0.5], [12, 0.5], [7, 0.5],
+];
+const C1_LEAD_B: Note[] = [
+  [15, 0.5], [14, 0.5], [12, 0.5], [10, 0.5], [12, 0.5], [10, 0.5], [7, 0.5], [3, 0.5],
+  [7, 0.5], [10, 0.5], [12, 0.5], [10, 0.5], [7, 0.5], [3, 0.5], [0, 1],
+];
+const C1_BASS_A: Note[] = [
+  // syncopated minor riff
+  [0, 0.5], [0, 0.5], [-5, 0.5], [-2, 0.5], [-3, 0.5], [-3, 0.5], [-5, 1],
+  [0, 0.5], [0, 0.5], [3, 0.5], [-2, 0.5], [-5, 0.5], [-2, 0.5], [0, 1],
+];
+const C1_BASS_B: Note[] = [
+  [-5, 1], [-2, 1], [0, 1], [-3, 1], [-5, 1], [-7, 1], [0, 1], [-5, 1],
+];
+
+// ------------ COMBAT: Heroic Counter — C major, 136 BPM ---------------------
+const C2_LEAD_A: Note[] = [
+  // rising heroic motif
+  [0, 0.5], [4, 0.5], [7, 0.5], [12, 0.5], [9, 0.5], [12, 0.5], [7, 1],
+  [4, 0.5], [7, 0.5], [9, 0.5], [12, 0.5], [11, 0.5], [9, 0.5], [4, 1],
+];
+const C2_LEAD_B: Note[] = [
+  [16, 0.5], [14, 0.5], [12, 0.5], [11, 0.5], [9, 0.5], [7, 0.5], [4, 0.5], [2, 0.5],
+  [4, 0.5], [7, 0.5], [12, 1], [7, 0.5], [4, 0.5], [0, 1],
+];
+const C2_BASS_A: Note[] = [
+  [0, 1], [4, 1], [7, 1], [-5, 1], [9, 1], [5, 1], [0, 1], [7, 1],
+];
+const C2_BASS_B: Note[] = [
+  [5, 1], [0, 1], [-7, 1], [0, 1], [4, 1], [7, 1], [-5, 1], [0, 1],
+];
+
+// ------------ COMBAT: Desperate Struggle — D minor, 152 BPM -----------------
+const C3_LEAD_A: Note[] = [
+  [0, 0.25], [3, 0.25], [7, 0.25], [10, 0.25], [12, 0.5], [10, 0.5], [7, 0.5], [3, 0.5],
+  [0, 0.25], [3, 0.25], [7, 0.25], [10, 0.25], [15, 0.5], [12, 0.5], [10, 1],
+];
+const C3_LEAD_B: Note[] = [
+  [17, 0.5], [15, 0.5], [12, 0.5], [10, 0.5], [12, 0.5], [10, 0.5], [7, 0.5], [3, 0.5],
+  [10, 0.25], [7, 0.25], [3, 0.25], [0, 0.25], [-2, 0.5], [-5, 0.5], [0, 1],
+];
+const C3_BASS_A: Note[] = [
+  [0, 1], [0, 1], [-2, 1], [-2, 1], [-5, 1], [-5, 1], [3, 1], [-2, 1],
+];
+const C3_BASS_B: Note[] = [
+  [-5, 1], [-7, 1], [0, 1], [3, 1], [-2, 1], [-5, 1], [0, 1], [0, 1],
+];
+
+// ------------ COMBAT: Battle of Attrition — B minor, 132 BPM ----------------
+const C4_LEAD_A: Note[] = [
+  [0, 0.5], [3, 0.5], [0, 0.5], [3, 0.5], [7, 1], [5, 0.5], [3, 0.5],
+  [0, 0.5], [3, 0.5], [7, 0.5], [10, 0.5], [12, 1], [10, 1],
+];
+const C4_LEAD_B: Note[] = [
+  [10, 0.5], [7, 0.5], [10, 0.5], [7, 0.5], [5, 0.5], [3, 0.5], [0, 1],
+  [3, 0.5], [5, 0.5], [7, 0.5], [10, 0.5], [12, 1], [7, 1],
+];
+const C4_BASS_A: Note[] = [
+  [0, 1], [0, 1], [-5, 1], [-5, 1], [-2, 1], [-2, 1], [-3, 1], [-7, 1],
+];
+const C4_BASS_B: Note[] = [
+  [-7, 1], [-5, 1], [-2, 1], [-3, 1], [0, 1], [3, 1], [7, 1], [0, 1],
+];
+
+// ------------ COMBAT: Last Stand — G major, 148 BPM, triumphant push --------
+const C5_LEAD_A: Note[] = [
+  [0, 0.5], [7, 0.5], [4, 0.5], [7, 0.5], [12, 0.5], [9, 0.5], [7, 1],
+  [4, 0.5], [7, 0.5], [9, 0.5], [12, 0.5], [11, 0.5], [9, 0.5], [7, 1],
+];
+const C5_LEAD_B: Note[] = [
+  [12, 0.5], [14, 0.5], [16, 0.5], [14, 0.5], [12, 0.5], [11, 0.5], [9, 0.5], [7, 0.5],
+  [4, 0.5], [7, 0.5], [11, 0.5], [14, 0.5], [16, 1], [12, 1],
+];
+const C5_BASS_A: Note[] = [
+  [0, 1], [4, 1], [-5, 1], [0, 1], [5, 1], [0, 1], [-7, 1], [0, 1],
+];
+const C5_BASS_B: Note[] = [
+  [4, 1], [-5, 1], [9, 1], [5, 1], [0, 1], [-5, 1], [4, 1], [-7, 1],
+];
+
+// ------------ COMBAT: Mortal Danger — A minor, 140 BPM, dark ----------------
+const C6_LEAD_A: Note[] = [
+  [0, 0.25], [0, 0.25], [3, 0.5], [0, 0.5], [-2, 0.5], [0, 1],
+  [3, 0.5], [7, 0.5], [10, 0.5], [7, 0.5], [3, 0.5], [0, 1.5],
+];
+const C6_LEAD_B: Note[] = [
+  [12, 0.5], [11, 0.5], [10, 0.5], [12, 0.5], [10, 0.5], [7, 0.5], [3, 1],
+  [10, 0.5], [12, 0.5], [10, 0.5], [7, 0.5], [3, 0.5], [0, 0.5], [-2, 1],
+];
+const C6_BASS_A: Note[] = [
+  [0, 1], [0, 1], [-4, 1], [-4, 1], [-5, 1], [-5, 1], [-7, 1], [-7, 1],
+];
+const C6_BASS_B: Note[] = [
+  [-5, 1], [-7, 1], [0, 1], [-4, 1], [-2, 1], [-5, 1], [0, 1], [-7, 1],
+];
+
+// ------------ BOSS: heavy A minor, 80 BPM, epic -----------------------------
+const BOSS_LEAD_A: Note[] = [
+  // ominous slow theme
+  [0, 1], [3, 1], [7, 1], [10, 1],
+  [12, 1], [10, 1], [7, 0.5], [3, 0.5], [0, 1],
+];
+const BOSS_LEAD_B: Note[] = [
+  [15, 1], [14, 1], [12, 1], [10, 1],
+  [10, 0.5], [12, 0.5], [10, 0.5], [7, 0.5], [3, 0.5], [0, 0.5], [-2, 1],
+];
+const BOSS_BASS_A: Note[] = [
+  // i - bVII - bVI - V
+  [0, 2], [-2, 2], [-4, 2], [-5, 2],
+];
+const BOSS_BASS_B: Note[] = [
+  [-5, 2], [-7, 2], [0, 2], [-4, 2],
+];
+
+// Each ROAD/COMBAT variation gets a sub-theme name for the on-screen mood pill.
+const VARIATIONS: Record<AudioEvent, ThemeSpec[]> = {
+  TOWN: [
+    {
+      bpm: 88,
+      songRoot: 60, // C4
+      leadA: TOWN_LEAD_A,
+      leadB: TOWN_LEAD_B,
+      counterA: TOWN_COUNTER_A,
+      counterB: TOWN_COUNTER_B,
+      bassA: TOWN_BASS_A,
+      bassB: TOWN_BASS_B,
+      songForm: 'AABABA',
+      durationSec: SINGLE_TRACK_SECONDS,
+      bassWave: 'triangle',
+      leadWave: 'square',
+      counterWave: 'triangle',
+      hasDrums: false,
+      gain: 0.18,
+      subTheme: 'Town · Calm',
+    },
+  ],
+  ROAD: [
+    {
+      bpm: 116, songRoot: 62,
+      leadA: ROAD1_LEAD_A, leadB: ROAD1_LEAD_B,
+      bassA: ROAD1_BASS_A, bassB: ROAD1_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'triangle', leadWave: 'square', counterWave: 'triangle',
+      hasDrums: true, gain: 0.18, subTheme: 'Forest Stroll',
+    },
+    {
+      bpm: 96, songRoot: 67,
+      leadA: ROAD2_LEAD_A, leadB: ROAD2_LEAD_B,
+      bassA: ROAD2_BASS_A, bassB: ROAD2_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'triangle', leadWave: 'square', counterWave: 'triangle',
+      hasDrums: true, gain: 0.18, subTheme: 'Mountain Pass',
+    },
+    {
+      bpm: 104, songRoot: 64,
+      leadA: ROAD3_LEAD_A, leadB: ROAD3_LEAD_B,
+      bassA: ROAD3_BASS_A, bassB: ROAD3_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'triangle', leadWave: 'square', counterWave: 'triangle',
+      hasDrums: true, gain: 0.18, subTheme: 'River Crossing',
+    },
+    {
+      bpm: 88, songRoot: 59,
+      leadA: ROAD4_LEAD_A, leadB: ROAD4_LEAD_B,
+      bassA: ROAD4_BASS_A, bassB: ROAD4_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'triangle', leadWave: 'sine', counterWave: 'triangle',
+      hasDrums: false, gain: 0.17, subTheme: 'Twilight Ride',
+    },
+    {
+      bpm: 124, songRoot: 69,
+      leadA: ROAD5_LEAD_A, leadB: ROAD5_LEAD_B,
+      bassA: ROAD5_BASS_A, bassB: ROAD5_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'triangle', leadWave: 'square', counterWave: 'triangle',
+      hasDrums: true, gain: 0.19, subTheme: 'Open Plains',
+    },
+    {
+      bpm: 108, songRoot: 66,
+      leadA: ROAD6_LEAD_A, leadB: ROAD6_LEAD_B,
+      bassA: ROAD6_BASS_A, bassB: ROAD6_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'sawtooth', leadWave: 'square', counterWave: 'triangle',
+      hasDrums: true, gain: 0.18, subTheme: 'Approaching Danger',
+    },
+  ],
+  COMBAT: [
+    {
+      bpm: 144, songRoot: 64,
+      leadA: C1_LEAD_A, leadB: C1_LEAD_B,
+      bassA: C1_BASS_A, bassB: C1_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'sawtooth', leadWave: 'square', counterWave: 'triangle',
+      hasDrums: true, gain: 0.2, subTheme: 'Initial Skirmish',
+    },
+    {
+      bpm: 136, songRoot: 60,
+      leadA: C2_LEAD_A, leadB: C2_LEAD_B,
+      bassA: C2_BASS_A, bassB: C2_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'sawtooth', leadWave: 'square', counterWave: 'triangle',
+      hasDrums: true, gain: 0.2, subTheme: 'Heroic Counter',
+    },
+    {
+      bpm: 152, songRoot: 62,
+      leadA: C3_LEAD_A, leadB: C3_LEAD_B,
+      bassA: C3_BASS_A, bassB: C3_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'sawtooth', leadWave: 'sawtooth', counterWave: 'triangle',
+      hasDrums: true, gain: 0.21, subTheme: 'Desperate Struggle',
+    },
+    {
+      bpm: 132, songRoot: 59,
+      leadA: C4_LEAD_A, leadB: C4_LEAD_B,
+      bassA: C4_BASS_A, bassB: C4_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'square', leadWave: 'square', counterWave: 'triangle',
+      hasDrums: true, gain: 0.2, subTheme: 'Battle of Attrition',
+    },
+    {
+      bpm: 148, songRoot: 67,
+      leadA: C5_LEAD_A, leadB: C5_LEAD_B,
+      bassA: C5_BASS_A, bassB: C5_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'sawtooth', leadWave: 'square', counterWave: 'triangle',
+      hasDrums: true, gain: 0.21, subTheme: 'Last Stand',
+    },
+    {
+      bpm: 140, songRoot: 57,
+      leadA: C6_LEAD_A, leadB: C6_LEAD_B,
+      bassA: C6_BASS_A, bassB: C6_BASS_B,
+      songForm: 'AABABA', durationSec: VARIATION_SECONDS,
+      bassWave: 'sawtooth', leadWave: 'sawtooth', counterWave: 'triangle',
+      hasDrums: true, gain: 0.21, subTheme: 'Mortal Danger',
+    },
+  ],
+  BOSS: [
+    {
+      bpm: 80, songRoot: 57, // A3
+      leadA: BOSS_LEAD_A, leadB: BOSS_LEAD_B,
+      bassA: BOSS_BASS_A, bassB: BOSS_BASS_B,
+      songForm: 'AABABA', durationSec: SINGLE_TRACK_SECONDS,
+      bassWave: 'sawtooth', leadWave: 'sawtooth', counterWave: 'triangle',
+      hasDrums: true, gain: 0.22, subTheme: 'Boss · Heavy',
+    },
+  ],
+  VICTORY_STINGER: [],
+  QUEST_COMPLETE: [],
+  QUEST_FAILED: [],
+  PAUSE_BELL: [],
 };
+
+// ============================================================================
+// Rendering
+// ============================================================================
 
 function midiToFreq(midi: number): number {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
-interface NoteParams {
+interface ScheduledNote {
   midi: number;
   start: number;
   duration: number;
@@ -112,14 +466,14 @@ interface NoteParams {
   release?: number;
 }
 
-function scheduleNote(ctx: OfflineAudioContext, dest: AudioNode, n: NoteParams): void {
+function scheduleNote(ctx: OfflineAudioContext, dest: AudioNode, n: ScheduledNote): void {
   const osc = ctx.createOscillator();
   osc.type = n.wave;
   osc.frequency.value = midiToFreq(n.midi);
 
   const env = ctx.createGain();
-  const attack = n.attack ?? 0.005;
-  const release = n.release ?? 0.04;
+  const attack = n.attack ?? 0.01;
+  const release = n.release ?? 0.05;
   const sustainStart = n.start + attack;
   const sustainEnd = n.start + n.duration - release;
   const end = n.start + n.duration;
@@ -136,13 +490,7 @@ function scheduleNote(ctx: OfflineAudioContext, dest: AudioNode, n: NoteParams):
   osc.stop(end + 0.01);
 }
 
-function scheduleSnare(
-  ctx: OfflineAudioContext,
-  dest: AudioNode,
-  start: number,
-  gain: number,
-): void {
-  // Short noise burst, band-passed = snare-ish
+function scheduleSnare(ctx: OfflineAudioContext, dest: AudioNode, start: number, gain: number): void {
   const length = Math.floor(SAMPLE_RATE * 0.08);
   const buf = ctx.createBuffer(1, length, SAMPLE_RATE);
   const data = buf.getChannelData(0);
@@ -163,12 +511,7 @@ function scheduleSnare(
   src.start(start);
 }
 
-function scheduleKick(
-  ctx: OfflineAudioContext,
-  dest: AudioNode,
-  start: number,
-  gain: number,
-): void {
+function scheduleKick(ctx: OfflineAudioContext, dest: AudioNode, start: number, gain: number): void {
   const osc = ctx.createOscillator();
   osc.type = 'sine';
   osc.frequency.setValueAtTime(110, start);
@@ -183,50 +526,42 @@ function scheduleKick(
   osc.stop(start + 0.18);
 }
 
-// Stable pseudo-random so each render of the same theme sounds identical
-function mulberry32(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+// Schedule one melodic line (lead/counter/bass) with offset semitones from songRoot.
+function scheduleVoice(
+  ctx: OfflineAudioContext,
+  dest: AudioNode,
+  notes: Note[],
+  songRoot: number,
+  octaveOffset: number, // 0 = same octave as songRoot, +12/-12 etc
+  startSec: number,
+  beatSec: number,
+  wave: Wave,
+  gain: number,
+  legato = 0.92,
+): number {
+  let t = startSec;
+  for (const [pitch, durationBeats] of notes) {
+    const dur = durationBeats * beatSec;
+    if (!isRest([pitch, durationBeats])) {
+      scheduleNote(ctx, dest, {
+        midi: songRoot + octaveOffset + pitch,
+        start: t,
+        duration: dur * legato,
+        wave,
+        gain,
+      });
+    }
+    t += dur;
+  }
+  return t;
 }
 
-function pickMelodyNote(
-  rng: () => number,
-  spec: ThemeSpec,
-  chordIdx: number,
-  prevMidi: number,
-): number {
-  // Pick a note in the scale, biased toward the current chord tone, and
-  // toward stepwise motion from the previous note.
-  const chord = spec.chordProgression[chordIdx]!;
-  const root = spec.bassRoot + 36; // melody is 3 octaves above bass
-  const candidates: number[] = [];
-  // Add all scale tones in a 1-octave window
-  for (let oct = 0; oct < 2; oct++) {
-    for (const interval of spec.scale) {
-      candidates.push(root + oct * 12 + interval);
-    }
-  }
-  // Add chord tones twice for emphasis
-  for (const offset of chord) {
-    candidates.push(spec.bassRoot + 36 + offset);
-    candidates.push(spec.bassRoot + 36 + offset);
-  }
-  // Sort by closeness to prevMidi to bias toward stepwise motion
-  candidates.sort((a, b) => Math.abs(a - prevMidi) - Math.abs(b - prevMidi));
-  // Top 5 nearest, pick one weighted by closeness
-  const top = candidates.slice(0, 5);
-  return top[Math.floor(rng() * top.length)] ?? prevMidi;
+function totalBeats(notes: Note[]): number {
+  return notes.reduce((acc, [, d]) => acc + d, 0);
 }
 
 function buildOfflineContextSafely(seconds: number): OfflineAudioContext {
   const length = Math.max(1, Math.floor(seconds * SAMPLE_RATE));
-  // Safari uses webkitOfflineAudioContext as an older alias.
   type AnyWin = typeof globalThis & {
     OfflineAudioContext?: typeof OfflineAudioContext;
     webkitOfflineAudioContext?: typeof OfflineAudioContext;
@@ -239,100 +574,85 @@ function buildOfflineContextSafely(seconds: number): OfflineAudioContext {
   return new Ctor(1, length, SAMPLE_RATE);
 }
 
-export async function synthesizeTheme(event: AudioEvent): Promise<AudioBuffer | null> {
-  const spec = THEMES[event];
+export async function synthesizeTheme(
+  event: AudioEvent,
+  variationIndex = 0,
+): Promise<AudioBuffer | null> {
+  const spec = VARIATIONS[event]?.[variationIndex];
   if (!spec) return null;
 
-  const ctx = buildOfflineContextSafely(TRACK_SECONDS);
+  const ctx = buildOfflineContextSafely(spec.durationSec);
 
   const master = ctx.createGain();
   master.gain.value = spec.gain;
-
-  // Gentle low-pass to take the harsh edges off chiptune
   const lp = ctx.createBiquadFilter();
   lp.type = 'lowpass';
-  lp.frequency.value = spec.feel === 'epic' ? 4500 : 6500;
+  lp.frequency.value = 6500;
   lp.Q.value = 0.5;
   master.connect(lp);
   lp.connect(ctx.destination);
 
   const beatSec = 60 / spec.bpm;
-  const measureSec = QUARTER_PER_MEASURE * beatSec;
-  const totalMeasures = Math.floor(TRACK_SECONDS / measureSec);
+  // One "section" (A or B) is the duration of the lead phrase.
+  const sectionBeatsA = totalBeats(spec.leadA);
+  const sectionBeatsB = totalBeats(spec.leadB);
+  const songForm = spec.songForm;
 
-  const rng = mulberry32(event.length * 31 + spec.bpm);
+  // Build the song timeline: walk through songForm letters, render each section
+  // until we hit durationSec.
+  let t = 0;
+  let formIdx = 0;
+  while (t < spec.durationSec - 0.5) {
+    const letter = songForm[formIdx % songForm.length]!;
+    const isA = letter === 'A';
+    const lead = isA ? spec.leadA : spec.leadB;
+    const counter = isA ? spec.counterA : spec.counterB;
+    const bass = isA ? spec.bassA : spec.bassB;
+    const sectionBeats = isA ? sectionBeatsA : sectionBeatsB;
+    const sectionSec = sectionBeats * beatSec;
 
-  // Per-measure scheduling
-  let prevMelody = spec.bassRoot + 36 + spec.scale[0]!;
-  for (let m = 0; m < totalMeasures; m++) {
-    const measureStart = m * measureSec;
-    const chordIdx = m % spec.chordProgression.length;
-    const chord = spec.chordProgression[chordIdx]!;
+    // Lead — one octave above songRoot
+    scheduleVoice(ctx, master, lead, spec.songRoot, 12, t, beatSec, spec.leadWave, 0.18, 0.85);
 
-    // Bass on beat 1 and 3 (root + fifth)
-    for (let beat = 0; beat < QUARTER_PER_MEASURE; beat++) {
-      const bStart = measureStart + beat * beatSec;
-      const bassOffset = beat % 2 === 0 ? chord[0]! : (chord[1] ?? chord[0]!);
-      scheduleNote(ctx, master, {
-        midi: spec.bassRoot + bassOffset,
-        start: bStart,
-        duration: beatSec * 0.95,
-        wave: spec.bassWave,
-        gain: 0.5,
-        attack: 0.01,
-        release: 0.05,
-      });
+    // Counter — same octave or 1 below (depending on theme), softer
+    if (counter && counter.length > 0) {
+      scheduleVoice(ctx, master, counter, spec.songRoot, 0, t, beatSec, spec.counterWave, 0.09, 0.9);
     }
 
-    // Chord pad on beat 1 (held for full measure)
-    for (const offset of chord.slice(1, 4)) {
-      scheduleNote(ctx, master, {
-        midi: spec.bassRoot + 12 + offset,
-        start: measureStart,
-        duration: measureSec * 0.98,
-        wave: 'triangle',
-        gain: 0.12,
-        attack: 0.04,
-        release: 0.3,
-      });
-    }
+    // Bass — one octave below songRoot
+    scheduleVoice(ctx, master, bass, spec.songRoot, -12, t, beatSec, spec.bassWave, 0.4, 0.95);
 
-    // Melody — 4 to 8 notes per measure depending on feel
-    const notesPerMeasure = spec.feel === 'calm' ? 4 : spec.feel === 'epic' ? 4 : 8;
-    const noteSlot = measureSec / notesPerMeasure;
-    for (let n = 0; n < notesPerMeasure; n++) {
-      // Rests vary by feel
-      const restProb = spec.feel === 'calm' ? 0.35 : 0.15;
-      if (rng() < restProb) continue;
-      const nStart = measureStart + n * noteSlot;
-      const dur = noteSlot * (0.6 + rng() * 0.3);
-      const midi = pickMelodyNote(rng, spec, chordIdx, prevMelody);
-      prevMelody = midi;
-      scheduleNote(ctx, master, {
-        midi,
-        start: nStart,
-        duration: dur,
-        wave: spec.leadWave,
-        gain: 0.18 + rng() * 0.06,
-        attack: 0.005,
-        release: 0.08,
-      });
-    }
-
-    // Drums
+    // Drums on every beat for action themes
     if (spec.hasDrums) {
-      // Kicks on beats 1 and 3
-      scheduleKick(ctx, master, measureStart, 0.45);
-      scheduleKick(ctx, master, measureStart + 2 * beatSec, 0.45);
-      // Snare on beats 2 and 4
-      scheduleSnare(ctx, master, measureStart + 1 * beatSec, 0.3);
-      scheduleSnare(ctx, master, measureStart + 3 * beatSec, 0.3);
+      const beatsInSection = Math.round(sectionBeats);
+      for (let b = 0; b < beatsInSection; b++) {
+        const beatTime = t + b * beatSec;
+        // Kick on 1 and 3, snare on 2 and 4 (assuming 4/4)
+        const beatInMeasure = b % 4;
+        if (beatInMeasure === 0 || beatInMeasure === 2) {
+          scheduleKick(ctx, master, beatTime, 0.42);
+        }
+        if (beatInMeasure === 1 || beatInMeasure === 3) {
+          scheduleSnare(ctx, master, beatTime, 0.28);
+        }
+      }
     }
+
+    t += sectionSec;
+    formIdx++;
   }
 
   return ctx.startRendering();
 }
 
 export function isProceduralTheme(event: AudioEvent): boolean {
-  return LOOPING_EVENTS.has(event) && event in THEMES;
+  return LOOPING_EVENTS.has(event) && getVariationCount(event) > 0;
+}
+
+export function getVariationCount(event: AudioEvent): number {
+  return VARIATIONS[event]?.length ?? 0;
+}
+
+export function getThemeSubTitle(event: AudioEvent, variationIndex: number): string | undefined {
+  return VARIATIONS[event]?.[variationIndex]?.subTheme;
 }
