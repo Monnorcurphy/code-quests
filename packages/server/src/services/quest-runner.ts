@@ -9,6 +9,7 @@ import { classifyCombatEvent, recordEncounter, resolveEncounter } from './monste
 import { getMonsterType } from './monster-types';
 import { setInputRequest, clearInputRequest } from '../db/quest-repository';
 import { frameInputRequest } from './adventure-framing';
+import { detectAndHandleFailure } from '../lib/quest-failure-detector';
 
 export const PROGRESS_EVENTS_PER_SCENE = 3;
 export const LICH_REPEAT_THRESHOLD = 3;
@@ -337,6 +338,8 @@ export async function runQuest(
           if (result.changes > 0) {
             persistEvents();
             endAgent(db, agent.id, 1);
+            const channel = publishEvent ? { publishQuestEvent: publishEvent } : undefined;
+            detectAndHandleFailure(quest.id, db, channel);
           }
           return;
         }
@@ -356,6 +359,8 @@ export async function runQuest(
           persistEvents();
           endAgent(db, agent.id, null);
           publishEvent?.(quest.id, { type: 'failed', timestamp: ts, reason: msg });
+          const channel = publishEvent ? { publishQuestEvent: publishEvent } : undefined;
+          detectAndHandleFailure(quest.id, db, channel);
         }
       } catch {
         // DB unavailable (e.g. shutdown in progress); original error already logged above

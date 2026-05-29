@@ -1,4 +1,5 @@
 import type { Adventurer } from '@code-quests/shared';
+import ScarList from './scar-list';
 
 interface RosterProps {
   adventurers: Adventurer[];
@@ -43,6 +44,7 @@ export default function Roster({ adventurers, isLoading, error }: RosterProps) {
             <span className="roster-record" aria-label={`${wins} wins, ${losses} losses`}>
               {wins} W / {losses} L
             </span>
+            <ScarList scars={a.scars} adventurerId={a.id} />
           </li>
         );
       })}

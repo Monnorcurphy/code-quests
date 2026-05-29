@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Adventurer, Quest } from '@code-quests/shared';
 import { api } from '../lib/api';
 import { subscribe } from '../lib/quest-socket';
@@ -37,14 +37,39 @@ function LibraryPreview() {
 }
 
 function ReturnedQuestsBadge() {
-  const { data } = useQuery({
-    queryKey: ['quests', 'returned', 'count'],
-    queryFn: () => api.quests.returned({ limit: 1 }),
-  });
-  const goToHallOfReturns = useTownStore((s) => s.goToHallOfReturns);
-  const total = data?.total ?? 0;
+  const queryClient = useQueryClient();
 
-  if (total === 0) return null;
+  const { data: returnedData } = useQuery({
+    queryKey: ['hall-of-returns', 'badge'],
+    queryFn: () => api.hallOfReturns.listQuests({ status: 'returned_to_town', limit: 20 }),
+  });
+
+  // Subscribe to active quests to catch quest_returned events in real time
+  const { data: rawQuests } = useQuery({
+    queryKey: ['quests'],
+    queryFn: api.quests.list,
+  });
+  const activeQuestIds = ((rawQuests as Quest[] | undefined) ?? [])
+    .filter((q) => q.status === 'active')
+    .map((q) => q.id);
+  const activeIdsKey = activeQuestIds.join(',');
+
+  useEffect(() => {
+    if (activeQuestIds.length === 0) return;
+    const unsubscribes = activeQuestIds.map((questId) =>
+      subscribe(questId, (event) => {
+        if (event.type === 'quest_returned') {
+          void queryClient.invalidateQueries({ queryKey: ['hall-of-returns', 'badge'] });
+        }
+      }),
+    );
+    return () => unsubscribes.forEach((u) => u());
+  }, [activeIdsKey, queryClient]);
+
+  const goToHallOfReturns = useTownStore((s) => s.goToHallOfReturns);
+  const count = returnedData?.items.length ?? 0;
+
+  if (count === 0) return null;
 
   return (
     <div className="returned-quests-badge">
@@ -52,9 +77,9 @@ function ReturnedQuestsBadge() {
         type="button"
         className="returned-quests-badge-btn"
         onClick={goToHallOfReturns}
-        aria-label={`${total} quest${total === 1 ? '' : 's'} returned — open Hall of Returns`}
+        aria-label={`${count} quest${count === 1 ? '' : 's'} returned — open Hall of Returns`}
       >
-        📜 {total} quest{total === 1 ? '' : 's'} returned
+        📜 {count} quest{count === 1 ? '' : 's'} returned
       </button>
     </div>
   );

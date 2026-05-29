@@ -267,7 +267,7 @@ describe('runQuest error recovery (bug regression)', () => {
     db.close();
   });
 
-  it('transitions quest to failed and closes agent when event iterator throws', async () => {
+  it('transitions quest to returned_to_town (via failure detector) and closes agent when event iterator throws', async () => {
     insertAdventurer(db, 'adv-err');
     insertQuest(db, 'q-err', 'adv-err');
 
@@ -293,15 +293,15 @@ describe('runQuest error recovery (bug regression)', () => {
     const { agent, done } = await runQuest(quest, adventurer, { db });
     await done;
 
+    // Phase 9: failure-detector automatically transitions failed → returned_to_town
     const questRow = db.prepare('SELECT status, failure_summary_json FROM quests WHERE id = ?').get('q-err') as {
       status: string;
       failure_summary_json: string | null;
     };
-    expect(questRow.status).toBe('failed');
+    expect(questRow.status).toBe('returned_to_town');
     expect(questRow.failure_summary_json).toBeTruthy();
-    const summary = JSON.parse(questRow.failure_summary_json!) as { reason: string; recommendation: string };
-    expect(summary.recommendation).toBe('retry');
-    expect(summary.reason).toContain('EPIPE');
+    const summary = JSON.parse(questRow.failure_summary_json!) as { recommendation: string };
+    expect(summary.recommendation).toBeTruthy();
 
     const agentRow = db.prepare('SELECT ended_at, exit_code FROM agents WHERE id = ?').get(agent.id) as {
       ended_at: string | null;

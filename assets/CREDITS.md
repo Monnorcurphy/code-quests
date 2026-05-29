@@ -214,6 +214,12 @@ Replace with real CC0/CC-BY chiptune tracks when available — the manifest (`pa
 
 ---
 
+## Phase 9 — Hall of Returns & Scars
+
+No new third-party assets in Phase 9. All UI elements (scar badges, recommendation badges, feedback form, action dialogs) are rendered with CSS and existing icon characters. No new sprites, audio files, or external packs were added.
+
+---
+
 ## Notes
 
 - Assets marked CC0 require no attribution but are acknowledged here for provenance.
