@@ -10,6 +10,7 @@ import { AudioProvider } from './audio/audio-provider';
 import { useTownStore } from './stores/town-store';
 import { useQuestStore } from './stores/quest-store';
 import { useEncounterStore } from './stores/encounter-store';
+import { useTourStore } from './stores/tour-store';
 import './styles/global.css';
 import './styles/features.css';
 
@@ -20,6 +21,7 @@ if (import.meta.env.DEV) {
     __townStore: useTownStore,
     __questStore: useQuestStore,
     __encounterStore: useEncounterStore,
+    __tourStore: useTourStore,
   });
 }
 
