@@ -191,7 +191,7 @@ describe('buildFailureSummary', () => {
     });
 
     it('returns retire when no agents and no encounters', () => {
-      expect(buildFailureSummary(makeQuest(), [], []).recommendation).toBe('repost_with_clarification');
+      expect(buildFailureSummary(makeQuest(), [], []).recommendation).toBe('retire');
     });
   });
 

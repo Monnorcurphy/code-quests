@@ -19,6 +19,8 @@ function chooseRecommendation(
     }
   }
 
+  if (retries === 0 && defeatEncounters.length === 0) return 'retire';
+
   if (retries <= 1 && defeatEncounters.length <= 1) return 'repost_with_clarification';
 
   return 'retire';
