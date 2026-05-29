@@ -15,8 +15,10 @@ import {
   MonsterTypeSchema,
   MonsterSchema,
   MonsterEncounterSchema,
+  ForgeSkillSchema,
+  ConfirmCandidateSchema,
 } from '@code-quests/shared';
-import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild } from '@code-quests/shared';
+import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild, ForgeSkillInput, ConfirmCandidateInput } from '@code-quests/shared';
 
 const FeedbackSuccessSchema = z.object({}).passthrough();
 
@@ -165,6 +167,21 @@ async function patchJson<S extends z.ZodTypeAny>(schema: S, path: string, body: 
   return schema.parse(data) as z.output<S>;
 }
 
+async function postEmpty(path: string, body: unknown = {}): Promise<void> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const raw: unknown = await res.json().catch(() => ({ error: `${res.statusText}` }));
+    const parsed = ApiErrorBodySchema.safeParse(raw);
+    const msg = parsed.success ? parsed.data.error : `${res.status} ${res.statusText}`;
+    const field = parsed.success ? parsed.data.field : undefined;
+    throw new ApiError(msg, { field, status: res.status, data: raw });
+  }
+}
+
 const CreateAdventurerInputSchema = z.object({
   name: z.string().min(1),
   class: AdventurerClassSchema,
@@ -261,6 +278,8 @@ export type PostMortemAttempt = z.infer<typeof PostMortemAttemptSchema>;
 // Re-export FailureSummary type for convenience
 export type { FailureSummary };
 
+export type { ForgeSkillInput, ConfirmCandidateInput };
+
 // Schemas that match the actual server response shapes
 const RepostServerResponseSchema = z.object({
   id: z.string(),
@@ -324,6 +343,18 @@ export const api = {
   },
   epics: {
     list: () => fetchJson(z.array(EpicSchema), '/epics'),
+  },
+  skills: {
+    list: (opts?: { status?: 'active' | 'candidate' | 'retired' }) => {
+      const qs = opts?.status !== undefined ? `?status=${opts.status}` : '';
+      return fetchJson(z.array(SkillSchema), `/skills${qs}`);
+    },
+    get: (id: string) => fetchJson(SkillSchema, `/skills/${id}`),
+    forge: (input: ForgeSkillInput) => postJson(SkillSchema, '/skills', ForgeSkillSchema.parse(input)),
+    confirmCandidate: (id: string, input?: ConfirmCandidateInput) =>
+      postJson(SkillSchema, `/skills/${id}/confirm`, input !== undefined ? ConfirmCandidateSchema.parse(input) : {}),
+    dismissCandidate: (id: string) => postEmpty(`/skills/${id}/dismiss`),
+    retire: (id: string) => postJson(SkillSchema, `/skills/${id}/retire`, {}),
   },
   equipment: {
     skills: () => fetchJson(z.array(SkillSchema), '/skills'),
