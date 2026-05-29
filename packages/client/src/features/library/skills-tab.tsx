@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import SkillCandidateCard from './skill-candidate-card';
+import ForgeSkillModal from './forge-skill-modal';
 import type { Skill } from '@code-quests/shared';
 
 function RetireButton({ skill }: { skill: Skill }) {
@@ -52,6 +53,9 @@ export default function SkillsTab() {
     queryFn: () => api.monsters.listTypes(),
   });
 
+  const [showForgeModal, setShowForgeModal] = useState(false);
+  const forgeButtonRef = useRef<HTMLButtonElement>(null);
+
   const candidates = skills.filter((s) => s.status === 'candidate');
   const activeSkills = skills.filter((s) => s.status === 'active');
 
@@ -75,6 +79,7 @@ export default function SkillsTab() {
   }
 
   return (
+    <>
     <div className="skills-tab">
       <section aria-labelledby="skill-candidates-heading">
         <h3 id="skill-candidates-heading" className="skills-section-heading">
@@ -98,9 +103,19 @@ export default function SkillsTab() {
           Unlocked Skills
         </h3>
         {activeSkills.length === 0 ? (
-          <p className="skills-empty-hint">
-            No skills unlocked yet. Confirm a candidate above, or forge a skill from a monster&apos;s detail page.
-          </p>
+          <div className="skills-empty-state">
+            <p className="skills-empty-hint">
+              No skills unlocked yet. Confirm a candidate above, or forge one now.
+            </p>
+            <button
+              ref={forgeButtonRef}
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowForgeModal(true)}
+            >
+              ⚒ Forge a Skill
+            </button>
+          </div>
         ) : (
           <div className="skills-table-wrap">
             <table className="skills-table" aria-label="Unlocked skills">
@@ -149,5 +164,14 @@ export default function SkillsTab() {
         )}
       </section>
     </div>
+
+    {showForgeModal && (
+      <ForgeSkillModal
+        onClose={() => setShowForgeModal(false)}
+        onSuccess={() => { /* skills query already invalidated inside modal */ }}
+        triggerRef={forgeButtonRef}
+      />
+    )}
+    </>
   );
 }

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
-import { useFocusTrap } from '../../lib/use-focus-trap';
 import { DifficultyStars } from './difficulty-stars';
+import ForgeSkillModal from './forge-skill-modal';
+import PromoteNemesisModal from './promote-nemesis-modal';
 import type { Monster, MonsterType, MonsterEncounter } from '@code-quests/shared';
 
 const OUTCOME_LABELS: Record<MonsterEncounter['outcome'], string> = {
@@ -45,114 +46,6 @@ function EncounterItem({ encounter }: { encounter: MonsterEncounter }) {
   );
 }
 
-type PromoteModalProps = {
-  monster: Monster;
-  onClose: () => void;
-  onSuccess: (updatedMonster: Monster) => void;
-  triggerRef: React.RefObject<HTMLButtonElement>;
-};
-
-function PromoteNemesisModal({ monster, onClose, onSuccess, triggerRef }: PromoteModalProps) {
-  const [name, setName] = useState(monster.name);
-  const [error, setError] = useState<string | null>(null);
-  const cancelRef = useRef<HTMLButtonElement>(null);
-  const queryClient = useQueryClient();
-
-  function handleClose() {
-    triggerRef.current?.focus();
-    onClose();
-  }
-
-  const panelRef = useFocusTrap(handleClose);
-
-  useEffect(() => {
-    cancelRef.current?.focus();
-  }, []);
-
-  const mutation = useMutation({
-    mutationFn: () => api.monsters.promoteNemesis(monster.id, name !== monster.name ? name : undefined),
-    onSuccess: (updated) => {
-      void queryClient.invalidateQueries({ queryKey: ['monsters'] });
-      void queryClient.invalidateQueries({ queryKey: ['monster', monster.id] });
-      triggerRef.current?.focus();
-      onSuccess(updated);
-    },
-    onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-    },
-  });
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    mutation.mutate();
-  }
-
-  return (
-    <div
-      className="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="promote-modal-title"
-    >
-      <div ref={panelRef} className="modal-panel promote-modal">
-        <h3 id="promote-modal-title" className="modal-title">Promote to Nemesis</h3>
-        <p className="modal-body">
-          This will mark <strong>{monster.name}</strong> as a guild Nemesis — a recurring
-          adversary that follows your guild across all projects.
-        </p>
-
-        <form onSubmit={handleSubmit} className="promote-form">
-          <div className="form-field">
-            <label htmlFor="nemesis-name" className="form-label">Nemesis name</label>
-            <input
-              id="nemesis-name"
-              type="text"
-              className="form-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={120}
-              required
-              aria-describedby={error ? 'promote-error' : undefined}
-            />
-          </div>
-
-          {error && (
-            <p id="promote-error" role="alert" className="form-error">
-              {error}
-            </p>
-          )}
-
-          <div
-            className="form-actions"
-            aria-live="polite"
-            aria-busy={mutation.isPending}
-          >
-            <button
-              ref={cancelRef}
-              type="button"
-              className="btn-secondary"
-              onClick={handleClose}
-              disabled={mutation.isPending}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={mutation.isPending || name.trim().length === 0}
-              aria-label={mutation.isPending ? 'Promoting…' : 'Confirm promotion to Nemesis'}
-            >
-              {mutation.isPending ? 'Promoting…' : 'Mark as Nemesis'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 type Props = {
   monster: Monster;
   monsterType: MonsterType | undefined;
@@ -162,8 +55,10 @@ type Props = {
 export default function MonsterDetail({ monster: initialMonster, monsterType, onBack }: Props) {
   const [currentMonster, setCurrentMonster] = useState(initialMonster);
   const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [showForgeModal, setShowForgeModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const promoteButtonRef = useRef<HTMLButtonElement>(null);
+  const forgeButtonRef = useRef<HTMLButtonElement>(null);
 
   const {
     data: encounters,
@@ -179,6 +74,11 @@ export default function MonsterDetail({ monster: initialMonster, monsterType, on
     setCurrentMonster(updated);
     setShowPromoteModal(false);
     setSuccessMessage(`${updated.name} is now a guild Nemesis.`);
+    setTimeout(() => setSuccessMessage(null), 4000);
+  }
+
+  function handleForgeSuccess(skillName: string) {
+    setSuccessMessage(`Skill '${skillName}' added to your guild's library.`);
     setTimeout(() => setSuccessMessage(null), 4000);
   }
 
@@ -245,8 +145,8 @@ export default function MonsterDetail({ monster: initialMonster, monsterType, on
           </dl>
         </div>
 
-        {currentMonster.scope === 'project' && (
-          <div className="monster-detail-actions">
+        <div className="monster-detail-actions">
+          {currentMonster.scope === 'project' && (
             <button
               ref={promoteButtonRef}
               type="button"
@@ -256,8 +156,17 @@ export default function MonsterDetail({ monster: initialMonster, monsterType, on
             >
               ⚔ Mark as Nemesis
             </button>
-          </div>
-        )}
+          )}
+          <button
+            ref={forgeButtonRef}
+            type="button"
+            className="btn-secondary"
+            onClick={() => setShowForgeModal(true)}
+            aria-label={`Forge a skill that counters ${currentMonster.name}`}
+          >
+            ⚒ Forge Skill
+          </button>
+        </div>
 
         <section aria-label="Encounter history" className="monster-detail-encounters">
           <h4 className="monster-detail-section-heading">Encounter History</h4>
@@ -297,6 +206,15 @@ export default function MonsterDetail({ monster: initialMonster, monsterType, on
           onClose={() => setShowPromoteModal(false)}
           onSuccess={handlePromoteSuccess}
           triggerRef={promoteButtonRef}
+        />
+      )}
+
+      {showForgeModal && (
+        <ForgeSkillModal
+          preselectedTypeId={currentMonster.typeId}
+          onClose={() => setShowForgeModal(false)}
+          onSuccess={handleForgeSuccess}
+          triggerRef={forgeButtonRef}
         />
       )}
     </>

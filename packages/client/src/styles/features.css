@@ -2259,6 +2259,98 @@
   margin: 0 0 0.5rem;
 }
 
+/* Forge Skill Modal */
+.forge-skill-modal {
+  max-width: 520px;
+}
+
+.forge-types-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 2px solid var(--color-stone-border);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-parchment);
+}
+
+.forge-type-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.forge-type-option input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-banner-red);
+  cursor: pointer;
+}
+
+.forge-types-empty {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin: 0.25rem 0;
+}
+
+.form-textarea {
+  padding: 0.5rem 0.6rem;
+  border: 2px solid var(--color-stone-border);
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--color-parchment);
+  color: var(--color-text);
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-textarea:focus {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--color-banner-red);
+}
+
+.form-label-optional {
+  font-weight: normal;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.forge-success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
+}
+
+.form-error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
+}
+
+.skills-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
 /* Parchment modal tokens */
 :root {
   --color-parchment-tan: #d9c79a;
