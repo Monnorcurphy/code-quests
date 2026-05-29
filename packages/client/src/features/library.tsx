@@ -10,6 +10,9 @@ type LibraryTab = 'bestiary' | 'skills';
 
 export default function Library() {
   const setActiveModal = useTownStore((s) => s.setActiveModal);
+  const markLibraryOpened = useTownStore((s) => s.markLibraryOpened);
+  const libraryInitialTab = useTownStore((s) => s.libraryInitialTab);
+  const setLibraryInitialTab = useTownStore((s) => s.setLibraryInitialTab);
   const panelRef = useFocusTrap(() => setActiveModal(null));
 
   const { data: monsterCount } = useQuery({
@@ -24,7 +27,15 @@ export default function Library() {
     staleTime: 30_000,
   });
   const candidateCount = allSkills?.filter((s) => s.status === 'candidate').length ?? 0;
-  const [activeTab, setActiveTab] = useState<LibraryTab>('bestiary');
+  const [activeTab, setActiveTab] = useState<LibraryTab>(libraryInitialTab);
+
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (mountedRef.current) return;
+    mountedRef.current = true;
+    markLibraryOpened();
+    setLibraryInitialTab('bestiary');
+  }, [markLibraryOpened, setLibraryInitialTab]);
 
   const focusedRef = useRef(false);
   useEffect(() => {

@@ -9,6 +9,45 @@ import Roster from './guild/roster';
 import RecruitModal from './guild/recruit-modal';
 import QuestBoard from './quests/quest-board';
 
+function LibraryNewsRibbon() {
+  const setActiveModal = useTownStore((s) => s.setActiveModal);
+  const setLibraryInitialTab = useTownStore((s) => s.setLibraryInitialTab);
+  const hasOpenedLibrary = useTownStore((s) => s.hasOpenedLibrary);
+
+  const { data: candidates } = useQuery({
+    queryKey: ['skills', 'candidates'],
+    queryFn: () => api.skills.list({ status: 'candidate' }),
+    staleTime: 15_000,
+  });
+  const candidateCount = candidates?.length ?? 0;
+
+  const showRibbon = !hasOpenedLibrary || candidateCount > 0;
+  if (!showRibbon) return null;
+
+  function handleClick() {
+    setLibraryInitialTab('skills');
+    setActiveModal('library');
+  }
+
+  const label = candidateCount > 0
+    ? `Library has news — ${candidateCount} skill candidate${candidateCount === 1 ? '' : 's'} ready`
+    : 'Library has news — visit the Skills tab';
+
+  return (
+    <div className="library-news-ribbon" role="alert" aria-label={label}>
+      <span className="library-news-ribbon-text">{label}</span>
+      <button
+        type="button"
+        className="library-news-ribbon-btn"
+        onClick={handleClick}
+        aria-label="Open Library Skills tab"
+      >
+        Go to Library
+      </button>
+    </div>
+  );
+}
+
 function LibraryPreview() {
   const setActiveModal = useTownStore((s) => s.setActiveModal);
   const { data: monsterCount } = useQuery({
@@ -188,6 +227,7 @@ function QuestBoardPanel({ onClose, onRecruit }: { onClose: () => void; onRecrui
           Entry &amp; Recruiting — assemble your guild before the quest begins.
         </p>
 
+        <LibraryNewsRibbon />
         <ActiveQuestsPeek adventurers={adventurers} />
         <ReturnedQuestsBadge />
 
