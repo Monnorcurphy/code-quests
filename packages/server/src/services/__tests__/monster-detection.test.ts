@@ -82,6 +82,38 @@ describe('classifyCombatEvent', () => {
     const result = classifyCombatEvent(db, event);
     expect(result).toBeNull();
   });
+
+  it('user-defined type classifies before built-in when both match', () => {
+    db.prepare(
+      `INSERT INTO monster_types (id, name, sprite_path, default_difficulty, failure_signature, created_by)
+       VALUES ('user:eslint-unused', 'Slug', 'monsters/slug.png', 1, 'eslint.*unused', 'user')`,
+    ).run();
+
+    const event = {
+      type: 'combat' as const,
+      timestamp: new Date().toISOString(),
+      message: 'eslint no-unused-vars',
+    };
+    const result = classifyCombatEvent(db, event);
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe('user:eslint-unused');
+  });
+
+  it('skips user type with invalid regex and falls through to built-in', () => {
+    db.prepare(
+      `INSERT INTO monster_types (id, name, sprite_path, default_difficulty, failure_signature, created_by)
+       VALUES ('user:bad-regex', 'Broken', 'monsters/broken.png', 1, '[invalid(', 'user')`,
+    ).run();
+
+    const event = {
+      type: 'combat' as const,
+      timestamp: new Date().toISOString(),
+      message: 'eslint error: missing semicolon',
+    };
+    const result = classifyCombatEvent(db, event);
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe('goblin_linter');
+  });
 });
 
 describe('recordEncounter', () => {

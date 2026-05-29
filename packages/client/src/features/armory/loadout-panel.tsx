@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useFocusTrap } from '../../lib/use-focus-trap';
 import { useTownStore } from '../../stores/town-store';
@@ -70,6 +70,18 @@ export default function LoadoutPanel({ onClose }: Props) {
   const catalogLoading = skillsLoading || toolsLoading || mcpLoading;
   const isSaving = saveStatus === 'saving';
 
+  const firstUnequippedSkillRef = useRef<HTMLLabelElement | null>(null);
+
+  const activeSkills = (skills as { id: string; name: string; status?: string }[]).filter(
+    (s) => s.status === 'active' || s.status === undefined,
+  );
+  const hasNewSkill = initialized && activeSkills.some((s) => !selectedSkillIds.includes(s.id));
+
+  const scrollToFirstUnequipped = useCallback(() => {
+    const el = firstUnequippedSkillRef.current;
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, []);
+
   async function handleSave() {
     if (!selectedQuestId) return;
     setSaveStatus('saving');
@@ -123,10 +135,13 @@ export default function LoadoutPanel({ onClose }: Props) {
               <div className="armory-columns">
                 <LoadoutColumn
                   heading="Skills"
-                  items={skills}
+                  items={activeSkills}
                   selectedIds={selectedSkillIds}
                   onChange={setSelectedSkillIds}
                   disabled={isSaving}
+                  showNewChip={hasNewSkill}
+                  onNewChipClick={scrollToFirstUnequipped}
+                  firstUnequippedRef={firstUnequippedSkillRef}
                 />
                 <LoadoutColumn
                   heading="Tools"
@@ -192,10 +207,25 @@ interface LoadoutColumnProps {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   disabled: boolean;
+  showNewChip?: boolean;
+  onNewChipClick?: () => void;
+  firstUnequippedRef?: React.MutableRefObject<HTMLLabelElement | null>;
 }
 
-function LoadoutColumn({ heading, items, selectedIds, onChange, disabled }: LoadoutColumnProps) {
+function LoadoutColumn({
+  heading,
+  items,
+  selectedIds,
+  onChange,
+  disabled,
+  showNewChip,
+  onNewChipClick,
+  firstUnequippedRef,
+}: LoadoutColumnProps) {
   const headingId = `col-${heading.toLowerCase().replace(/\s+/g, '-')}`;
+  const firstUnequippedId = firstUnequippedRef
+    ? items.find((i) => !selectedIds.includes(i.id))?.id
+    : undefined;
 
   function toggle(id: string) {
     if (selectedIds.includes(id)) {
@@ -207,28 +237,48 @@ function LoadoutColumn({ heading, items, selectedIds, onChange, disabled }: Load
 
   return (
     <section className="armory-column" aria-labelledby={headingId}>
-      <h3 id={headingId} className="armory-column-heading">
-        {heading}
-      </h3>
+      <div className="armory-column-header">
+        <h3 id={headingId} className="armory-column-heading">
+          {heading}
+        </h3>
+        {showNewChip && (
+          <button
+            type="button"
+            className="armory-new-skill-chip"
+            onClick={onNewChipClick}
+            aria-label="New skill available — click to scroll to it"
+          >
+            🔓 New skill available
+          </button>
+        )}
+      </div>
       {items.length === 0 ? (
         <p className="armory-column-empty">No {heading.toLowerCase()} available.</p>
       ) : (
         <ul className="armory-column-list" role="list">
-          {items.map((item) => (
-            <li key={item.id} className="armory-column-item">
-              <label className="armory-item-label">
-                <input
-                  type="checkbox"
-                  className="armory-item-checkbox"
-                  checked={selectedIds.includes(item.id)}
-                  onChange={() => toggle(item.id)}
-                  disabled={disabled}
-                  aria-label={item.name}
-                />
-                <span className="armory-item-name">{item.name}</span>
-              </label>
-            </li>
-          ))}
+          {items.map((item) => {
+            const isFirstUnequipped = item.id === firstUnequippedId;
+            return (
+              <li key={item.id} className="armory-column-item">
+                <label
+                  className={`armory-item-label${isFirstUnequipped ? ' armory-item--new' : ''}`}
+                  ref={isFirstUnequipped && firstUnequippedRef
+                    ? (el) => { firstUnequippedRef.current = el; }
+                    : undefined}
+                >
+                  <input
+                    type="checkbox"
+                    className="armory-item-checkbox"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => toggle(item.id)}
+                    disabled={disabled}
+                    aria-label={item.name}
+                  />
+                  <span className="armory-item-name">{item.name}</span>
+                </label>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

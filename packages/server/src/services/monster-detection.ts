@@ -1,8 +1,9 @@
 import { randomUUID } from 'crypto';
 import type Database from 'better-sqlite3';
-import { getMonsterType, listMonsterTypes, MONSTER_PROJECT_ID } from './monster-types';
+import { getMonsterType, listMonsterTypes, validateFailureSignature, MONSTER_PROJECT_ID } from './monster-types';
 import type { MonsterType } from './monster-types';
 import { generateMonsterName } from './monster-name-generator';
+import { evaluateSkillCandidate } from './skill-candidate-detection';
 
 export interface Monster {
   id: string;
@@ -89,12 +90,20 @@ export function classifyCombatEvent(
   const types = listMonsterTypes(db);
   for (const t of types) {
     if (!t.failureSignature) continue;
-    try {
-      const re = new RegExp(t.failureSignature, 'i');
-      if (re.test(event.message)) return t;
-    } catch {
-      // invalid regex in DB — skip silently
+    if (!validateFailureSignature(t.failureSignature)) {
+      process.stderr.write(
+        JSON.stringify({
+          level: 'warn',
+          service: 'monster-detection',
+          event: 'invalid_failure_signature',
+          monsterTypeId: t.id,
+          pattern: t.failureSignature,
+        }) + '\n',
+      );
+      continue;
     }
+    const re = new RegExp(t.failureSignature, 'i');
+    if (re.test(event.message)) return t;
   }
 
   process.stderr.write(
@@ -191,6 +200,20 @@ export function resolveEncounter(
   const monsterId = encounterRow['monster_id'] as string;
   if (outcome === 'victory') {
     db.prepare('UPDATE monsters SET defeats = defeats + 1 WHERE id = ?').run(monsterId);
+
+    const monsterTypeRow = db
+      .prepare('SELECT type_id FROM monsters WHERE id = ?')
+      .get(monsterId) as { type_id: string } | undefined;
+    const questRow = db
+      .prepare('SELECT adventurer_id FROM quests WHERE id = ?')
+      .get(encounterRow['quest_id'] as string) as { adventurer_id: string | null } | undefined;
+
+    if (monsterTypeRow?.type_id && questRow?.adventurer_id) {
+      evaluateSkillCandidate(db, {
+        adventurerId: questRow.adventurer_id,
+        monsterTypeId: monsterTypeRow.type_id,
+      });
+    }
   } else {
     db.prepare('UPDATE monsters SET escapes = escapes + 1 WHERE id = ?').run(monsterId);
   }

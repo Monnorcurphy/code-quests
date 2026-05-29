@@ -351,4 +351,39 @@ The Playwright spec (`packages/client/tests/e2e/phase-9-capstone.spec.ts`) mocks
 | 7 | Done | PAUSED_INPUT modal, user-blocked flow, Pause Bell |
 | 8 | Done | Audio layer — ambient themes, stingers, silent mode, credits |
 | 9 | Done | Hall of Returns, post-mortem, re-post / retire / split, scars, failure loop |
-| 10 | Future | Skills learning loop; user-defined MonsterTypes |
+| 10 | Done | Skills learning loop, Library hub, user-defined MonsterTypes, Armory chip |
+
+## Phase 10 walkthrough
+
+Phase 10 completes the self-improvement loop: the app watches which monsters the adventurer defeats, proposes skills, and the user confirms or dismisses them. Confirmed skills are available in the Armory for every future quest.
+
+### Quick demo (Phase 10)
+
+```bash
+# Install dependencies and start dev servers
+pnpm install && pnpm dev
+
+# Seed Phase 10 demo data (idempotent)
+pnpm --filter=@code-quests/server tsx src/scripts/seed-dev.ts --phase-10-demo
+```
+
+Then in the browser at `http://localhost:5173`, follow these 8 steps:
+
+1. **Town Square** — A gold "Library has news" ribbon appears at the top of the Town Square panel, linking to the Library Skills tab.
+2. **Click the ribbon** — The Library modal opens with the **Skills** tab auto-selected. One candidate card is visible: "Auto: Goblin (Linter)" (auto-detected after 3 victorious encounters).
+3. **Confirm the skill** — Click **Confirm Skill** on the candidate card. An inline form opens; leave defaults or rename the skill and submit. A success toast appears. The card disappears from Candidates and "Goblin Linter Slayer" (or your chosen name) appears in the **Unlocked Skills** section.
+4. **Close the Library** — The ribbon in Town Square is now gone (you've opened the Library and resolved all candidates).
+5. **Walk to the Armory** — Open the Loadout for any quest. A green **🔓 New skill available** chip appears next to the Skills section heading. Click the chip — the panel scrolls to the first unequipped skill, highlighted in green. Check it, then click **Save Loadout**.
+6. **Coin New Type** — From the Bestiary tab, click **+ Coin New Type**. In the modal, enter name "Slug", signature `eslint.*max-len`, choose any sprite, and submit. A success toast confirms creation. The Bestiary list updates (no encounters yet, but "Slug" now appears in the Forge Skill and Coin Type dropdowns).
+7. **Forge Skill manually** — Click any monster in the Bestiary list → click **⚒ Forge Skill** on its detail page → fill in the skill form and submit. The new skill appears in the Skills tab under Unlocked Skills.
+8. **Accessibility** — All four key surfaces (Library Bestiary, Library Skills, Coin New Type modal, Armory Loadout) pass `axe-core` with zero violations.
+
+### Automated E2E
+
+```bash
+pnpm test:e2e --grep "Phase 10"
+```
+
+The Playwright spec (`packages/client/tests/e2e/phase-10-capstone.spec.ts`) mocks the API and walks through the key interaction paths, including axe-core scans on every Phase 10 surface.
+
+See also: `specs/done/phase-10-walkthrough.md` for the full prose walkthrough.

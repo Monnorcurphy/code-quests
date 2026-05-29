@@ -4,11 +4,15 @@ import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
 import { api } from '../lib/api';
 import Bestiary from './library/bestiary';
+import SkillsTab from './library/skills-tab';
 
 type LibraryTab = 'bestiary' | 'skills';
 
 export default function Library() {
   const setActiveModal = useTownStore((s) => s.setActiveModal);
+  const markLibraryOpened = useTownStore((s) => s.markLibraryOpened);
+  const libraryInitialTab = useTownStore((s) => s.libraryInitialTab);
+  const setLibraryInitialTab = useTownStore((s) => s.setLibraryInitialTab);
   const panelRef = useFocusTrap(() => setActiveModal(null));
 
   const { data: monsterCount } = useQuery({
@@ -16,7 +20,22 @@ export default function Library() {
     queryFn: () => api.monsters.list({ scope: 'project' }).then((m) => m.length),
     staleTime: 30_000,
   });
-  const [activeTab, setActiveTab] = useState<LibraryTab>('bestiary');
+
+  const { data: allSkills } = useQuery({
+    queryKey: ['skills'],
+    queryFn: () => api.skills.list(),
+    staleTime: 30_000,
+  });
+  const candidateCount = allSkills?.filter((s) => s.status === 'candidate').length ?? 0;
+  const [activeTab, setActiveTab] = useState<LibraryTab>(libraryInitialTab);
+
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (mountedRef.current) return;
+    mountedRef.current = true;
+    markLibraryOpened();
+    setLibraryInitialTab('bestiary');
+  }, [markLibraryOpened, setLibraryInitialTab]);
 
   const focusedRef = useRef(false);
   useEffect(() => {
@@ -61,8 +80,14 @@ export default function Library() {
             id="lib-tab-skills"
             className={`library-tab${activeTab === 'skills' ? ' library-tab--active' : ''}`}
             onClick={() => setActiveTab('skills')}
+            aria-label={candidateCount > 0
+              ? `Skills — ${candidateCount} candidate${candidateCount === 1 ? '' : 's'} pending`
+              : 'Skills'}
           >
             Skills
+            {candidateCount > 0 && (
+              <span className="skills-tab-dot" aria-hidden="true" />
+            )}
           </button>
         </div>
 
@@ -83,7 +108,7 @@ export default function Library() {
           hidden={activeTab !== 'skills'}
           className="library-tabpanel"
         >
-          <p className="library-placeholder">Skills catalogue coming in Phase 10.</p>
+          <SkillsTab />
         </div>
 
         <div className="form-actions">

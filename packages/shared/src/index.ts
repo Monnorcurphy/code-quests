@@ -21,6 +21,12 @@ export type { Agent, AgentEvent } from './agent';
 export { MonsterScopeSchema, MonsterTypeSchema, MonsterSchema, MonsterEncounterSchema } from './monster';
 export type { MonsterScope, MonsterType, Monster, MonsterEncounter } from './monster';
 
+export { ForgeSkillSchema, ConfirmCandidateSchema } from './skill-actions';
+export type { ForgeSkillInput, ConfirmCandidateInput } from './skill-actions';
+
+export { CreateMonsterTypeSchema } from './monster-type-actions';
+export type { CreateMonsterTypeInput } from './monster-type-actions';
+
 export {
   RepostAdjustmentsSchema,
   RepostBodySchema,

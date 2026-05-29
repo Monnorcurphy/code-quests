@@ -1,25 +1,23 @@
-# Progress — Phase 9
+# Progress — Phase 10
 
-Previous task progress archived to metrics/progress-before-ginkgo.md
+Previous task progress archived to metrics/progress-before-indus.md
 
-## ginkgo — Hall of Returns capstone (Phase 9 capstone)
+## task-indus (capstone) — DONE
 
-**Status:** Done
+**Town Square ribbon:** Added `LibraryNewsRibbon` component to `town-square.tsx` that shows when `candidateCount >= 1 || !hasOpenedLibrary`. Clicking opens Library on Skills tab.
 
-**What was built:**
-- `packages/server/src/lib/quest-failure-detector.ts` — `detectAndHandleFailure()` helper: when a quest is in `failed` status, automatically calls `returnQuestToTown()` to transition to `returned_to_town`
-- `packages/server/src/lib/__tests__/quest-failure-detector.test.ts` — 5 unit/integration tests including the "non-zero exit" simulation the spec requires
-- `packages/server/src/services/quest-runner.ts` — hooked `detectAndHandleFailure` into both the `failed` event path and the catch-block error recovery path
-- `packages/server/src/scripts/seed-dev-phase9.ts` — dev-only seed creating one returned quest (Hydra × 2, `repost_with_clarification`) and one scarred adventurer ("Vance the Scarred")
-- `packages/server/package.json` — added `seed:phase9` script
-- `packages/client/src/features/guild/scar-list.tsx` — new component: "Scars (N)" badge that expands to show `ScarRecord` entries; each entry deep-links to the originating post-mortem via `navigate()`
-- `packages/client/src/features/guild/roster.tsx` — added `<ScarList>` per roster row
-- `packages/client/src/features/town-square.tsx` — updated `ReturnedQuestsBadge` to query `api.hallOfReturns.listQuests({ status: 'returned_to_town' })` (correct endpoint) and subscribe to active quests' WebSocket channels for `quest_returned` events to invalidate in real time
-- `packages/client/tests/e2e/phase-9-capstone.spec.ts` — Playwright E2E test covering: list view a11y, post-mortem rendering, feedback form, re-post/retire/split dialogs, Guild Hall scar badge
-- `assets/CREDITS.md` — Phase 9 note (no new third-party assets)
-- `README.md` — Phase 9 walkthrough section + updated phase roadmap table
+**Town Store:** Added `hasOpenedLibrary` (localStorage-persisted), `libraryInitialTab`, `markLibraryOpened()`, and `setLibraryInitialTab()` to `town-store.ts`.
 
-**Fixes:**
-- `packages/server/src/__tests__/quest-runner.test.ts` — updated test assertion for error recovery path: Phase 9 failure detector means quests now end in `returned_to_town` rather than `failed` after an unhandled error
+**Library:** Updated `library.tsx` to read `libraryInitialTab` from store for initial tab state, call `markLibraryOpened()` on mount, and reset `libraryInitialTab` to `'bestiary'`.
 
-**Tests:** 476 server + 918 client + 83 shared = 1477 total, all green. Lint clean, typecheck clean.
+**Armory loadout:** Added "🔓 New skill available" chip beside Skills section heading in `loadout-panel.tsx`. Chip appears when there's at least one active skill not in equipment. Clicking scrolls to first unequipped skill (highlighted in green).
+
+**Seed script:** Extended `seed-dev.ts` with `--phase-10-demo` flag: creates adventurer "Aldric the Learned", epic, 2 complete quests, goblin_linter monster, 3 victory encounters, then calls `evaluateSkillCandidate` to create the candidate skill.
+
+**E2E test:** Created `phase-10-capstone.spec.ts` with 11 tests covering: ribbon, Library Skills tab, confirm flow, Armory chip, Coin New Type, Forge Skill, and axe-core a11y scans.
+
+**Docs:** Added Phase 10 walkthrough to `README.md`; created `specs/done/phase-10-walkthrough.md`.
+
+**CSS:** Added styles for `.library-news-ribbon`, `.armory-column-header`, `.armory-new-skill-chip`, `.armory-item--new`.
+
+All tests: 976 passed. Typecheck: clean. Lint: clean.

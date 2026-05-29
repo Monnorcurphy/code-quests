@@ -46,7 +46,22 @@ export function getMonsterType(db: Database.Database, id: string): MonsterType |
 
 export function listMonsterTypes(db: Database.Database): MonsterType[] {
   const rows = db
-    .prepare('SELECT id, name, sprite_path, default_difficulty, failure_signature, created_by FROM monster_types ORDER BY default_difficulty ASC, id ASC')
+    .prepare(
+      `SELECT id, name, sprite_path, default_difficulty, failure_signature, created_by
+       FROM monster_types
+       ORDER BY CASE created_by WHEN 'user' THEN 0 ELSE 1 END ASC,
+                default_difficulty ASC,
+                id ASC`,
+    )
     .all() as Record<string, unknown>[];
   return rows.map(rowToMonsterType);
+}
+
+export function validateFailureSignature(pattern: string): boolean {
+  try {
+    new RegExp(pattern);
+    return true;
+  } catch {
+    return false;
+  }
 }

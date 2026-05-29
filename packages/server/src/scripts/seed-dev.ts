@@ -1,5 +1,6 @@
 import { openDb } from '../db/connection';
 import { runMigrations } from '../db/migrator';
+import { evaluateSkillCandidate } from '../services/skill-candidate-detection';
 
 function seed() {
   if (process.env.NODE_ENV === 'production') {
@@ -246,7 +247,163 @@ function seed() {
     process.stdout.write(`Created active agent for Phase 5 demo quest (${demoAgentId})\n`);
   }
 
+  if (process.argv.includes('--phase-10-demo')) {
+    seedPhase10Demo(db);
+  }
+
   process.stdout.write('Seed complete.\n');
+}
+
+function seedPhase10Demo(db: ReturnType<typeof openDb>) {
+  const now = new Date().toISOString();
+
+  // Adventurer for the demo
+  let demoAdventurerId: string;
+  const existingDemo = db
+    .prepare("SELECT id FROM adventurers WHERE name = 'Aldric the Learned'")
+    .get() as { id: string } | undefined;
+
+  if (existingDemo) {
+    demoAdventurerId = existingDemo.id;
+    process.stdout.write(`Using existing adventurer: Aldric the Learned (${demoAdventurerId})\n`);
+  } else {
+    demoAdventurerId = crypto.randomUUID();
+    db.prepare(
+      'INSERT INTO adventurers (id, name, class, model_id, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).run(demoAdventurerId, 'Aldric the Learned', 'champion', 'default', now);
+    process.stdout.write(`Created adventurer: Aldric the Learned (${demoAdventurerId})\n`);
+  }
+
+  // Epic for the demo
+  let demoEpicId: string;
+  const existingDemoEpic = db
+    .prepare("SELECT id FROM epics WHERE title = 'Phase 10 Demo Epic'")
+    .get() as { id: string } | undefined;
+
+  if (existingDemoEpic) {
+    demoEpicId = existingDemoEpic.id;
+  } else {
+    demoEpicId = crypto.randomUUID();
+    db.prepare('INSERT INTO epics (id, title, goal, created_at) VALUES (?, ?, ?, ?)').run(
+      demoEpicId,
+      'Phase 10 Demo Epic',
+      'Demonstrate the Phase 10 self-improvement learning loop',
+      now,
+    );
+    process.stdout.write(`Created epic: Phase 10 Demo Epic (${demoEpicId})\n`);
+  }
+
+  // 2 demo quests (complete, with the demo adventurer)
+  const demoQuests = [
+    {
+      title: 'Phase 10 Demo: Fix lint violations in auth module',
+      description: 'Address ESLint errors in the authentication module.',
+    },
+    {
+      title: 'Phase 10 Demo: Fix lint violations in payments module',
+      description: 'Address ESLint errors in the payments module.',
+    },
+  ];
+
+  const demoQuestIds: string[] = [];
+  for (const q of demoQuests) {
+    const existing = db.prepare('SELECT id FROM quests WHERE title = ?').get(q.title) as
+      | { id: string }
+      | undefined;
+    if (existing) {
+      demoQuestIds.push(existing.id);
+    } else {
+      const questId = crypto.randomUUID();
+      db.prepare(
+        `INSERT INTO quests (id, epic_id, title, description, acceptance_criteria_json,
+          edge_cases_json, context, status, adventurer_id, equipment_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        questId,
+        demoEpicId,
+        q.title,
+        q.description,
+        JSON.stringify(['All lint errors resolved']),
+        JSON.stringify([]),
+        '',
+        'complete',
+        demoAdventurerId,
+        JSON.stringify({ skillIds: [], toolIds: [], mcpServerIds: [] }),
+        now,
+        now,
+      );
+      demoQuestIds.push(questId);
+      process.stdout.write(`Created demo quest: ${q.title} (${questId})\n`);
+    }
+  }
+
+  // goblin_linter monster (project-scoped)
+  let goblinMonsterId: string;
+  const existingGoblin = db
+    .prepare(
+      "SELECT id FROM monsters WHERE type_id = 'goblin_linter' AND name = 'Phase 10 Demo Goblin'",
+    )
+    .get() as { id: string } | undefined;
+
+  if (existingGoblin) {
+    goblinMonsterId = existingGoblin.id;
+  } else {
+    goblinMonsterId = crypto.randomUUID();
+    db.prepare(
+      `INSERT INTO monsters (id, type_id, name, scope, first_seen_at, last_seen_at)
+       VALUES (?, 'goblin_linter', 'Phase 10 Demo Goblin', 'project', ?, ?)`,
+    ).run(goblinMonsterId, now, now);
+    process.stdout.write(`Created demo goblin monster (${goblinMonsterId})\n`);
+  }
+
+  // 3 victorious encounters (distribute across the 2 demo quests)
+  const encounterAssignments = [demoQuestIds[0], demoQuestIds[0], demoQuestIds[1]];
+  let encountersCreated = 0;
+
+  for (let i = 0; i < encounterAssignments.length; i++) {
+    const questId = encounterAssignments[i];
+    const checkKey = `Phase 10 Demo encounter ${i + 1}`;
+    const existing = db
+      .prepare(
+        "SELECT id FROM monster_encounters WHERE monster_id = ? AND quest_id = ? AND combat_log_json LIKE ?",
+      )
+      .get(goblinMonsterId, questId, `%${checkKey}%`) as { id: string } | undefined;
+
+    if (!existing) {
+      const encId = crypto.randomUUID();
+      db.prepare(
+        `INSERT INTO monster_encounters
+           (id, monster_id, quest_id, appeared_at, combat_log_json, outcome, loot_json, resolved_at)
+         VALUES (?, ?, ?, ?, ?, 'victory', '[]', ?)`,
+      ).run(
+        encId,
+        goblinMonsterId,
+        questId,
+        now,
+        JSON.stringify([checkKey]),
+        now,
+      );
+      encountersCreated++;
+    }
+  }
+
+  if (encountersCreated > 0) {
+    process.stdout.write(`Created ${encountersCreated} demo monster encounters\n`);
+  }
+
+  // Trigger skill candidate evaluation
+  const result = evaluateSkillCandidate(db, {
+    adventurerId: demoAdventurerId,
+    monsterTypeId: 'goblin_linter',
+  });
+
+  if (result.created) {
+    process.stdout.write(`Created skill candidate for goblin_linter (id: ${result.skillId ?? '?'})\n`);
+  } else if (result.updated) {
+    process.stdout.write(`Updated existing skill for goblin_linter (id: ${result.skillId ?? '?'})\n`);
+  } else {
+    process.stdout.write('Skill candidate already exists or threshold not yet met\n');
+  }
 }
 
 seed();
