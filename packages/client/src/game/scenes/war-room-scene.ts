@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BaseBuildingScene, BUILDING_DOOR_Y } from './base-building-scene';
+import { GuideNpc } from '../entities/guide-npc';
 import { registerScene } from '../scene-registry';
 import { sceneRouter } from '../scene-router';
 import { useTownStore } from '../../stores/town-store';
@@ -116,10 +117,25 @@ export class WarRoomScene extends BaseBuildingScene {
       if (this.tableInRange) useTownStore.getState().setActiveModal('draft');
     });
 
+    // Commander Tyra — officer briefing by the planning table.
+    new GuideNpc(this, {
+      x: 460,
+      y: BUILDING_DOOR_Y + 4,
+      textureKey: 'character/npc-villager',
+      bubbleText: 'Commander Tyra — Officer',
+      bubbleWidth: 190,
+      onActivate: () => useTownStore.getState().setActiveModal('draft'),
+    });
+
     sceneRouter.setInteractives([
       {
         id: 'planning-table',
         label: 'Planning Table',
+        onActivate: () => useTownStore.getState().setActiveModal('draft'),
+      },
+      {
+        id: 'commander-tyra',
+        label: 'Commander Tyra (Officer)',
         onActivate: () => useTownStore.getState().setActiveModal('draft'),
       },
       this.returnDoorInteractive,

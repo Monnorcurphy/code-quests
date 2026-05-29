@@ -1,5 +1,6 @@
 import { BaseBuildingScene, BUILDING_DOOR_Y } from './base-building-scene';
 import { EquipmentStationInteractive } from '../interactives/equipment-station';
+import { GuideNpc } from '../entities/guide-npc';
 import { registerScene } from '../scene-registry';
 import { sceneRouter } from '../scene-router';
 import { useTownStore } from '../../stores/town-store';
@@ -90,12 +91,27 @@ export class ArmoryScene extends BaseBuildingScene {
     this.equipmentStation = new EquipmentStationInteractive(this, STATION_X, BUILDING_DOOR_Y);
     this.equipmentStation.registerWithPlayer(this.player);
 
+    // Smith Bran — blacksmith standing by the anvil.
+    new GuideNpc(this, {
+      x: 380,
+      y: BUILDING_DOOR_Y + 4,
+      textureKey: 'character/npc-villager',
+      bubbleText: 'Smith Bran — Blacksmith',
+      bubbleWidth: 170,
+      onActivate: () => useTownStore.getState().setActiveModal('armory-loadout'),
+    });
+
     sceneRouter.setInteractives([
       this.returnDoorInteractive,
       {
         id: 'armory-loadout',
         label: 'Loadout Workbench',
         onActivate: () => this.equipmentStation.activate(),
+      },
+      {
+        id: 'smith-bran',
+        label: 'Smith Bran (Blacksmith)',
+        onActivate: () => useTownStore.getState().setActiveModal('armory-loadout'),
       },
     ]);
 

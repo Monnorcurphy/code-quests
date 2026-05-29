@@ -1,4 +1,5 @@
 import { BaseBuildingScene, BUILDING_DOOR_Y } from './base-building-scene';
+import { GuideNpc } from '../entities/guide-npc';
 import { registerScene } from '../scene-registry';
 import { sceneRouter } from '../scene-router';
 import { useTownStore } from '../../stores/town-store';
@@ -75,10 +76,25 @@ export class LibraryScene extends BaseBuildingScene {
       .setOrigin(0.5)
       .setDepth(3);
 
+    // Sage Mireldine — the librarian. Clickable NPC that opens the Library.
+    new GuideNpc(this, {
+      x: 1140,
+      y: BUILDING_DOOR_Y + 4,
+      textureKey: 'character/npc-villager',
+      bubbleText: 'Sage Mireldine — Librarian',
+      bubbleWidth: 180,
+      onActivate: () => useTownStore.getState().setActiveModal('library'),
+    });
+
     sceneRouter.setInteractives([
       {
         id: 'ancient-tome',
         label: 'Ancient Tome',
+        onActivate: () => useTownStore.getState().setActiveModal('library'),
+      },
+      {
+        id: 'sage-mireldine',
+        label: 'Sage Mireldine (Librarian)',
         onActivate: () => useTownStore.getState().setActiveModal('library'),
       },
       this.returnDoorInteractive,

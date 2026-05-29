@@ -1,4 +1,5 @@
 import { BaseBuildingScene, BUILDING_DOOR_Y } from './base-building-scene';
+import { GuideNpc } from '../entities/guide-npc';
 import { registerScene } from '../scene-registry';
 import { sceneRouter } from '../scene-router';
 import { useTownStore } from '../../stores/town-store';
@@ -36,7 +37,24 @@ export class HallOfReturnsScene extends BaseBuildingScene {
       .setOrigin(0.5)
       .setDepth(2);
 
-    sceneRouter.setInteractives([this.returnDoorInteractive]);
+    // Keeper Vorn — undertaker tending the returned scrolls.
+    new GuideNpc(this, {
+      x: 380,
+      y: BUILDING_DOOR_Y + 4,
+      textureKey: 'character/npc-villager',
+      bubbleText: 'Keeper Vorn — Undertaker',
+      bubbleWidth: 180,
+      onActivate: () => useTownStore.getState().setActiveModal('hall-of-returns'),
+    });
+
+    sceneRouter.setInteractives([
+      {
+        id: 'keeper-vorn',
+        label: 'Keeper Vorn (Undertaker)',
+        onActivate: () => useTownStore.getState().setActiveModal('hall-of-returns'),
+      },
+      this.returnDoorInteractive,
+    ]);
 
     useTownStore.getState().setActiveModal('hall-of-returns');
 

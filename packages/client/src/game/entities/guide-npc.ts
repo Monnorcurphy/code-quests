@@ -9,6 +9,10 @@ interface GuideNpcOpts {
   y: number;
   textureKey: string; // e.g. 'character/npc-villager'
   onActivate: () => void;
+  // Optional custom bubble label (defaults to the Elder Hawthorne prompt).
+  bubbleText?: string;
+  // Optional bubble width override (use when label text is wider than default).
+  bubbleWidth?: number;
 }
 
 const BUBBLE_W = 140;
@@ -40,13 +44,15 @@ export class GuideNpc {
       });
     }
 
-    // Speech bubble — "Click me for help"
+    // Speech bubble — default "Click me for help", or custom label
+    const label = opts.bubbleText ?? '👋 Click me for help';
+    const bubbleW = opts.bubbleWidth ?? BUBBLE_W;
     this.bubble = scene.add
-      .rectangle(opts.x, opts.y + BUBBLE_OFFSET_Y, BUBBLE_W, BUBBLE_H, 0xfef9e7)
+      .rectangle(opts.x, opts.y + BUBBLE_OFFSET_Y, bubbleW, BUBBLE_H, 0xfef9e7)
       .setStrokeStyle(2, 0x1a0e08)
       .setDepth(6);
     this.bubbleText = scene.add
-      .text(opts.x, opts.y + BUBBLE_OFFSET_Y, '👋 Click me for help', {
+      .text(opts.x, opts.y + BUBBLE_OFFSET_Y, label, {
         fontSize: '11px',
         color: '#1a0e08',
         fontStyle: 'bold',

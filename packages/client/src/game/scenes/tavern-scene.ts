@@ -1,4 +1,5 @@
 import { BaseBuildingScene, BUILDING_DOOR_Y } from './base-building-scene';
+import { GuideNpc } from '../entities/guide-npc';
 import { registerScene } from '../scene-registry';
 import { sceneRouter } from '../scene-router';
 import { useTownStore } from '../../stores/town-store';
@@ -83,10 +84,25 @@ export class TavernScene extends BaseBuildingScene {
       this.add.sprite(250, BUILDING_DOOR_Y + 4, 'character/npc-villager').setDepth(2).setFlipX(true);
     }
 
+    // Innkeep Rorek — tavernkeeper between the tables.
+    new GuideNpc(this, {
+      x: 480,
+      y: BUILDING_DOOR_Y + 4,
+      textureKey: 'character/npc-villager',
+      bubbleText: 'Innkeep Rorek — Tavernkeeper',
+      bubbleWidth: 200,
+      onActivate: () => useTownStore.getState().setActiveModal('tavern'),
+    });
+
     sceneRouter.setInteractives([
       {
         id: 'ale-barrel',
         label: 'Ale Barrel',
+        onActivate: () => useTownStore.getState().setActiveModal('tavern'),
+      },
+      {
+        id: 'innkeep-rorek',
+        label: 'Innkeep Rorek (Tavernkeeper)',
         onActivate: () => useTownStore.getState().setActiveModal('tavern'),
       },
       this.returnDoorInteractive,

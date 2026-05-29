@@ -1,4 +1,5 @@
 import { BaseBuildingScene, BUILDING_DOOR_Y } from './base-building-scene';
+import { GuideNpc } from '../entities/guide-npc';
 import { registerScene } from '../scene-registry';
 import { sceneRouter } from '../scene-router';
 import { useTownStore } from '../../stores/town-store';
@@ -58,10 +59,25 @@ export class OracleScene extends BaseBuildingScene {
       .setOrigin(0.5)
       .setDepth(3);
 
+    // Seer Caelis — priestess tending the crystal ball.
+    new GuideNpc(this, {
+      x: 420,
+      y: BUILDING_DOOR_Y + 4,
+      textureKey: 'character/npc-villager',
+      bubbleText: 'Seer Caelis — Priestess',
+      bubbleWidth: 170,
+      onActivate: () => useTownStore.getState().setActiveModal('oracle'),
+    });
+
     sceneRouter.setInteractives([
       {
         id: 'crystal-ball',
         label: 'Crystal Ball',
+        onActivate: () => useTownStore.getState().setActiveModal('oracle'),
+      },
+      {
+        id: 'seer-caelis',
+        label: 'Seer Caelis (Priestess)',
         onActivate: () => useTownStore.getState().setActiveModal('oracle'),
       },
       this.returnDoorInteractive,
