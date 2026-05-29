@@ -1,21 +1,32 @@
 # Progress — Phase 11
 
-Previous task progress archived to metrics/progress-before-aries.md
+Previous task progress archived to metrics/progress-before-cancer.md
 
-## Task aries — Auto-match deterministic demo path
+## Task cancer — Failure → scar → re-post loop integration
 
 **Status:** Complete
 
-**Changes:**
-- `packages/server/src/services/auto-match.ts` — Added final id-lexicographic tiebreak for full determinism. Added exported `autoMatchWithReason()` returning adventurer + plain-language reason string.
-- `packages/server/src/services/__tests__/auto-match-showcase.test.ts` — New test verifying all three showcase quests deterministically match the right adventurers (Brielle→JWT, Tess→copy, Rook→meter), and that results are order-independent.
-- `packages/server/src/__tests__/auto-match-route.test.ts` — Tests for `GET /quests/:id/auto-match` endpoint (404, no-adventurer, matched adventurer, showcase scenario).
-- `packages/server/src/routes/quests.ts` — New `GET /:id/auto-match` route returning `{ adventurerId, adventurerName, adventurerClass, reason }`.
-- `packages/client/src/lib/api.ts` — Added `api.quests.autoMatch(id)` function with Zod schema; updated `dispatch` to accept optional `adventurerId` param.
-- `packages/client/src/features/quests/auto-match-preview.tsx` — New React component showing auto-match suggestion + reason + override dropdown. Full loading/error/empty states per ux-feedback rules.
-- `packages/client/src/features/quests/dispatch-button.tsx` — Accepts optional `adventurerId` prop, passes through to API dispatch call.
-- `packages/client/src/features/war-room.tsx` — Integrated AutoMatchPreview into idle quest detail section; lifted adventurer selection state to WarRoom; fetches adventurers for dropdown.
-- `packages/client/src/__tests__/auto-match-preview.test.tsx` — New component tests: loading state, suggestion display, error state, empty-guild state, auto-selection callback, dropdown override.
-- `packages/client/src/__tests__/dispatch-button.test.tsx` — Updated assertion to include new adventurerId argument.
+**What was done:**
+- Server: Added `monsterTypeId` to the fatal monster JSON in the Hall of Returns list query
+- Server: Created `packages/server/src/__tests__/repost-cycle.test.ts` — full integration test covering the fail→scar→repost→complete arc using the seeded showcase scenario (Brielle dispatched without type_whisperer, fails, gains scar, re-post adds type_whisperer, quest completes)
+- Server: Added showcase seed scenario test to `quest-return.test.ts` — verifies scar shape (questId, failureSummary, monsterIdAtFatal, occurredAt) using seeded Brielle adventurer data
+- Server: Added unit test to `auto-match.test.ts` — verifies Brielle's JWT scar lowers her score for a type-heavy future quest, causing a clean champion newcomer to be selected instead
+- Client: Added `monsterTypeId` to `FatalMonsterSchema` in `api.ts`
+- Client: Added `equipment` field to `HallOfReturnsQuestSchema` in `api.ts`
+- Client: Extended `api.quests.repost` to accept `equipment` in adjustments
+- Client: Updated `failure-summary-card.tsx` — "Browse Library" link now points to `/town/library?typeId=xxx` filtered to the fatal monster's type
+- Client: Updated `repost-dialog.tsx` — added inline skills equipment-edit section with constrained checkbox pickers (pre-populated from quest's existing equipment), passes equipment in the repost API call
+- Client: Updated `bestiary.tsx` — accepts `initialTypeFilter` prop, filters monster list by typeId, shows a filter banner when active
+- Client: Updated `library.tsx` — reads `typeId` from `useSearchParams()` and passes to `Bestiary` as `initialTypeFilter`
+- Tests: Updated `repost-dialog.test.tsx` to cover equipment section (skills API mock, checkbox toggle, pre-population, submission with equipment)
+- Tests: Fixed 5 test fixtures to add new required fields (`equipment`, `monsterTypeId`)
+- Tests: Fixed `library.test.tsx` to wrap renders in `MemoryRouter` (required by new `useSearchParams` call)
 
-**Verification:** All 1615 tests pass (83 shared + 547 server + 985 client). Zero lint/typecheck errors.
+**Acceptance criteria met:**
+- ✅ Integration test passes deterministically
+- ✅ Hall of Returns failure summary shows non-empty recommendation text and links to bestiary filtered by monster type
+- ✅ Re-post inline equipment editor uses constrained inputs (checkboxes, not free text)
+- ✅ Scar persists on adventurer across re-post + win
+- ✅ Auto-match considers scars (verified by unit test)
+- ✅ All 1542 tests pass (551 server, 991 client)
+- ✅ Lint, typecheck, all green

@@ -71,11 +71,11 @@ function makeEncounter(overrides: Partial<MonsterEncounter> = {}): MonsterEncoun
   };
 }
 
-function renderBestiary() {
+function renderBestiary(props: { initialTypeFilter?: string } = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <Bestiary />
+      <Bestiary {...props} />
     </QueryClientProvider>,
   );
 }
@@ -306,6 +306,49 @@ describe('PromoteNemesisModal — focus management', () => {
         screen.getByRole('button', { name: /mark grizzlebar the nit as guild nemesis/i }),
       );
     });
+  });
+});
+
+describe('Bestiary — type filter', () => {
+  it('shows filter banner when initialTypeFilter is provided', async () => {
+    vi.mocked(api.monsters.list).mockResolvedValue([makeMonster()]);
+    renderBestiary({ initialTypeFilter: 'mt-1' });
+    await waitFor(() => {
+      expect(screen.getByText(/filtered by type/i)).toBeDefined();
+    });
+  });
+
+  it('shows filtered empty state when no monsters match the filter', async () => {
+    vi.mocked(api.monsters.list).mockResolvedValue([makeMonster({ typeId: 'mt-1' })]);
+    vi.mocked(api.monsters.listTypes).mockResolvedValue([
+      makeMonsterType({ id: 'ghost_unknown', name: 'Ghost' }),
+    ]);
+    renderBestiary({ initialTypeFilter: 'ghost_unknown' });
+    await waitFor(() => {
+      expect(screen.getByText(/no monsters of type/i)).toBeDefined();
+      expect(screen.getByText(/have been recorded yet/i)).toBeDefined();
+    });
+  });
+
+  it('filtered empty state includes a clear filter link', async () => {
+    vi.mocked(api.monsters.list).mockResolvedValue([makeMonster({ typeId: 'mt-1' })]);
+    vi.mocked(api.monsters.listTypes).mockResolvedValue([
+      makeMonsterType({ id: 'ghost_unknown', name: 'Ghost' }),
+    ]);
+    renderBestiary({ initialTypeFilter: 'ghost_unknown' });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /clear filter/i })).toBeDefined();
+    });
+  });
+
+  it('does not show the table when filter matches zero monsters', async () => {
+    vi.mocked(api.monsters.list).mockResolvedValue([makeMonster({ typeId: 'mt-1' })]);
+    vi.mocked(api.monsters.listTypes).mockResolvedValue([
+      makeMonsterType({ id: 'ghost_unknown', name: 'Ghost' }),
+    ]);
+    renderBestiary({ initialTypeFilter: 'ghost_unknown' });
+    await waitFor(() => screen.getByText(/no monsters of type/i));
+    expect(screen.queryByRole('table')).toBeNull();
   });
 });
 

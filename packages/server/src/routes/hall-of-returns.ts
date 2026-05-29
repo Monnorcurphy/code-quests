@@ -85,6 +85,7 @@ const LIST_SELECT = `
       SELECT json_object(
         'monsterId', me.monster_id,
         'monsterName', m.name,
+        'monsterTypeId', m.type_id,
         'spritePath', mt.sprite_path,
         'difficulty', m.calibrated_difficulty
       )

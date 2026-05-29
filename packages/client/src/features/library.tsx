@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
 import { api } from '../lib/api';
@@ -14,6 +15,8 @@ export default function Library() {
   const libraryInitialTab = useTownStore((s) => s.libraryInitialTab);
   const setLibraryInitialTab = useTownStore((s) => s.setLibraryInitialTab);
   const panelRef = useFocusTrap(() => setActiveModal(null));
+  const [searchParams] = useSearchParams();
+  const bestiaryTypeFilter = searchParams.get('typeId');
 
   const { data: monsterCount } = useQuery({
     queryKey: ['monsters-count'],
@@ -98,7 +101,7 @@ export default function Library() {
           hidden={activeTab !== 'bestiary'}
           className="library-tabpanel"
         >
-          <Bestiary />
+          <Bestiary initialTypeFilter={bestiaryTypeFilter} />
         </div>
 
         <div

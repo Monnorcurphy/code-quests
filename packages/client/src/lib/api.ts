@@ -10,6 +10,7 @@ import {
   SkillSchema,
   ToolSchema,
   MCPServerSchema,
+  EquipmentSchema,
   SpecAuditSchema,
   AgentEventSchema,
   MonsterTypeSchema,
@@ -217,6 +218,7 @@ export type AdvanceSceneResponse = z.infer<typeof AdvanceSceneResponseSchema>;
 const FatalMonsterSchema = z.object({
   monsterId: z.string(),
   monsterName: z.string(),
+  monsterTypeId: z.string(),
   spritePath: z.string(),
   difficulty: z.number(),
 });
@@ -232,6 +234,7 @@ export const HallOfReturnsQuestSchema = z.object({
   status: QuestStatusSchema,
   adventurerId: z.string().nullable(),
   agentId: z.string().nullable(),
+  equipment: EquipmentSchema.default({ skillIds: [], toolIds: [], mcpServerIds: [] }),
   failureSummary: FailureSummarySchema.nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -344,7 +347,7 @@ export const api = {
       ),
     submitFeedback: (id: string, text: string) =>
       postJson(FeedbackSuccessSchema, `/quests/${id}/actions/feedback`, { text }),
-    repost: (id: string, adjustments?: { acceptanceCriteria?: string[]; edgeCases?: string[] }): Promise<RepostResult> =>
+    repost: (id: string, adjustments?: { acceptanceCriteria?: string[]; edgeCases?: string[]; equipment?: Equipment }): Promise<RepostResult> =>
       postJson(RepostServerResponseSchema, `/quests/${id}/actions/repost`, { adjustments })
         .then((q) => ({ newQuestId: q.id, newTitle: q.title })),
     retire: (id: string) =>
