@@ -411,4 +411,8 @@ export const api = {
     getPostMortem: (questId: string) =>
       fetchJson(PostMortemResponseSchema, `/hall-of-returns/quests/${questId}/post-mortem`),
   },
+  showcase: {
+    reset: () =>
+      postJson(z.object({ epicId: z.string() }), '/showcase/reset', {}),
+  },
 };

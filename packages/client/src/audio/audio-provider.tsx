@@ -41,7 +41,13 @@ export function AudioProvider({ children }: AudioProviderProps) {
       .then(() => {
         if (!cancelled) {
           setBackend(b);
-          if (import.meta.env.DEV && typeof window !== 'undefined') {
+          const isTestable =
+            import.meta.env.DEV ||
+            !!(
+              typeof window !== 'undefined' &&
+              (window as unknown as Record<string, unknown>).__DEMO_MODE__
+            );
+          if (isTestable && typeof window !== 'undefined') {
             (window as unknown as Record<string, unknown>).__audioBackend__ = b;
           }
         }

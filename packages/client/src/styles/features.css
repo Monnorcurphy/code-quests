@@ -3129,3 +3129,146 @@ body[data-quest-paused='true'] *:not([class*='pause-bell-flash']):not([role='dia
   outline-offset: 2px;
   border-radius: 2px;
 }
+
+/* =========================================================
+   Showcase Button (demo mode only)
+   ========================================================= */
+
+.showcase-button-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.showcase-demo-ribbon {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--color-banner-red, #b91c1c);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  z-index: 1;
+}
+
+.showcase-start-btn {
+  width: 100%;
+}
+
+.showcase-confirm-backdrop {
+  z-index: 200;
+}
+
+.showcase-confirm-panel {
+  max-width: 380px;
+}
+
+.showcase-confirm-error {
+  color: var(--color-banner-red, #b91c1c);
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+}
+
+.showcase-confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+/* =========================================================
+   Tour Overlay
+   ========================================================= */
+
+.tour-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: none;
+}
+
+.tour-overlay-panel {
+  background: var(--color-parchment, #faf7f0);
+  border: 2px solid var(--color-parchment-dark, #c8b89a);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  padding: 1.25rem 1.5rem;
+  max-width: 480px;
+  width: 100%;
+  pointer-events: all;
+}
+
+.tour-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.tour-overlay-counter {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tour-overlay-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--color-text-secondary, #666);
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  border-radius: 3px;
+}
+
+.tour-overlay-close:hover {
+  color: var(--color-text, #333);
+}
+
+.tour-overlay-close:focus-visible {
+  outline: 3px solid var(--color-focus-ring, #2563eb);
+  outline-offset: 2px;
+}
+
+.tour-overlay-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text, #1a1a1a);
+  margin: 0 0 0.5rem;
+}
+
+.tour-overlay-body {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text, #333);
+  margin: 0 0 1rem;
+}
+
+.tour-overlay-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.tour-overlay-back,
+.tour-overlay-next {
+  min-width: 90px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-overlay-panel {
+    transition: none;
+  }
+}
