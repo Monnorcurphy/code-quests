@@ -17,6 +17,16 @@ vi.mock('../lib/api', async (importOriginal) => {
         get: vi.fn(),
         listEncounters: vi.fn(),
         listQuestEncounters: vi.fn(),
+        promoteNemesis: vi.fn(),
+        createType: vi.fn(),
+      },
+      skills: {
+        list: vi.fn().mockResolvedValue([]),
+        get: vi.fn(),
+        forge: vi.fn(),
+        confirmCandidate: vi.fn(),
+        dismissCandidate: vi.fn(),
+        retire: vi.fn(),
       },
     },
   };
@@ -59,12 +69,13 @@ describe('Library', () => {
     expect(bestiaryTab.getAttribute('aria-selected')).toBe('true');
   });
 
-  it('Skills tab shows placeholder text when clicked', async () => {
+  it('Skills tab shows the skills section headings when clicked', async () => {
     const user = userEvent.setup();
     renderLibrary();
     await user.click(screen.getByRole('tab', { name: 'Skills' }));
     await waitFor(() => {
-      expect(screen.getByText(/skills catalogue coming in phase 10/i)).toBeDefined();
+      expect(screen.getByRole('heading', { name: /skill candidates/i })).toBeDefined();
+      expect(screen.getByRole('heading', { name: /unlocked skills/i })).toBeDefined();
     });
   });
 

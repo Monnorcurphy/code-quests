@@ -1,16 +1,17 @@
 # Progress — Phase 10
 
-Previous task progress archived to metrics/progress-before-cauvery.md
+Previous task progress archived to metrics/progress-before-chattahoochee.md
 
-## Task cauvery — Custom monster types API + detection integration (DONE)
+## chattahoochee — Library Skills tab (active list + candidates panel)
 
-- Migration 009: rebuilt `monster_types` with `CHECK(created_by IN ('system','user'))` using the standard SQLite table-rebuild pattern. Preserves all 10 seeded built-in types.
-- `packages/shared/src/monster-type-actions.ts`: `CreateMonsterTypeSchema` with Zod validation including regex validation via `superRefine`.
-- `packages/shared/src/index.ts`: re-exported `CreateMonsterTypeSchema` and `CreateMonsterTypeInput`.
-- `packages/server/src/services/monster-types.ts`: added `validateFailureSignature(pattern)` helper; updated `listMonsterTypes` sort order so user-defined types are evaluated first in classification.
-- `packages/server/src/services/monster-detection.ts`: uses `validateFailureSignature` — invalid regex emits a structured JSON log via stderr and skips (no crash).
-- `packages/server/src/routes/monsters.ts`: added `POST /monsters/types` handler — validates body, slugifies name to generate `user:<slug>` id, returns 409 on duplicate, inserts with `created_by='user'`, returns 201 + MonsterType.
-- `packages/client/src/lib/api.ts`: added `api.monsters.createType(input)`.
-- `packages/server/src/routes/__tests__/monsters-types.test.ts`: happy path, 409 duplicate, 400 invalid regex, 400 out-of-range difficulty, CHECK constraint rejection test.
-- `packages/server/src/services/__tests__/monster-detection.test.ts`: two new tests — user type classifies before built-in when both match; invalid user regex is skipped and built-in match still works.
-- All 514 tests pass. Typecheck and lint clean.
+**Status:** Complete
+
+**What was built:**
+- `packages/client/src/features/library/skill-candidate-card.tsx` — parchment card for one candidate skill; states: idle, confirming (inline form), confirming-loading, dismissing, success. Success toast auto-dismisses via 3s setTimeout that calls `queryClient.invalidateQueries(['skills'])`.
+- `packages/client/src/features/library/skills-tab.tsx` — Skills tab component; queries `['skills']` and `['monster-types']`, renders Skill Candidates (top) and Unlocked Skills table (bottom), both with empty states. Includes `RetireButton` sub-component.
+- `packages/client/src/features/library.tsx` — replaced placeholder `<p>` with `<SkillsTab />`. Added `['skills']` query to derive `candidateCount`; Skills tab button shows a red dot indicator and updated `aria-label` when candidates ≥ 1.
+- `packages/client/src/features/library/__tests__/skills-tab.test.tsx` — 18 Vitest tests covering empty states, candidate confirm/dismiss flows (with vi.useFakeTimers for the 3s dismiss), inline name validation, error states, active-skill retire, and axe-core accessibility checks.
+- Updated `packages/client/src/__tests__/library.test.tsx` to mock `api.skills` and update the stale Skills-tab placeholder assertion.
+- Added CSS for all new components to `packages/client/src/styles/features.css`.
+
+**Verify:** 936 client tests pass, 515 server tests pass, typecheck and lint clean.
