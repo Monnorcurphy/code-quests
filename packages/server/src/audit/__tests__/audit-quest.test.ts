@@ -13,6 +13,7 @@ function makeQuest(overrides: Partial<Quest> = {}): Quest {
   return {
     id: 'quest-1',
     epicId: null,
+    projectId: null,
     title: 'Test Quest',
     description: 'A sufficiently long description that passes the minimum length requirement for testing',
     acceptanceCriteria: ['Users can log in with valid credentials', 'Invalid credentials show an error'],

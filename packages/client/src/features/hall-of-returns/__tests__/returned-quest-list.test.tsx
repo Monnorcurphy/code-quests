@@ -41,6 +41,7 @@ function makeItem(overrides: Partial<HallOfReturnsList['items'][number]> = {}): 
   return {
     id: 'quest-1',
     epicId: null,
+    projectId: null,
     title: 'Slay the Dragon',
     description: '',
     acceptanceCriteria: [],

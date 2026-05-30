@@ -162,6 +162,7 @@ describe('runQuest (offline adapter)', () => {
     const quest = QuestSchema.parse({
       id: questRow['id'],
       epicId: null,
+    projectId: null,
       title: questRow['title'] as string,
       description: questRow['description'] as string,
       acceptanceCriteria: JSON.parse(questRow['acceptance_criteria_json'] as string) as string[],
@@ -211,6 +212,7 @@ describe('runQuest (offline adapter)', () => {
     const quest = QuestSchema.parse({
       id: questRow['id'],
       epicId: null,
+    projectId: null,
       title: questRow['title'] as string,
       description: questRow['description'] as string,
       acceptanceCriteria: JSON.parse(questRow['acceptance_criteria_json'] as string) as string[],

@@ -4,6 +4,7 @@ import { SceneKeyboardNav } from '../components/scene-keyboard-nav';
 import { HUDOverlayManager } from '../components/hud-overlay-manager';
 import { SettingsButton } from '../components/settings-button';
 import { BuildingsBar } from '../components/buildings-bar';
+import { ProjectChip } from '../features/projects/project-chip';
 import { useGuildHallData } from '../features/guild/use-guild-hall-data';
 import { useWanderersData } from '../features/town-square/use-wanderers-data';
 import { sceneRouter } from '../game/scene-router';
@@ -79,6 +80,7 @@ export function PhaserTown() {
       )}
       <SceneKeyboardNav items={navItems} />
       <BuildingsBar current={validSceneKey} />
+      <ProjectChip />
       <HUDOverlayManager />
       <SettingsButton />
       <Suspense fallback={null}>

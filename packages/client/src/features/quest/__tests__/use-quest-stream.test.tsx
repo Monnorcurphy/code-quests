@@ -97,6 +97,7 @@ beforeEach(() => {
     edgeCases: [],
     context: '',
     epicId: null,
+    projectId: null,
     adventurerId: null,
     agentId: null,
     equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },

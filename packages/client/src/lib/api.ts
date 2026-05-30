@@ -20,8 +20,10 @@ import {
   ForgeSkillSchema,
   ConfirmCandidateSchema,
   CreateMonsterTypeSchema,
+  ProjectSchema,
+  CreateProjectSchema,
 } from '@code-quests/shared';
-import type { Equipment, AgentEvent, AdventurerClass, AdventurerStyle, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild, ForgeSkillInput, ConfirmCandidateInput, CreateMonsterTypeInput } from '@code-quests/shared';
+import type { Equipment, AgentEvent, AdventurerClass, AdventurerStyle, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild, ForgeSkillInput, ConfirmCandidateInput, CreateMonsterTypeInput, CreateProjectInput } from '@code-quests/shared';
 
 const FeedbackSuccessSchema = z.object({}).passthrough();
 
@@ -170,6 +172,17 @@ async function patchJson<S extends z.ZodTypeAny>(schema: S, path: string, body: 
   return schema.parse(data) as z.output<S>;
 }
 
+async function deleteRequest(path: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}${path}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const raw: unknown = await res.json().catch(() => ({ error: `${res.statusText}` }));
+    const parsed = ApiErrorBodySchema.safeParse(raw);
+    const msg = parsed.success ? parsed.data.error : `${res.status} ${res.statusText}`;
+    const field = parsed.success ? parsed.data.field : undefined;
+    throw new ApiError(msg, { field, status: res.status, data: raw });
+  }
+}
+
 async function postEmpty(path: string, body: unknown = {}): Promise<void> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
@@ -198,6 +211,7 @@ const CreateQuestInputSchema = z.object({
   description: z.string().optional(),
   acceptanceCriteria: z.array(z.string()).optional(),
   epicId: z.string().nullable().optional(),
+  projectId: z.string().nullable().optional(),
 });
 
 export type CreateQuestInput = z.infer<typeof CreateQuestInputSchema>;
@@ -308,6 +322,13 @@ export const api = {
       patchJson(AdventurerSchema, `/adventurers/${id}/style`, {
         style: AdventurerStyleSchema.parse(style),
       }),
+    delete: (id: string) => deleteRequest(`/adventurers/${id}`),
+  },
+  projects: {
+    list: () => fetchJson(z.array(ProjectSchema), '/projects'),
+    create: (input: CreateProjectInput) =>
+      postJson(ProjectSchema, '/projects', CreateProjectSchema.parse(input)),
+    delete: (id: string) => deleteRequest(`/projects/${id}`),
   },
   quests: {
     list: () => fetchJson(z.array(QuestSchema), '/quests'),

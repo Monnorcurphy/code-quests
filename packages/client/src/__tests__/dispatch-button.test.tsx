@@ -31,6 +31,7 @@ function makeQuest(overrides: Partial<Quest> = {}): Quest {
   return {
     id: 'q-dispatch',
     epicId: null,
+    projectId: null,
     title: 'Dispatch Quest',
     description: 'A sufficiently long description for testing',
     acceptanceCriteria: ['Enemies defeated', 'Treasure secured'],

@@ -26,6 +26,7 @@ function makeQuest(overrides: Partial<Quest> = {}): Quest {
   return {
     id: 'q-oracle',
     epicId: null,
+    projectId: null,
     title: 'Test Quest',
     description: 'A test quest description',
     acceptanceCriteria: ['AC one', 'AC two'],

@@ -41,6 +41,7 @@ function makeQuest(overrides: Partial<HallOfReturnsQuest> = {}): HallOfReturnsQu
   return {
     id: 'quest-1',
     epicId: null,
+    projectId: null,
     title: 'Slay the Dragon',
     description: 'A dangerous quest.',
     acceptanceCriteria: ['Dragon defeated'],

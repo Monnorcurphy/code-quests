@@ -3341,3 +3341,29 @@ body[data-quest-paused='true'] *:not([class*='pause-bell-flash']):not([role='dia
   padding: 0.25rem 0.6rem;
   font-size: 0.8rem;
 }
+
+.roster-dismiss-btn {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.roster-dismiss-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+}
+
+.roster-dismiss-prompt {
+  color: #7a1818;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.roster-dismiss-error {
+  flex-basis: 100%;
+  margin: 0.5rem 0 0;
+  color: #7a1818;
+  font-size: 0.85rem;
+}

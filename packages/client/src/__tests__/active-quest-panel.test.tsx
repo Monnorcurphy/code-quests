@@ -31,6 +31,7 @@ function makeQuest(overrides: Partial<Quest> = {}): Quest {
   return {
     id: 'q-test',
     epicId: null,
+    projectId: null,
     title: 'Slay the Goblin Linter',
     description: 'A noble quest',
     acceptanceCriteria: ['Linter defeated'],

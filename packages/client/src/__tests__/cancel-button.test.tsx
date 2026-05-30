@@ -24,6 +24,7 @@ function makeCancelledQuest(): Quest {
   return {
     id: 'q-test',
     epicId: null,
+    projectId: null,
     title: 'Test Quest',
     description: '',
     acceptanceCriteria: [],

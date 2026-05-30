@@ -17,6 +17,7 @@ function mockFetch(body: unknown, status = 200) {
 const repostServerResponse = {
   id: 'new-quest-id',
   epicId: null,
+    projectId: null,
   title: 'Slay the Dragon (revised)',
   description: 'Original description',
   acceptanceCriteria: ['AC 1'],

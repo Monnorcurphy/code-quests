@@ -74,6 +74,7 @@ function makePostMortem(overrides: Partial<PostMortemResponse> = {}): PostMortem
     quest: {
       id: 'quest-1',
       epicId: null,
+    projectId: null,
       title: 'Slay the Dragon',
       description: 'A dangerous quest.',
       acceptanceCriteria: ['Dragon defeated'],

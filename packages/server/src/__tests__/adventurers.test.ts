@@ -250,4 +250,40 @@ describe('DELETE /adventurers/:id', () => {
     const res = await request(app).delete('/adventurers/ghost');
     expect(res.status).toBe(404);
   });
+
+  it('refuses to delete an adventurer who is on an active quest', async () => {
+    db.prepare(
+      `INSERT INTO quests (id, title, status, adventurer_id) VALUES (?, ?, ?, ?)`,
+    ).run('q-active', 'Live one', 'active', 'adv-del');
+    const res = await request(app).delete('/adventurers/adv-del');
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('ADVENTURER_BUSY');
+    const check = db.prepare('SELECT id FROM adventurers WHERE id = ?').get('adv-del');
+    expect(check).toBeDefined();
+  });
+
+  it('preserves historical quest rows by nulling adventurer_id', async () => {
+    db.prepare(
+      `INSERT INTO quests (id, title, status, adventurer_id) VALUES (?, ?, ?, ?)`,
+    ).run('q-old', 'Old one', 'complete', 'adv-del');
+    const res = await request(app).delete('/adventurers/adv-del');
+    expect(res.status).toBe(204);
+    const quest = db.prepare('SELECT adventurer_id FROM quests WHERE id = ?').get('q-old') as {
+      adventurer_id: string | null;
+    };
+    expect(quest.adventurer_id).toBeNull();
+  });
+
+  it('cleans up agent rows that referenced the deleted adventurer', async () => {
+    db.prepare(
+      `INSERT INTO quests (id, title, status, adventurer_id) VALUES (?, ?, ?, ?)`,
+    ).run('q-past', 'Past', 'complete', 'adv-del');
+    db.prepare(
+      `INSERT INTO agents (id, adventurer_id, quest_id, ended_at, exit_code) VALUES (?, ?, ?, ?, ?)`,
+    ).run('ag-1', 'adv-del', 'q-past', '2026-01-01', 0);
+    const res = await request(app).delete('/adventurers/adv-del');
+    expect(res.status).toBe(204);
+    const agent = db.prepare('SELECT id FROM agents WHERE id = ?').get('ag-1');
+    expect(agent).toBeUndefined();
+  });
 });

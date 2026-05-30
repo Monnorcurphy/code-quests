@@ -25,6 +25,7 @@ import { transitionQuestStatus, InvalidTransitionError } from '../services/quest
 import { findAgentByQuest, endAgent } from '../services/agents-service';
 import { advanceQuestScene } from '../services/quest-scene-progression';
 import { setUserBlocker, getUserBlocker } from '../db/quest-repository';
+import { getProject, touchProject } from '../db/project-repository';
 import { frameUserBlocker } from '../services/adventure-framing';
 
 const RespondInputBodySchema = z.object({
@@ -38,6 +39,7 @@ const BlockQuestBodySchema = z.object({
 const CreateQuestSchema = z.object({
   title: z.string().min(1),
   epicId: z.string().min(1).nullable().default(null),
+  projectId: z.string().min(1).nullable().default(null),
   description: z.string().default(''),
   acceptanceCriteria: QuestAcListSchema.default([]),
   edgeCases: QuestAcListSchema.default([]),
@@ -57,6 +59,7 @@ type PatchQuest = z.infer<typeof PatchQuestSchema>;
 type QuestRow = {
   id: string;
   epic_id: string | null;
+  project_id: string | null;
   title: string;
   description: string;
   acceptance_criteria_json: string;
@@ -80,6 +83,7 @@ function rowToApi(row: QuestRow) {
   return {
     id: row.id,
     epicId: row.epic_id,
+    projectId: row.project_id,
     title: row.title,
     description: row.description,
     acceptanceCriteria: JSON.parse(row.acceptance_criteria_json) as string[],
@@ -102,7 +106,7 @@ function rowToApi(row: QuestRow) {
 
 function assertReferenceExists(
   db: Database.Database,
-  table: 'epics' | 'adventurers',
+  table: 'epics' | 'adventurers' | 'projects',
   id: string | null | undefined,
   field: string,
   res: Response,
@@ -181,18 +185,20 @@ export function createQuestsRouter(
   router.post('/', validate(CreateQuestSchema), (req, res) => {
     const body = req.body as CreateQuest;
     if (!assertReferenceExists(db, 'epics', body.epicId, 'epicId', res)) return;
+    if (!assertReferenceExists(db, 'projects', body.projectId, 'projectId', res)) return;
     if (!assertReferenceExists(db, 'adventurers', body.adventurerId, 'adventurerId', res)) return;
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     db.prepare(
       `INSERT INTO quests
-        (id, epic_id, title, description, acceptance_criteria_json, edge_cases_json,
+        (id, epic_id, project_id, title, description, acceptance_criteria_json, edge_cases_json,
          context, status, adventurer_id, agent_id, equipment_json, spec_audit_json,
          created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
       body.epicId,
+      body.projectId,
       body.title,
       body.description,
       JSON.stringify(body.acceptanceCriteria),
@@ -282,6 +288,7 @@ export function createQuestsRouter(
     }
     const body = req.body as PatchQuest;
     if (!assertReferenceExists(db, 'epics', body.epicId, 'epicId', res)) return;
+    if (!assertReferenceExists(db, 'projects', body.projectId, 'projectId', res)) return;
     if (!assertReferenceExists(db, 'adventurers', body.adventurerId, 'adventurerId', res)) return;
     if (body.acceptanceCriteria !== undefined && existing.ac_locked_at !== null) {
       res.status(400).json({
@@ -294,6 +301,7 @@ export function createQuestsRouter(
     const vals: unknown[] = [];
     if (body.title !== undefined) { cols.push('title = ?'); vals.push(body.title); }
     if (body.epicId !== undefined) { cols.push('epic_id = ?'); vals.push(body.epicId); }
+    if (body.projectId !== undefined) { cols.push('project_id = ?'); vals.push(body.projectId); }
     if (body.description !== undefined) { cols.push('description = ?'); vals.push(body.description); }
     if (body.acceptanceCriteria !== undefined) { cols.push('acceptance_criteria_json = ?'); vals.push(JSON.stringify(body.acceptanceCriteria)); }
     if (body.edgeCases !== undefined) { cols.push('edge_cases_json = ?'); vals.push(JSON.stringify(body.edgeCases)); }
@@ -540,10 +548,35 @@ export function createQuestsRouter(
         const activeQuest = QuestSchema.parse(rowToApi(
           db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.id) as QuestRow,
         ));
+
+        // Real-agent dispatch needs a project. Stub/offline adapters can run
+        // without one (they don't spawn a subprocess). We only block when we'd
+        // otherwise spawn a real Claude with no project scope.
+        let projectCwd: string | undefined;
+        if (activeQuest.projectId) {
+          const project = getProject(db, activeQuest.projectId);
+          if (!project) {
+            res.status(409).json({
+              error: 'Quest is linked to a project that no longer exists',
+              code: 'PROJECT_MISSING',
+            });
+            return;
+          }
+          projectCwd = project.path;
+          touchProject(db, project.id);
+        } else if (process.env['CODE_QUESTS_USE_REAL_AGENT'] === '1') {
+          res.status(409).json({
+            error: 'Real-agent dispatch requires a project. Add one in Town Square and link it to this quest.',
+            code: 'NO_PROJECT',
+          });
+          return;
+        }
+
         const channel = getChannel();
         const { agent, done } = await runQuest(activeQuest, adventurer, {
           db,
           publishEvent: channel ? (questId, evt) => channel.publishQuestEvent(questId, evt) : undefined,
+          cwd: projectCwd,
         });
         void done;
 

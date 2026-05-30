@@ -49,6 +49,9 @@ export type { ForgeSkillInput, ConfirmCandidateInput } from './skill-actions';
 export { CreateMonsterTypeSchema } from './monster-type-actions';
 export type { CreateMonsterTypeInput } from './monster-type-actions';
 
+export { ProjectSchema, CreateProjectSchema } from './project';
+export type { Project, CreateProjectInput } from './project';
+
 export {
   RepostAdjustmentsSchema,
   RepostBodySchema,

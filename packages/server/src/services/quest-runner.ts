@@ -17,6 +17,11 @@ export const LICH_REPEAT_THRESHOLD = 3;
 export interface RunQuestDeps {
   db: Database.Database;
   publishEvent?: (questId: string, event: AgentEvent) => void;
+  // Working directory the agent subprocess should treat as the project root.
+  // Resolved from the quest's project. May be undefined when the offline /
+  // stub adapter is in use (those adapters don't spawn real subprocesses
+  // and don't need a cwd).
+  cwd?: string;
 }
 
 export interface QuestRunResult {
@@ -38,7 +43,7 @@ export async function runQuest(
   adventurer: Adventurer,
   deps: RunQuestDeps,
 ): Promise<QuestRunResult> {
-  const { db, publishEvent } = deps;
+  const { db, publishEvent, cwd } = deps;
   const adapter = getQuestAdapter();
   if (!adapter.spawn) {
     throw new Error(`Quest adapter '${adapter.name}' does not support spawning agents`);
@@ -53,6 +58,7 @@ export async function runQuest(
     description: quest.description,
     acceptanceCriteria: quest.acceptanceCriteria,
     equipment: quest.equipment,
+    cwd,
   });
 
   const agent = createAgent(db, {

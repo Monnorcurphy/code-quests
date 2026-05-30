@@ -70,6 +70,7 @@ export type QuestStatus = z.infer<typeof QuestStatusSchema>;
 export const QuestSchema = z.object({
   id: z.string().min(1),
   epicId: z.string().min(1).nullable(),
+  projectId: z.string().min(1).nullable().default(null),
   title: z.string().min(1),
   description: z.string().default(''),
   acceptanceCriteria: z.array(z.string()).default([]),

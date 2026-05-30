@@ -138,12 +138,50 @@ export function createAdventurersRouter(db: Database.Database): Router {
   });
 
   router.delete('/:id', (req, res) => {
-    const existing = db.prepare('SELECT id FROM adventurers WHERE id = ?').get(req.params.id);
+    const existing = db.prepare('SELECT id, name FROM adventurers WHERE id = ?').get(req.params.id) as
+      | { id: string; name: string }
+      | undefined;
     if (!existing) {
       res.status(404).json({ error: 'Adventurer not found' });
       return;
     }
-    db.prepare('DELETE FROM adventurers WHERE id = ?').run(req.params.id);
+
+    // Refuse if the adventurer is currently on a quest. Killing them mid-run
+    // would orphan the agent subprocess and leave the quest in a half-state.
+    const inFlight = db
+      .prepare(
+        `SELECT id, status FROM quests
+         WHERE adventurer_id = ?
+         AND status IN ('active', 'paused_input', 'user_blocked')
+         LIMIT 1`,
+      )
+      .get(req.params.id) as { id: string; status: string } | undefined;
+    if (inFlight) {
+      res.status(409).json({
+        error: `${existing.name} is currently on a quest. Finish or cancel it before dismissing.`,
+        code: 'ADVENTURER_BUSY',
+        questId: inFlight.id,
+        questStatus: inFlight.status,
+      });
+      return;
+    }
+
+    // Preserve historical quest records — Hall of Returns shows past quests
+    // by adventurer. We null adventurer_id on quests so the rows survive.
+    // Agent rows have a NOT NULL FK to adventurers, so we remove them; that's
+    // OK because they're process records, not user-facing artifacts. The
+    // quest_id FK on monster_encounters still resolves because quests stay.
+    const tx = db.transaction(() => {
+      db.prepare('UPDATE quests SET adventurer_id = NULL WHERE adventurer_id = ?').run(
+        req.params.id,
+      );
+      db.prepare('UPDATE quests SET agent_id = NULL WHERE agent_id IN (SELECT id FROM agents WHERE adventurer_id = ?)').run(
+        req.params.id,
+      );
+      db.prepare('DELETE FROM agents WHERE adventurer_id = ?').run(req.params.id);
+      db.prepare('DELETE FROM adventurers WHERE id = ?').run(req.params.id);
+    });
+    tx();
     res.status(204).send();
   });
 

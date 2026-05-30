@@ -6,6 +6,7 @@ function makeQuest(id = 'q-1'): Quest {
   return {
     id,
     epicId: null,
+    projectId: null,
     title: 'Test Quest',
     description: 'A test quest',
     acceptanceCriteria: [],

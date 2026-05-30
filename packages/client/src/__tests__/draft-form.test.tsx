@@ -17,6 +17,11 @@ vi.mock('../lib/api', async (importOriginal) => {
         create: vi.fn(),
       },
       epics: { list: vi.fn().mockResolvedValue([]) },
+      projects: {
+        list: vi.fn().mockResolvedValue([]),
+        create: vi.fn(),
+        delete: vi.fn(),
+      },
     },
   };
 });
@@ -24,6 +29,7 @@ vi.mock('../lib/api', async (importOriginal) => {
 const mockQuest: Quest = {
   id: 'quest-1',
   epicId: null,
+    projectId: null,
   title: 'Implement dark mode toggle',
   description: '',
   acceptanceCriteria: [],

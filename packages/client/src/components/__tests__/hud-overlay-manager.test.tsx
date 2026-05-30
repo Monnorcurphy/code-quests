@@ -25,6 +25,11 @@ vi.mock('../../lib/api', async (importOriginal) => {
         tools: vi.fn().mockResolvedValue([]),
         mcpServers: vi.fn().mockResolvedValue([]),
       },
+      projects: {
+        list: vi.fn().mockResolvedValue([]),
+        create: vi.fn(),
+        delete: vi.fn(),
+      },
     },
   };
 });

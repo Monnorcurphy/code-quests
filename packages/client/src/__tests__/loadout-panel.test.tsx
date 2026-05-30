@@ -63,6 +63,7 @@ const mockMcpServers: MCPServer[] = [
 const makeQuest = (overrides: Partial<Quest> = {}): Quest => ({
   id: 'q-1',
   epicId: null,
+    projectId: null,
   title: 'Test Quest',
   description: '',
   acceptanceCriteria: [],

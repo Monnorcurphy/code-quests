@@ -3,6 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import type { Epic } from '@code-quests/shared';
 import { api } from '../../lib/api';
+import { useActiveProjectStore } from '../../stores/active-project-store';
+import ProjectPickerModal from '../projects/project-picker-modal';
+import { useProjects } from '../projects/use-projects';
 
 const TitleSchema = z
   .string()
@@ -32,6 +35,14 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
   const [newEpicTitle, setNewEpicTitle] = useState('');
   const [newEpicGoal, setNewEpicGoal] = useState('');
   const [newEpicError, setNewEpicError] = useState<string | null>(null);
+  const [projectPickerOpen, setProjectPickerOpen] = useState(false);
+
+  const activeProjectId = useActiveProjectStore((s) => s.activeProjectId);
+  const { data: projectsData } = useProjects();
+  const activeProject = (projectsData ?? []).find((p) => p.id === activeProjectId) ?? null;
+  // If the persisted active id no longer matches any project (e.g. deleted on
+  // another tab), treat the draft as project-less.
+  const effectiveProjectId = activeProject ? activeProjectId : null;
 
   const onSuccessRef = useRef(onSuccess);
   useEffect(() => {
@@ -139,6 +150,7 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
       description: description || undefined,
       acceptanceCriteria: filledAcs,
       epicId: epicId || null,
+      projectId: effectiveProjectId,
     });
   }
 
@@ -158,6 +170,53 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
       <p className="sr-only" aria-live="polite" aria-atomic="true">
         {isSubmitting ? 'Submitting…' : ''}
       </p>
+
+      {!effectiveProjectId && (
+        <div
+          role="region"
+          aria-label="No active project"
+          data-testid="no-project-banner"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '10px 12px',
+            marginBottom: 12,
+            background: '#fbe6c4',
+            border: '1px solid #a06a18',
+            borderLeft: '4px solid #7a1818',
+            borderRadius: 4,
+            color: '#5a3818',
+          }}
+        >
+          <span>
+            <strong>Pick a project before drafting a quest.</strong> Your agent
+            will run inside the folder you choose.
+          </span>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => setProjectPickerOpen(true)}
+          >
+            Choose project
+          </button>
+        </div>
+      )}
+      {effectiveProjectId && activeProject && (
+        <p
+          data-testid="active-project-summary"
+          style={{
+            margin: '0 0 12px',
+            fontSize: '0.85rem',
+            color: '#5a3818',
+          }}
+        >
+          Working in <strong>{activeProject.name}</strong>{' '}
+          <span style={{ fontStyle: 'italic' }}>({activeProject.path})</span>.
+        </p>
+      )}
+      {projectPickerOpen && <ProjectPickerModal onClose={() => setProjectPickerOpen(false)} />}
 
       {isSuccess && (
         <p className="recruit-success" role="status" aria-live="polite">

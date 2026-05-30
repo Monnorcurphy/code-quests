@@ -42,6 +42,11 @@ vi.mock('../lib/api', () => ({
       list: vi.fn().mockResolvedValue([]),
       active: vi.fn().mockResolvedValue([]),
     },
+    projects: {
+      list: vi.fn().mockResolvedValue([]),
+      create: vi.fn(),
+      delete: vi.fn(),
+    },
   },
 }));
 
