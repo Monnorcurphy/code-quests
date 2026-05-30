@@ -98,22 +98,45 @@ export class GuildHallScene extends BaseBuildingScene {
 
     // Back wall — dark stone
     this.add.rectangle(700, 240, 1280, 360, 0x1c1408).setDepth(-2);
-    // Wall sconces — wrought-iron bracket coming out of the wall with a
-    // candle in a cup at the end and a flame above. Properly attached
-    // (no more floating glow orbs).
-    for (const sx of [340, 1060]) {
-      const sconceY = 250;
-      // Wall mount plate
-      this.add.rectangle(sx, sconceY - 28, 12, 8, 0x252028).setDepth(-1);
-      // Vertical bracket from plate down to cup
-      this.add.rectangle(sx, sconceY - 10, 3, 24, 0x252028).setDepth(-1);
-      // Cup / brazier
-      this.add.rectangle(sx, sconceY + 2, 14, 5, 0x383038).setDepth(-1);
-      this.add.rectangle(sx, sconceY - 1, 12, 2, 0x52525e).setDepth(-1);
-      // Flame
-      this.add.circle(sx, sconceY - 8, 7, 0xffa030, 0.35).setDepth(0);
-      this.add.circle(sx, sconceY - 9, 4, 0xffe070, 0.9).setDepth(0);
-      this.add.circle(sx, sconceY - 11, 2, 0xfffacd, 0.95).setDepth(0);
+    // Wall torches — wrought-iron mount on the wall, an angled bracket arm,
+    // a brazier cup, and a tall flame stack. Sized so the torch is visible
+    // against the dark back wall without looking like a floating glow orb.
+    for (const sx of [330, 1070]) {
+      const sconceY = 220;
+      const ironDark = 0x18120a;
+      const ironLight = 0x3a2a18;
+
+      // Wall plate — a vertical iron bracket bolted to the wall
+      this.add.rectangle(sx, sconceY, 10, 36, ironDark).setDepth(-1);
+      this.add.rectangle(sx, sconceY, 4, 36, ironLight).setDepth(0);
+      // Two rivet dots
+      this.add.circle(sx, sconceY - 14, 1.5, 0xb5995e).setDepth(0);
+      this.add.circle(sx, sconceY + 14, 1.5, 0xb5995e).setDepth(0);
+
+      // Angled bracket arm: a thin diagonal iron rod going up-and-out
+      const armEndX = sx;
+      const armEndY = sconceY - 10;
+      this.add.line(0, 0, sx + 2, sconceY + 4, armEndX, armEndY, ironDark)
+        .setLineWidth(3)
+        .setDepth(0);
+
+      // Brazier cup — flat-bottomed iron bowl atop the bracket
+      this.add.rectangle(armEndX, armEndY + 2, 16, 6, ironLight).setDepth(0);
+      this.add.rectangle(armEndX, armEndY + 6, 18, 3, ironDark).setDepth(0);
+
+      // Coal bed glow
+      this.add.rectangle(armEndX, armEndY + 1, 12, 2, 0xff6020).setDepth(1);
+
+      // Flame stack — outer to inner, taller than wide so it reads as fire
+      const flameBaseY = armEndY - 1;
+      // Outer halo
+      this.add.circle(armEndX, flameBaseY - 12, 16, 0xff8a20, 0.18).setDepth(0);
+      // Outer flame
+      this.add.triangle(armEndX, flameBaseY - 4, -8, 6, 8, 6, 0, -20, 0xff7020).setDepth(1);
+      // Mid flame
+      this.add.triangle(armEndX, flameBaseY - 6, -5, 4, 5, 4, 0, -16, 0xffb040).setDepth(2);
+      // Inner core
+      this.add.triangle(armEndX, flameBaseY - 8, -3, 2, 3, 2, 0, -10, 0xfff0b0).setDepth(3);
     }
 
     // Five framed guild portraits on the back wall

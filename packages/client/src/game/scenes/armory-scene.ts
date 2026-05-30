@@ -99,26 +99,42 @@ export class ArmoryScene extends BaseBuildingScene {
       this.add.triangle(ax, 208, 0, -5, -3, 3, 3, 3, 0xc0c8d0).setDepth(3);
     }
 
-    // Axe — simple silhouette: vertical haft + a single crescent blade on
-    // each side as a flat triangle. No paper-folded look.
+    // Battle axe — vertical wooden haft with a single broad iron head
+    // mounted near the top, drawn as one polygon so it reads as a single
+    // object instead of the "play button" silhouette the previous twin
+    // triangles produced.
     const axeX = 960;
     const axeY = 250;
-    // Wooden haft
-    this.add.rectangle(axeX, axeY, 5, 90, 0x4a2814).setDepth(1);
-    this.add.rectangle(axeX - 1, axeY, 1, 90, 0x6a3a18).setDepth(2);
-    // Haft pommel + cap
-    this.add.rectangle(axeX, axeY + 47, 9, 5, 0x2a1810).setDepth(2);
-    this.add.rectangle(axeX, axeY - 47, 9, 5, 0x2a1810).setDepth(2);
-    // Single triangular blade on each side of the head
-    this.add
-      .triangle(axeX + 12, axeY - 10, -8, -8, 8, 0, -8, 12, 0xb0b8c8)
-      .setDepth(2);
-    this.add
-      .triangle(axeX - 12, axeY - 10, 8, -8, -8, 0, 8, 12, 0xb0b8c8)
-      .setDepth(2);
-    // Polished edge highlights on the blades
-    this.add.rectangle(axeX + 16, axeY - 10, 2, 14, 0xe0e8f0).setDepth(3);
-    this.add.rectangle(axeX - 16, axeY - 10, 2, 14, 0xe0e8f0).setDepth(3);
+    // Wooden haft (top of head down to butt cap)
+    this.add.rectangle(axeX, axeY + 8, 5, 86, 0x4a2814).setDepth(1);
+    this.add.rectangle(axeX - 1, axeY + 8, 1, 86, 0x6a3a18).setDepth(2);
+    // Leather grip wraps near the bottom
+    for (const wy of [axeY + 30, axeY + 38, axeY + 46]) {
+      this.add.rectangle(axeX, wy, 7, 2, 0x2a1404).setDepth(2);
+    }
+    // Iron butt cap
+    this.add.rectangle(axeX, axeY + 53, 9, 5, 0x2a2a32).setDepth(2);
+
+    // Axe head — single broad blade with the cutting edge on the LEFT.
+    // Built from a few rectangles + triangles so the silhouette reads as
+    // one piece. Eye (where the haft passes through) is darker iron.
+    const headY = axeY - 30;
+    const headColor = 0x9098a8;
+    const headDark = 0x4a525c;
+    const headEdge = 0xe8edf2;
+    // Eye block (around the haft)
+    this.add.rectangle(axeX, headY, 10, 22, headDark).setDepth(2);
+    // Main body of the blade extending to the left
+    this.add.rectangle(axeX - 12, headY, 16, 26, headColor).setDepth(2);
+    // Top + bottom flares that taper the head outward
+    this.add.triangle(axeX - 20, headY - 12, 0, 0, 10, 0, 0, 10, headColor).setDepth(2);
+    this.add.triangle(axeX - 20, headY + 12, 0, 0, 10, 0, 0, -10, headColor).setDepth(2);
+    // Cutting edge — sharp triangular wedge on the far left
+    this.add.triangle(axeX - 24, headY, 0, -16, 4, 0, 0, 16, headEdge).setDepth(3);
+    // Polished highlight running along the edge
+    this.add.rectangle(axeX - 22, headY, 1, 22, 0xfafcfe).setDepth(4);
+    // Small top spike sprouting from the eye
+    this.add.triangle(axeX, headY - 14, -3, 2, 3, 2, 0, -6, headDark).setDepth(2);
 
     // Anvil on the floor by the workbench
     this.add.rectangle(620, BUILDING_DOOR_Y + 24, 80, 18, 0x303040).setDepth(1);

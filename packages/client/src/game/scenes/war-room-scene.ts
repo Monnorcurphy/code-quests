@@ -50,27 +50,66 @@ export class WarRoomScene extends BaseBuildingScene {
       .text(mapX, mapY - mapH / 2 + 14, 'MAP OF THE REALM', { fontSize: '12px', color: '#f0e0b0', fontStyle: 'bold' })
       .setOrigin(0.5)
       .setDepth(3);
-    // Ocean / coast — solid body with a soft jagged eastern edge.
-    // Body is one wide rectangle so it reads as a single mass; the eastern
-    // edge is hidden behind a column of small ellipses that vary in width
-    // per row, breaking the hard rectangle line into a wavy shore.
+    // Ocean / coast — one solid polygon. Previously stacked alpha ellipses
+    // showed visible seams ("comb teeth") wherever they overlapped; switching
+    // to a Graphics fillPath gives one continuous mass with a smooth wavy
+    // eastern shore.
     const seaColor = 0x3a72aa;
-    const coastBaseX = mapX - mapW / 2 + 18;
-    const coastHeights = [60, 70, 76, 82, 86, 88, 86, 82, 78, 80, 84, 88, 90, 92, 88, 84, 80, 78, 82, 88, 94, 92, 86, 78, 70, 60];
-    // Solid sea mass — main body
     const seaTop = mapY - 110;
     const seaBottom = mapY + 130;
-    const seaH = seaBottom - seaTop;
-    this.add.rectangle(coastBaseX, mapY + 10, 36, seaH, seaColor, 0.85).setDepth(2);
-    // Soft shore edge — wide ellipses at each Y row blend the eastern outline
-    for (let i = 0; i < coastHeights.length; i++) {
-      const sy = seaTop + i * (seaH / coastHeights.length);
-      const sw = coastHeights[i] ?? 80;
-      this.add.ellipse(coastBaseX + sw / 2 - 4, sy, sw, 12, seaColor, 0.85).setDepth(2);
-    }
-    // Bay nub where the river meets the sea (so the river visibly drains in)
+    const westX = mapX - mapW / 2 + 6;
+    const baseCoastX = mapX - mapW / 2 + 30;
     const riverMouthY = mapY + 50;
-    this.add.ellipse(coastBaseX + 92, riverMouthY, 24, 18, seaColor, 0.85).setDepth(2);
+
+    // Eastern shoreline points — alternating bumps + a bay around the river
+    // mouth. Walks top→bottom. Each entry is a horizontal offset added to
+    // baseCoastX, so the polygon edge wobbles instead of sitting on a
+    // straight vertical line.
+    const shoreOffsets: { y: number; dx: number }[] = [
+      { y: seaTop, dx: 0 },
+      { y: seaTop + 24, dx: 18 },
+      { y: seaTop + 48, dx: 8 },
+      { y: seaTop + 72, dx: 22 },
+      { y: seaTop + 96, dx: 6 },
+      // Bay around the river mouth — peninsulas above and below pinch in,
+      // and the coast pushes east to form a small inlet at riverMouthY.
+      { y: riverMouthY - 14, dx: 14 },
+      { y: riverMouthY, dx: 40 },
+      { y: riverMouthY + 14, dx: 18 },
+      { y: seaTop + 168, dx: 4 },
+      { y: seaTop + 196, dx: 20 },
+      { y: seaTop + 220, dx: 6 },
+      { y: seaBottom, dx: 0 },
+    ];
+
+    const water = this.add.graphics().setDepth(2);
+    water.fillStyle(seaColor, 1);
+    water.beginPath();
+    // Start at NW corner, walk south along the western edge, then north
+    // along the wavy eastern shoreline back to the start.
+    water.moveTo(westX, seaTop);
+    water.lineTo(westX, seaBottom);
+    for (let i = shoreOffsets.length - 1; i >= 0; i--) {
+      const p = shoreOffsets[i]!;
+      water.lineTo(baseCoastX + p.dx, p.y);
+    }
+    water.closePath();
+    water.fillPath();
+
+    // Subtle lighter band along the shore where the surf would catch
+    const surf = this.add.graphics().setDepth(3);
+    surf.lineStyle(1.5, 0x5e8fc4, 0.7);
+    surf.beginPath();
+    for (let i = 0; i < shoreOffsets.length; i++) {
+      const p = shoreOffsets[i]!;
+      const x = baseCoastX + p.dx + 1;
+      if (i === 0) surf.moveTo(x, p.y);
+      else surf.lineTo(x, p.y);
+    }
+    surf.strokePath();
+
+    // For downstream code that positions things relative to the coast.
+    const coastBaseX = baseCoastX;
 
     // Forests — proper clusters of trees, not 3-4 scattered points
     const forestRegions: Array<{ cx: number; cy: number; count: number }> = [
@@ -112,10 +151,13 @@ export class WarRoomScene extends BaseBuildingScene {
       this.add.triangle(cx, cy, -6, 6, 6, 6, 0, -14, 0xffffff).setDepth(3);
       this.add.triangle(cx + 12, cy + 4, -9, 10, 9, 10, 0, -10, 0x6a5a4a).setDepth(2);
     }
-    // River — connects from the mountains (right) all the way to the sea (left)
-    this.add.line(0, 0, mapX + 200, mapY - 10, mapX + 100, mapY + 30, seaColor).setLineWidth(3).setDepth(2);
-    this.add.line(0, 0, mapX + 100, mapY + 30, mapX + 10, mapY + 50, seaColor).setLineWidth(3).setDepth(2);
-    this.add.line(0, 0, mapX + 10, mapY + 50, coastBaseX + 90, riverMouthY, seaColor).setLineWidth(3).setDepth(2);
+    // River — connects from the mountains (right) all the way to the sea
+    // (left), draining into the bay. Final segment ends a few pixels inside
+    // the water polygon so the river visually meets the coast.
+    const riverEndX = coastBaseX + 42;
+    this.add.line(0, 0, mapX + 200, mapY - 10, mapX + 100, mapY + 30, seaColor).setLineWidth(3).setDepth(3);
+    this.add.line(0, 0, mapX + 100, mapY + 30, mapX + 10, mapY + 50, seaColor).setLineWidth(3).setDepth(3);
+    this.add.line(0, 0, mapX + 10, mapY + 50, riverEndX, riverMouthY, seaColor).setLineWidth(3).setDepth(3);
     // City markers (red pins)
     const cities = [
       { x: mapX - 40, y: mapY + 30, name: 'Aldenhold' },

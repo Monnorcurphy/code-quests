@@ -253,12 +253,15 @@ export const HallOfReturnsQuestSchema = z.object({
   failureSummary: FailureSummarySchema.nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  // Nullish (not just nullable) — the post-mortem endpoint surfaces the
+  // adventurer at the top level of the response, so quest.adventurer is
+  // undefined there. The list endpoint includes it on each quest row.
   adventurer: z.object({
     id: z.string(),
     name: z.string(),
     class: AdventurerClassSchema,
-  }).nullable(),
-  fatalMonster: FatalMonsterSchema.nullable(),
+  }).nullish(),
+  fatalMonster: FatalMonsterSchema.nullish(),
 }).passthrough();
 
 const HallOfReturnsListSchema = z.object({
