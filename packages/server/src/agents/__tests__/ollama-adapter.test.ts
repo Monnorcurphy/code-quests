@@ -145,6 +145,102 @@ describe('ollama-adapter', () => {
     }
   });
 
+  it('tags streamed progress events with role:assistant', async () => {
+    const chunks = [
+      { message: { role: 'assistant', content: 'Hello' }, done: false },
+      { message: { role: 'assistant', content: '' }, done: true },
+    ];
+    vi.spyOn(global, 'fetch').mockResolvedValue(ndjsonResponse(chunks));
+
+    const adapter = createOllamaAdapter();
+    const handle = await adapter.spawn!(SPAWN_INPUT);
+    const events = await drain(handle);
+
+    const progress = events.filter((e) => e.type === 'progress');
+    expect(progress.length).toBeGreaterThan(0);
+    for (const ev of progress) {
+      expect(ev).toMatchObject({ type: 'progress', role: 'assistant' });
+    }
+  });
+
+  it('respond() while a turn is in flight queues the message and chains a second fetch with the extended history', async () => {
+    // Build a manually-driven stream for turn 1 so we can hold the turn
+    // open while respond() is called.
+    let t1Ctrl!: ReadableStreamDefaultController<Uint8Array>;
+    const t1Stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        t1Ctrl = c;
+      },
+    });
+    const enc = new TextEncoder();
+    const emitT1 = (obj: Record<string, unknown>): void => {
+      t1Ctrl.enqueue(enc.encode(JSON.stringify(obj) + '\n'));
+    };
+
+    let t2Ctrl!: ReadableStreamDefaultController<Uint8Array>;
+    const t2Stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        t2Ctrl = c;
+      },
+    });
+    const emitT2 = (obj: Record<string, unknown>): void => {
+      t2Ctrl.enqueue(enc.encode(JSON.stringify(obj) + '\n'));
+    };
+
+    const fetchSpy = vi
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(new Response(t1Stream, { status: 200 }))
+      .mockResolvedValueOnce(new Response(t2Stream, { status: 200 }));
+
+    const adapter = createOllamaAdapter();
+    const handle = await adapter.spawn!(SPAWN_INPUT);
+
+    const collected: AgentEvent[] = [];
+    const collector = (async () => {
+      for await (const ev of handle.events()) {
+        collected.push(ev);
+      }
+    })();
+
+    // Drive turn 1 partway.
+    emitT1({ message: { role: 'assistant', content: 'Greetings' }, done: false });
+    await new Promise<void>((r) => setImmediate(r));
+
+    // User sends a message mid-turn.
+    await handle.respond('and then?');
+    expect(
+      collected.some((e) => e.type === 'progress' && e.role === 'user' && e.message === 'and then?'),
+    ).toBe(true);
+
+    // Finish turn 1 → adapter should chain turn 2.
+    emitT1({ message: { role: 'assistant', content: '' }, done: true });
+    await new Promise<void>((r) => setImmediate(r));
+
+    // Stream turn 2 to completion.
+    emitT2({ message: { role: 'assistant', content: 'More' }, done: false });
+    emitT2({ message: { role: 'assistant', content: '', done: true }, done: true });
+    await collector;
+
+    expect(collected.at(-1)).toMatchObject({ type: 'completed' });
+    // Two fetches were issued — initial + chained respond.
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const secondCall = fetchSpy.mock.calls[1] as [string, RequestInit];
+    const secondBody = JSON.parse(secondCall[1].body as string) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(secondBody.messages.map((m) => m.role)).toEqual([
+      'system',
+      'user',
+      'assistant',
+      'user',
+    ]);
+    expect(secondBody.messages.at(-1)).toMatchObject({ role: 'user', content: 'and then?' });
+    // turn_ended log marker emitted between turns.
+    expect(
+      collected.some((e) => e.type === 'log' && e.message === '[turn_ended]'),
+    ).toBe(true);
+  });
+
   it('cancel() aborts the in-flight fetch and closes the queue', async () => {
     // Build a stream we can error from the outside when the abort signal fires.
     // The adapter's read() loop will reject with our abort error, and because

@@ -18,6 +18,11 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
     type: z.literal('progress'),
     timestamp: z.string(),
     message: z.string(),
+    // Optional speaker tag for the chat dock. When present:
+    //   'user'      — the message was typed by the user via respond-input
+    //   'assistant' — the message came from the agent / adapter
+    // Older events without `role` are treated as assistant by the UI.
+    role: z.enum(['user', 'assistant']).optional(),
   }),
   z.object({
     type: z.literal('combat'),

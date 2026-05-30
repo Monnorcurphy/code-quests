@@ -138,9 +138,11 @@ describe('POST /quests/:id/respond-input', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 409 when quest is not paused_input', async () => {
+  it('returns 409 when quest is in a terminal status (complete/failed)', async () => {
+    // Chat dock support: respond-input now also accepts 'active' (mid-quest
+    // chat). Terminal statuses still return 409.
     insertAdventurer(db, 'adv-ri-409');
-    insertQuest(db, 'q-ri-409', 'adv-ri-409', 'active');
+    insertQuest(db, 'q-ri-409', 'adv-ri-409', 'complete');
     const app = makeApp(db);
     const res = await request(app).post('/quests/q-ri-409/respond-input').send({ text: 'answer' });
     expect(res.status).toBe(409);

@@ -779,8 +779,12 @@ export function createQuestsRouter(
       res.status(404).json({ error: 'Quest not found' });
       return;
     }
-    if (row.status !== 'paused_input') {
-      res.status(409).json({ error: 'Quest is not awaiting input' });
+    // Allow chat replies in both 'paused_input' (the historical use case —
+    // agent explicitly asked for input) and 'active' (the chat-dock case —
+    // user wants to talk to the adventurer mid-quest). All other statuses
+    // are terminal or invalid for sending input.
+    if (row.status !== 'paused_input' && row.status !== 'active') {
+      res.status(409).json({ error: 'Quest is not accepting input' });
       return;
     }
     const handle = getActiveHandle(req.params.id);

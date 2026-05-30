@@ -14,8 +14,6 @@ export class MissingApiKeyError extends Error {
   }
 }
 
-// Local async queue — same pattern as cc-adapter, inlined here so this
-// adapter has no cross-adapter dependency.
 class AsyncQueue<T> implements AsyncIterable<T> {
   private buffer: T[] = [];
   private waiting: Array<(result: IteratorResult<T, undefined>) => void> = [];
@@ -54,12 +52,17 @@ class AsyncQueue<T> implements AsyncIterable<T> {
   }
 }
 
-interface SystemAndUser {
+interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface InitialMessages {
   system: string;
   user: string;
 }
 
-function buildSystemAndUser(input: AgentSpawnInput): SystemAndUser {
+function buildSystemAndUser(input: AgentSpawnInput): InitialMessages {
   const cls = input.adventurerClass ?? 'adventurer';
   const system = `You are ${input.adventurerName}, a Code Quests ${cls}. Stay within the quest scope.`;
   const acList = input.acceptanceCriteria.map((ac) => `- ${ac}`).join('\n');
@@ -89,18 +92,23 @@ function extractDeltaText(chunk: unknown): string {
   return delta.content;
 }
 
-// TODO: tool/function-calling support not wired — v1 is plain text only.
-// When adding tools, extend the request body with `tools: [...]` and parse
-// `delta.tool_calls` from the SSE stream into combat / paused_input events.
-
 interface SpawnDeps {
   fetch: typeof globalThis.fetch;
+}
+
+interface TurnConfig {
+  apiKey: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  siteUrl: string;
+  siteName: string;
 }
 
 async function consumeStream(
   body: ReadableStream<Uint8Array>,
   onText: (full: string) => void,
-  onDone: () => void,
+  onDone: (finalText: string) => void,
   onError: (err: Error) => void,
   signal: AbortSignal,
 ): Promise<void> {
@@ -124,14 +132,13 @@ async function consumeStream(
         const payload = line.slice(5).trim();
         if (!payload) continue;
         if (payload === '[DONE]') {
-          onDone();
+          onDone(accumulated);
           return;
         }
         let parsed: unknown;
         try {
           parsed = JSON.parse(payload);
         } catch {
-          // Skip malformed chunks — OpenRouter occasionally sends keep-alives.
           continue;
         }
         const text = extractDeltaText(parsed);
@@ -141,8 +148,7 @@ async function consumeStream(
         }
       }
     }
-    // Stream closed without an explicit [DONE].
-    onDone();
+    onDone(accumulated);
   } catch (err) {
     if (signal.aborted) return;
     onError(err instanceof Error ? err : new Error(String(err)));
@@ -163,10 +169,30 @@ async function spawnHandle(
   const queue = new AsyncQueue<AgentEvent>();
   const controller = new AbortController();
   let settled = false;
+  let turnInFlight = false;
+  // Messages queued by respond() while a turn is in flight. They become the
+  // next turn's user messages, fired serially after the current turn ends.
+  const pendingUserMessages: string[] = [];
   let exitResolve!: (v: { exitCode: number | null }) => void;
   const exitPromise = new Promise<{ exitCode: number | null }>((r) => {
     exitResolve = r;
   });
+
+  const cfg = input.model.config ?? {};
+  const turnCfg: TurnConfig = {
+    apiKey: input.apiKey,
+    model: input.model.modelId,
+    temperature: typeof cfg.temperature === 'number' ? cfg.temperature : DEFAULT_TEMPERATURE,
+    maxTokens: typeof cfg.maxTokens === 'number' ? cfg.maxTokens : DEFAULT_MAX_TOKENS,
+    siteUrl: typeof cfg.siteUrl === 'string' ? cfg.siteUrl : DEFAULT_SITE_URL,
+    siteName: typeof cfg.siteName === 'string' ? cfg.siteName : DEFAULT_SITE_NAME,
+  };
+
+  const { system, user } = buildSystemAndUser(input);
+  const messages: ChatMessage[] = [
+    { role: 'system', content: system },
+    { role: 'user', content: user },
+  ];
 
   const finalize = (event: AgentEvent): void => {
     if (settled) return;
@@ -176,91 +202,114 @@ async function spawnHandle(
     exitResolve({ exitCode: event.type === 'completed' ? 0 : 1 });
   };
 
-  const { system, user } = buildSystemAndUser(input);
-  const cfg = input.model.config ?? {};
-  const temperature = typeof cfg.temperature === 'number' ? cfg.temperature : DEFAULT_TEMPERATURE;
-  const maxTokens = typeof cfg.maxTokens === 'number' ? cfg.maxTokens : DEFAULT_MAX_TOKENS;
-  const siteUrl = typeof cfg.siteUrl === 'string' ? cfg.siteUrl : DEFAULT_SITE_URL;
-  const siteName = typeof cfg.siteName === 'string' ? cfg.siteName : DEFAULT_SITE_NAME;
-
-  const body = JSON.stringify({
-    model: input.model.modelId,
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-    stream: true,
-    temperature,
-    max_tokens: maxTokens,
-  });
-
-  // Fire the request asynchronously — the handle returns immediately so the
-  // caller can start iterating the event stream.
-  void (async (): Promise<void> => {
-    let response: Response;
-    try {
-      response = await deps.fetch(OPENROUTER_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${input.apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': siteUrl,
-          'X-Title': siteName,
-        },
-        body,
-        signal: controller.signal,
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      finalize({ type: 'failed', timestamp: new Date().toISOString(), reason: msg });
+  function maybeStartNextTurn(): void {
+    if (settled || turnInFlight) return;
+    const next = pendingUserMessages.shift();
+    if (next === undefined) {
+      // No pending follow-up — quest is done.
+      finalize({ type: 'completed', timestamp: new Date().toISOString() });
       return;
     }
+    // Surface the user's text as a chat event (already echoed when respond()
+    // was called, but we add it to history here so the LLM sees it).
+    messages.push({ role: 'user', content: next });
+    runTurn();
+  }
 
-    if (!response.ok) {
-      let detail = '';
+  function runTurn(): void {
+    if (settled) return;
+    turnInFlight = true;
+    const requestBody = JSON.stringify({
+      model: turnCfg.model,
+      messages,
+      stream: true,
+      temperature: turnCfg.temperature,
+      max_tokens: turnCfg.maxTokens,
+    });
+
+    void (async (): Promise<void> => {
+      let response: Response;
       try {
-        detail = await response.text();
-      } catch {
-        // ignore body read errors
-      }
-      const reason = `OpenRouter HTTP ${String(response.status)}${detail ? `: ${detail.slice(0, 512)}` : ''}`;
-      finalize({ type: 'failed', timestamp: new Date().toISOString(), reason });
-      return;
-    }
-
-    if (!response.body) {
-      finalize({
-        type: 'failed',
-        timestamp: new Date().toISOString(),
-        reason: 'OpenRouter response had no body',
-      });
-      return;
-    }
-
-    await consumeStream(
-      response.body,
-      (full) => {
-        if (settled) return;
-        const truncated = full.length > 8192 ? full.slice(0, 8192) : full;
-        queue.push({
-          type: 'progress',
-          timestamp: new Date().toISOString(),
-          message: truncated,
+        response = await deps.fetch(OPENROUTER_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${turnCfg.apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': turnCfg.siteUrl,
+            'X-Title': turnCfg.siteName,
+          },
+          body: requestBody,
+          signal: controller.signal,
         });
-      },
-      () => {
-        finalize({ type: 'completed', timestamp: new Date().toISOString() });
-      },
-      (err) => {
+      } catch (err) {
+        turnInFlight = false;
+        const msg = err instanceof Error ? err.message : String(err);
+        finalize({ type: 'failed', timestamp: new Date().toISOString(), reason: msg });
+        return;
+      }
+
+      if (!response.ok) {
+        let detail = '';
+        try {
+          detail = await response.text();
+        } catch {
+          // ignore body read errors
+        }
+        const reason = `OpenRouter HTTP ${String(response.status)}${detail ? `: ${detail.slice(0, 512)}` : ''}`;
+        turnInFlight = false;
+        finalize({ type: 'failed', timestamp: new Date().toISOString(), reason });
+        return;
+      }
+
+      if (!response.body) {
+        turnInFlight = false;
         finalize({
           type: 'failed',
           timestamp: new Date().toISOString(),
-          reason: err.message,
+          reason: 'OpenRouter response had no body',
         });
-      },
-      controller.signal,
-    );
-  })();
+        return;
+      }
+
+      await consumeStream(
+        response.body,
+        (full) => {
+          if (settled) return;
+          const truncated = full.length > 8192 ? full.slice(0, 8192) : full;
+          queue.push({
+            type: 'progress',
+            timestamp: new Date().toISOString(),
+            message: truncated,
+            role: 'assistant',
+          });
+        },
+        (finalText) => {
+          turnInFlight = false;
+          messages.push({ role: 'assistant', content: finalText });
+          if (!settled) {
+            queue.push({
+              type: 'log',
+              timestamp: new Date().toISOString(),
+              message: '[turn_ended]',
+            });
+          }
+          maybeStartNextTurn();
+        },
+        (err) => {
+          turnInFlight = false;
+          finalize({
+            type: 'failed',
+            timestamp: new Date().toISOString(),
+            reason: err.message,
+          });
+        },
+        controller.signal,
+      );
+    })();
+  }
+
+  // Kick off the initial turn.
+  runTurn();
 
   return {
     pid: null,
@@ -272,15 +321,27 @@ async function spawnHandle(
       controller.abort();
       finalize({ type: 'completed', timestamp: new Date().toISOString() });
     },
-    async respond(_text: string): Promise<void> {
-      const reason = 'OpenRouter adapter does not support mid-quest replies yet';
-      process.stderr.write(`[openrouter-adapter] respond() ignored: ${reason}\n`);
-      if (settled) return;
+    async respond(text: string): Promise<void> {
+      if (settled) {
+        process.stderr.write('[openrouter-adapter] respond() after exit ignored\n');
+        return;
+      }
+      // Echo the user's message to the event stream immediately so the chat
+      // dock can render it without waiting for the turn to start.
       queue.push({
-        type: 'failed',
+        type: 'progress',
         timestamp: new Date().toISOString(),
-        reason,
+        message: text,
+        role: 'user',
       });
+      if (turnInFlight) {
+        // Queue and start when the current turn ends.
+        pendingUserMessages.push(text);
+        return;
+      }
+      // No turn in flight (paused between turns) — start a new turn now.
+      messages.push({ role: 'user', content: text });
+      runTurn();
     },
     async awaitExit(): Promise<{ exitCode: number | null }> {
       return exitPromise;

@@ -184,7 +184,8 @@ describe('runQuest → model routing', () => {
     await result.done;
 
     expect(getSecret).toHaveBeenCalledWith('model-or');
-    const spawnArg = spawnSpy.mock.calls[0]![0];
+    const calls = spawnSpy.mock.calls as unknown as Array<[{ apiKey?: string; model?: { provider?: string } }]>;
+    const spawnArg = calls[0]![0];
     expect(spawnArg.apiKey).toBe('sk-or-test-fake');
   });
 
@@ -201,7 +202,8 @@ describe('runQuest → model routing', () => {
     await result.done;
 
     expect(getSecret).not.toHaveBeenCalled();
-    const spawnArg = spawnSpy.mock.calls[0]![0];
+    const calls = spawnSpy.mock.calls as unknown as Array<[{ apiKey?: string; model?: { provider?: string } }]>;
+    const spawnArg = calls[0]![0];
     expect(spawnArg.apiKey).toBeUndefined();
     expect(spawnArg.model?.provider).toBe('claude_cli');
   });

@@ -4,8 +4,6 @@ import type { AgentAdapter, AgentHandle, AgentSpawnInput } from './adapter';
 const DEFAULT_BASE_URL = 'http://localhost:11434';
 const DEFAULT_TEMPERATURE = 0.7;
 
-// Small inline async queue — same shape as the one in cc-adapter. Keeping it
-// inline avoids creating a shared utility for the single other consumer.
 class AsyncQueue<T> implements AsyncIterable<T> {
   private buffer: T[] = [];
   private waiting: Array<(result: IteratorResult<T, undefined>) => void> = [];
@@ -45,17 +43,17 @@ class AsyncQueue<T> implements AsyncIterable<T> {
 }
 
 interface OllamaMessage {
-  role: string;
+  role: 'system' | 'user' | 'assistant';
   content: string;
 }
 
 interface OllamaChunk {
-  message?: OllamaMessage;
+  message?: { role: string; content: string };
   done?: boolean;
   error?: string;
 }
 
-function buildMessages(input: AgentSpawnInput): { system: string; user: string } {
+function buildSystemAndUser(input: AgentSpawnInput): { system: string; user: string } {
   const cls = input.adventurerClass ?? 'adventurer';
   const system = `You are ${input.adventurerName}, a Code Quests ${cls}. Stay within the quest scope.`;
   const acList = input.acceptanceCriteria.map((ac) => `- ${ac}`).join('\n');
@@ -96,6 +94,8 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
   const controller = new AbortController();
 
   let settled = false;
+  let turnInFlight = false;
+  const pendingUserMessages: string[] = [];
   let exitResolve!: (v: { exitCode: number | null }) => void;
   const exitPromise = new Promise<{ exitCode: number | null }>((r) => {
     exitResolve = r;
@@ -118,130 +118,165 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
     queue.push({ type: 'completed', timestamp: new Date().toISOString() });
   };
 
-  const { system, user } = buildMessages(input);
+  const { system, user } = buildSystemAndUser(input);
+  const messages: OllamaMessage[] = [
+    { role: 'system', content: system },
+    { role: 'user', content: user },
+  ];
 
-  const options: Record<string, number> = { temperature };
+  const turnOptions: Record<string, number> = { temperature };
   if (typeof maxTokens === 'number') {
-    options['num_predict'] = maxTokens;
+    turnOptions['num_predict'] = maxTokens;
   }
 
-  const body = JSON.stringify({
-    model: modelId,
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-    stream: true,
-    options,
-  });
-
-  // Kick off the streaming request without blocking the spawn() resolution.
-  void (async () => {
-    let response: Response;
-    try {
-      response = await fetch(`${baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-        signal: controller.signal,
-      });
-    } catch (err) {
-      if (controller.signal.aborted) {
-        pushCompleted();
-        finalize(0);
-        return;
-      }
-      if (isConnectionRefused(err)) {
-        pushFailed(
-          `Could not reach Ollama at ${baseUrl}. Install from https://ollama.com or set baseUrl in the model config.`,
-        );
-      } else {
-        const msg = err instanceof Error ? err.message : String(err);
-        pushFailed(`Ollama request failed: ${msg}`);
-      }
-      finalize(1);
+  function maybeStartNextTurn(): void {
+    if (settled || turnInFlight) return;
+    const next = pendingUserMessages.shift();
+    if (next === undefined) {
+      pushCompleted();
+      finalize(0);
       return;
     }
+    messages.push({ role: 'user', content: next });
+    runTurn();
+  }
 
-    if (!response.ok) {
-      let detail = '';
+  function runTurn(): void {
+    if (settled) return;
+    turnInFlight = true;
+
+    const body = JSON.stringify({
+      model: modelId,
+      messages,
+      stream: true,
+      options: turnOptions,
+    });
+
+    void (async () => {
+      let response: Response;
       try {
-        detail = await response.text();
-      } catch {
-        // best-effort
-      }
-      const truncated = detail.length > 512 ? detail.slice(0, 512) : detail;
-      pushFailed(`Ollama HTTP ${response.status}: ${truncated || response.statusText}`);
-      finalize(1);
-      return;
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      pushFailed('Ollama response has no body to stream');
-      finalize(1);
-      return;
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let accumulated = '';
-
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          const chunk = parseChunk(line);
-          if (!chunk) continue;
-          if (chunk.error) {
-            pushFailed(`Ollama error: ${chunk.error}`);
-            finalize(1);
-            return;
-          }
-          const piece = chunk.message?.content ?? '';
-          if (piece) {
-            accumulated += piece;
-            const message = accumulated.length > 4096 ? accumulated.slice(-4096) : accumulated;
-            queue.push({
-              type: 'progress',
-              timestamp: new Date().toISOString(),
-              message,
-            });
-          }
-          if (chunk.done === true) {
-            pushCompleted();
-            finalize(0);
-            return;
-          }
-        }
-      }
-      // Drain any trailing buffered line.
-      if (buffer.trim()) {
-        const chunk = parseChunk(buffer);
-        if (chunk?.done === true) {
+        response = await fetch(`${baseUrl}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          signal: controller.signal,
+        });
+      } catch (err) {
+        turnInFlight = false;
+        if (controller.signal.aborted) {
           pushCompleted();
           finalize(0);
           return;
         }
-      }
-      // Stream ended without a done flag — treat as completion.
-      pushCompleted();
-      finalize(0);
-    } catch (err) {
-      if (controller.signal.aborted) {
-        pushCompleted();
-        finalize(0);
+        if (isConnectionRefused(err)) {
+          pushFailed(
+            `Could not reach Ollama at ${baseUrl}. Install from https://ollama.com or set baseUrl in the model config.`,
+          );
+        } else {
+          const msg = err instanceof Error ? err.message : String(err);
+          pushFailed(`Ollama request failed: ${msg}`);
+        }
+        finalize(1);
         return;
       }
-      const msg = err instanceof Error ? err.message : String(err);
-      pushFailed(`Ollama stream read failed: ${msg}`);
-      finalize(1);
-    }
-  })();
+
+      if (!response.ok) {
+        let detail = '';
+        try {
+          detail = await response.text();
+        } catch {
+          // best-effort
+        }
+        const truncated = detail.length > 512 ? detail.slice(0, 512) : detail;
+        turnInFlight = false;
+        pushFailed(`Ollama HTTP ${response.status}: ${truncated || response.statusText}`);
+        finalize(1);
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        turnInFlight = false;
+        pushFailed('Ollama response has no body to stream');
+        finalize(1);
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulated = '';
+
+      const finishTurn = (): void => {
+        turnInFlight = false;
+        messages.push({ role: 'assistant', content: accumulated });
+        if (!settled) {
+          queue.push({
+            type: 'log',
+            timestamp: new Date().toISOString(),
+            message: '[turn_ended]',
+          });
+        }
+        maybeStartNextTurn();
+      };
+
+      try {
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            const chunk = parseChunk(line);
+            if (!chunk) continue;
+            if (chunk.error) {
+              turnInFlight = false;
+              pushFailed(`Ollama error: ${chunk.error}`);
+              finalize(1);
+              return;
+            }
+            const piece = chunk.message?.content ?? '';
+            if (piece) {
+              accumulated += piece;
+              const message = accumulated.length > 4096 ? accumulated.slice(-4096) : accumulated;
+              queue.push({
+                type: 'progress',
+                timestamp: new Date().toISOString(),
+                message,
+                role: 'assistant',
+              });
+            }
+            if (chunk.done === true) {
+              finishTurn();
+              return;
+            }
+          }
+        }
+        if (buffer.trim()) {
+          const chunk = parseChunk(buffer);
+          if (chunk?.done === true) {
+            finishTurn();
+            return;
+          }
+        }
+        // Stream ended without a done flag — treat as turn done.
+        finishTurn();
+      } catch (err) {
+        turnInFlight = false;
+        if (controller.signal.aborted) {
+          pushCompleted();
+          finalize(0);
+          return;
+        }
+        const msg = err instanceof Error ? err.message : String(err);
+        pushFailed(`Ollama stream read failed: ${msg}`);
+        finalize(1);
+      }
+    })();
+  }
+
+  runTurn();
 
   return {
     pid: null,
@@ -256,16 +291,25 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
         // best-effort
       }
     },
-    async respond(_text: string): Promise<void> {
-      process.stderr.write(
-        '[ollama-adapter] respond() called — mid-quest replies are not supported\n',
-      );
-      if (settled) return;
+    async respond(text: string): Promise<void> {
+      if (settled) {
+        process.stderr.write('[ollama-adapter] respond() after exit ignored\n');
+        return;
+      }
+      // Echo the user's text to the event stream so the chat dock renders
+      // immediately, then either queue (if mid-turn) or fire a new turn.
       queue.push({
-        type: 'failed',
+        type: 'progress',
         timestamp: new Date().toISOString(),
-        reason: 'Ollama adapter does not support mid-quest replies yet',
+        message: text,
+        role: 'user',
       });
+      if (turnInFlight) {
+        pendingUserMessages.push(text);
+        return;
+      }
+      messages.push({ role: 'user', content: text });
+      runTurn();
     },
     async awaitExit(): Promise<{ exitCode: number | null }> {
       return exitPromise;

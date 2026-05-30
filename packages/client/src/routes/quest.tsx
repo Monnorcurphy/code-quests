@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import HUDOverlay from '../features/quest/hud-overlay';
+import ChatDock from '../features/quest/chat-dock';
 import { useQuestStream } from '../features/quest/use-quest-stream';
 import { sceneRouter } from '../game/scene-router';
 import { useQuestStore } from '../stores/quest-store';
@@ -144,6 +145,7 @@ export default function QuestRoute() {
       <Suspense fallback={null}>
         <PhaserMount initialScene={quest.currentScene as SceneKey} questId={questId} />
       </Suspense>
+      <ChatDock questId={questId!} modelId={quest.modelId} />
     </main>
   );
 }
