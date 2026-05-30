@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { AudioSettings } from './audio-settings';
 import Credits from '../features/credits';
+import { useTownStore } from '../stores/town-store';
 
 const STORAGE_KEY = 'code-quests:reduced-motion';
 
@@ -33,6 +34,7 @@ function SettingsPanel({ onClose }: SettingsPanelProps) {
   const panelRef = useFocusTrap(onClose);
   const closeRef = useRef<HTMLButtonElement>(null);
   const creditsButtonRef = useRef<HTMLButtonElement>(null);
+  const setActiveModal = useTownStore((s) => s.setActiveModal);
   // Tracks whether the user has opened Credits at least once this session.
   // Prevents the "return focus to credits button" effect from firing on initial mount.
   const wasInCreditsRef = useRef(false);
@@ -57,6 +59,11 @@ function SettingsPanel({ onClose }: SettingsPanelProps) {
   function handleOpenCredits() {
     wasInCreditsRef.current = true;
     setCreditsOpen(true);
+  }
+
+  function handleOpenModels() {
+    onClose();
+    setActiveModal('models');
   }
 
   return (
@@ -95,6 +102,20 @@ function SettingsPanel({ onClose }: SettingsPanelProps) {
               </label>
             </div>
             <AudioSettings />
+            <div className="settings-row">
+              <div className="settings-row-text">
+                <span className="settings-row-label">Models</span>
+                <span className="settings-row-hint">Configure LLMs your adventurers can use</span>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleOpenModels}
+                data-testid="open-models-btn"
+              >
+                Manage
+              </button>
+            </div>
             <div className="form-actions" style={{ justifyContent: 'space-between' }}>
               <button
                 ref={creditsButtonRef}

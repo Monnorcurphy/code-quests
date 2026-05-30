@@ -22,8 +22,10 @@ import {
   CreateMonsterTypeSchema,
   ProjectSchema,
   CreateProjectSchema,
+  ModelSchema,
+  CreateModelSchema,
 } from '@code-quests/shared';
-import type { Equipment, AgentEvent, AdventurerClass, AdventurerStyle, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild, ForgeSkillInput, ConfirmCandidateInput, CreateMonsterTypeInput, CreateProjectInput } from '@code-quests/shared';
+import type { Equipment, AgentEvent, AdventurerClass, AdventurerStyle, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild, ForgeSkillInput, ConfirmCandidateInput, CreateMonsterTypeInput, CreateProjectInput, CreateModelInput } from '@code-quests/shared';
 
 const FeedbackSuccessSchema = z.object({}).passthrough();
 
@@ -317,6 +319,14 @@ const SplitServerResponseSchema = z.object({
 export type RepostResult = { newQuestId: string; newTitle: string };
 export type SplitResult = { questIds: string[]; titles: string[] };
 
+// The /models endpoints return the base Model record plus a server-computed
+// `hasKey` boolean (whether an API key is stored in the keychain for it).
+// The plaintext key itself is never returned.
+const ReturnedModelSchema = ModelSchema.extend({
+  hasKey: z.boolean(),
+});
+export type ReturnedModel = z.infer<typeof ReturnedModelSchema>;
+
 export const api = {
   adventurers: {
     list: () => fetchJson(z.array(AdventurerSchema), '/adventurers'),
@@ -334,6 +344,13 @@ export const api = {
     create: (input: CreateProjectInput) =>
       postJson(ProjectSchema, '/projects', CreateProjectSchema.parse(input)),
     delete: (id: string) => deleteRequest(`/projects/${id}`),
+  },
+  models: {
+    list: (): Promise<ReturnedModel[]> =>
+      fetchJson(z.array(ReturnedModelSchema), '/models'),
+    create: (input: CreateModelInput): Promise<ReturnedModel> =>
+      postJson(ReturnedModelSchema, '/models', CreateModelSchema.parse(input)),
+    delete: (id: string) => deleteRequest(`/models/${id}`),
   },
   quests: {
     list: () => fetchJson(z.array(QuestSchema), '/quests'),
