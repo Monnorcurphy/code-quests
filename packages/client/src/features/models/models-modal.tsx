@@ -1,9 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ModelProvider, CreateModelInput } from '@code-quests/shared';
+import { providerNeedsKey } from '@code-quests/shared';
 import { api, ApiError, type ReturnedModel } from '../../lib/api';
 import { useFocusTrap } from '../../lib/use-focus-trap';
 import { useModels, MODELS_QUERY_KEY } from './use-models';
+
+// Three states for the model row badge:
+//   ✓ key            — provider needs a key AND one is stored
+//   needs key        — provider needs a key AND none is stored
+//   uses subscription — provider doesn't need a key (claude_cli)
+//   no key required  — provider doesn't need a key (ollama)
+function badgeFor(m: ReturnedModel): { label: string; bg: string } {
+  if (!providerNeedsKey(m.provider)) {
+    return m.provider === 'claude_cli'
+      ? { label: 'uses subscription', bg: '#4a4830' }
+      : { label: 'no key required', bg: '#4a4830' };
+  }
+  return m.hasKey
+    ? { label: '✓ key', bg: '#2f6b2f' }
+    : { label: 'needs key', bg: '#7a4818' };
+}
 
 interface ModelsModalProps {
   onClose: () => void;
@@ -13,10 +30,40 @@ interface ModelsModalProps {
 // reserved for later phases and intentionally not exposed in the UI.
 type SupportedProvider = Extract<ModelProvider, 'claude_cli' | 'openrouter' | 'ollama'>;
 
-const PROVIDER_OPTIONS: { value: SupportedProvider; label: string; placeholder: string; needsKey: boolean }[] = [
-  { value: 'claude_cli', label: 'Claude (CLI)', placeholder: 'sonnet', needsKey: false },
-  { value: 'openrouter', label: 'OpenRouter', placeholder: 'anthropic/claude-3.5-sonnet', needsKey: true },
-  { value: 'ollama', label: 'Ollama', placeholder: 'llama3.1:70b', needsKey: false },
+interface ProviderOption {
+  value: SupportedProvider;
+  label: string;
+  placeholder: string;
+  needsKey: boolean;
+  hint: string;
+  setupHint?: string;
+}
+
+const PROVIDER_OPTIONS: ProviderOption[] = [
+  {
+    value: 'claude_cli',
+    label: 'Claude (CLI)',
+    placeholder: 'sonnet',
+    needsKey: false,
+    hint: 'Uses your Claude CLI subscription — no API key. Try sonnet, opus, haiku, or a full id like claude-sonnet-4-6.',
+    setupHint: 'Requires the `claude` binary on your PATH (https://claude.com/claude-code).',
+  },
+  {
+    value: 'openrouter',
+    label: 'OpenRouter',
+    placeholder: 'anthropic/claude-3.5-sonnet',
+    needsKey: true,
+    hint: 'Pay-per-token gateway to hundreds of models. Browse openrouter.ai/models for ids: anthropic/claude-3.5-sonnet, google/gemini-flash-1.5, meta-llama/llama-3.3-70b-instruct, deepseek/deepseek-chat, etc.',
+    setupHint: 'Get a key at openrouter.ai/keys, then paste it below.',
+  },
+  {
+    value: 'ollama',
+    label: 'Ollama',
+    placeholder: 'llama3.1:8b',
+    needsKey: false,
+    hint: 'Runs models locally — free, private, no key. Use whatever you have pulled. Run `ollama list` in a terminal to see your installed models.',
+    setupHint: 'Install Ollama from ollama.com, then `ollama pull llama3.1:8b` (or any model you want).',
+  },
 ];
 
 function providerOption(p: SupportedProvider) {
@@ -112,7 +159,10 @@ export default function ModelsModal({ onClose }: ModelsModalProps) {
       <div ref={panelRef} className="modal-panel" style={{ maxWidth: 560 }} data-testid="models-modal">
         <h2 id="models-title" className="modal-title">Models</h2>
         <p className="modal-body">
-          Manage the LLMs your adventurers can be assigned. API keys are stored in your OS keychain — never in the database.
+          Models are the LLMs your adventurers think with. Register one per provider you want
+          to use — your Claude CLI subscription, an OpenRouter account, a local Ollama install,
+          or any combination. You'll pick from this list when drafting a quest. API keys live
+          in your OS keychain, never the database.
         </p>
 
         <section aria-labelledby="models-list-heading" style={{ marginBottom: 18 }}>
@@ -154,18 +204,24 @@ export default function ModelsModal({ onClose }: ModelsModalProps) {
                       {m.provider} · {m.modelId}
                     </span>
                   </div>
-                  <span
-                    aria-label={m.hasKey ? 'API key configured' : 'API key missing'}
-                    style={{
-                      fontSize: '0.75rem',
-                      padding: '2px 6px',
-                      borderRadius: 3,
-                      background: m.hasKey ? '#2f6b2f' : '#7a4818',
-                      color: '#fff8e8',
-                    }}
-                  >
-                    {m.hasKey ? '✓ key' : 'needs key'}
-                  </span>
+                  {(() => {
+                    const b = badgeFor(m);
+                    return (
+                      <span
+                        aria-label={b.label}
+                        style={{
+                          fontSize: '0.75rem',
+                          padding: '2px 6px',
+                          borderRadius: 3,
+                          background: b.bg,
+                          color: '#fff8e8',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {b.label}
+                      </span>
+                    );
+                  })()}
                   <button
                     type="button"
                     className="btn-secondary"
@@ -242,12 +298,37 @@ export default function ModelsModal({ onClose }: ModelsModalProps) {
                 type="text"
                 value={modelIdValue}
                 onChange={(e) => setModelIdValue(e.target.value)}
-                aria-describedby={fieldError('modelId') ? 'model-identifier-error' : undefined}
+                aria-describedby={
+                  fieldError('modelId') ? 'model-identifier-error' : 'model-identifier-hint'
+                }
                 aria-invalid={fieldError('modelId') ? 'true' : undefined}
                 maxLength={200}
                 placeholder={option.placeholder}
                 disabled={isCreating}
               />
+              <p
+                id="model-identifier-hint"
+                style={{
+                  margin: '4px 0 0',
+                  fontSize: '0.8rem',
+                  color: '#5a3818',
+                  lineHeight: 1.35,
+                }}
+              >
+                {option.hint}
+              </p>
+              {option.setupHint && (
+                <p
+                  style={{
+                    margin: '4px 0 0',
+                    fontSize: '0.75rem',
+                    color: '#7a4a18',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  Setup: {option.setupHint}
+                </p>
+              )}
               {fieldError('modelId') && (
                 <p id="model-identifier-error" className="field-error" role="alert">
                   {fieldError('modelId')}

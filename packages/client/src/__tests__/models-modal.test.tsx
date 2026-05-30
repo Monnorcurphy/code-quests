@@ -77,9 +77,24 @@ describe('ModelsModal', () => {
     });
     expect(screen.getByText(/openrouter · anthropic\/claude-3.5-sonnet/)).toBeDefined();
     expect(screen.getByText(/ollama · llama3.1:70b/)).toBeDefined();
-    // Badges
-    expect(screen.getByLabelText('API key configured')).toBeDefined();
-    expect(screen.getByLabelText('API key missing')).toBeDefined();
+    // Badges: openrouter with hasKey=true → "✓ key"; ollama (no key needed) → "no key required".
+    expect(screen.getByLabelText('✓ key')).toBeDefined();
+    expect(screen.getByLabelText('no key required')).toBeDefined();
+  });
+
+  it('shows "uses subscription" badge for claude_cli (regression: was wrongly "needs key")', async () => {
+    vi.mocked(api.models.list).mockResolvedValue([
+      sampleModel({
+        id: 'cc-1', name: 'Claude Opus', provider: 'claude_cli',
+        modelId: 'opus', hasKey: false,
+      }),
+    ]);
+    renderModal();
+    await waitFor(() => {
+      expect(screen.getByText('Claude Opus')).toBeDefined();
+    });
+    expect(screen.getByText('uses subscription')).toBeDefined();
+    expect(screen.queryByText('needs key')).toBeNull();
   });
 
   it('adds an OpenRouter model with apiKey and surfaces it in the list', async () => {
