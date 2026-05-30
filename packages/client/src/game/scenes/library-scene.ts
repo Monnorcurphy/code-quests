@@ -46,28 +46,28 @@ export class LibraryScene extends BaseBuildingScene {
       }
     }
 
-    // Reading lectern with the Ancient Tome
-    this.add.rectangle(700, BUILDING_DOOR_Y - 4, 60, 60, 0x5a3a14).setDepth(1);
-    this.add.triangle(
-      700, BUILDING_DOOR_Y - 26,
-      -30, 10,
-      30, 10,
-      0, -10,
-      0x6a4a20,
-    ).setDepth(1);
-    // Open tome — interactive
+    // Reading lectern + Ancient Tome — clean stack: lectern column + slanted
+    // top + open book resting on the slant. No stray lines or triangles.
+    // Lectern column
+    this.add.rectangle(700, BUILDING_DOOR_Y + 6, 36, 80, 0x4a2c10).setDepth(1);
+    this.add.rectangle(700, BUILDING_DOOR_Y + 6, 30, 76, 0x5a3a14).setDepth(2);
+    // Lectern top — slanted reading surface
+    this.add.rectangle(700, BUILDING_DOOR_Y - 34, 80, 8, 0x4a2c10).setDepth(2);
+    this.add.rectangle(700, BUILDING_DOOR_Y - 36, 76, 4, 0x6a4a28).setDepth(3);
+    // Open tome resting on the lectern — two pages with a central spine
     const tome = this.add
-      .rectangle(700, BUILDING_DOOR_Y - 28, 80, 28, 0xf5e7b5)
-      .setStrokeStyle(2, 0x5a3a14)
-      .setDepth(2)
+      .rectangle(700, BUILDING_DOOR_Y - 44, 64, 18, 0xf5e7b5)
+      .setStrokeStyle(2, 0x6a4a28)
+      .setDepth(4)
       .setInteractive({ useHandCursor: true });
     tome.on('pointerdown', () => useTownStore.getState().setActiveModal('library'));
-    // Spine + page lines
-    this.add.line(700, BUILDING_DOOR_Y - 28, -40, 0, 40, 0, 0x5a3a14).setDepth(3);
-    this.add
-      .text(700, BUILDING_DOOR_Y - 28, '≡', { fontSize: '20px', color: '#5a3a14', fontStyle: 'bold' })
-      .setOrigin(0.5)
-      .setDepth(3);
+    // Spine down the middle
+    this.add.rectangle(700, BUILDING_DOOR_Y - 44, 2, 18, 0x6a4a28).setDepth(5);
+    // A few horizontal lines as faux text on each page
+    for (const py of [BUILDING_DOOR_Y - 49, BUILDING_DOOR_Y - 46, BUILDING_DOOR_Y - 43, BUILDING_DOOR_Y - 40]) {
+      this.add.rectangle(686, py, 22, 1, 0x8a6a3a).setDepth(5);
+      this.add.rectangle(714, py, 22, 1, 0x8a6a3a).setDepth(5);
+    }
     this.add
       .text(700, BUILDING_DOOR_Y - 78, 'Ancient Tome', {
         fontSize: '12px', color: '#fef9e7', fontStyle: 'bold',

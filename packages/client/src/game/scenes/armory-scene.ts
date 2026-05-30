@@ -60,23 +60,52 @@ export class ArmoryScene extends BaseBuildingScene {
       this.add.rectangle(sx, 250, 30, 4, 0xc4a050).setDepth(3);
     }
 
-    // Bow
-    this.add
-      .circle(810, 250, 50, 0x000000, 0)
-      .setStrokeStyle(3, 0x6a3814)
-      .setDepth(1);
-    this.add.line(0, 0, 810, 200, 810, 300, 0xc4c4c4, 0.8).setDepth(2);
-    // Arrows in a quiver
-    for (let i = 0; i < 4; i++) {
-      this.add.rectangle(890 + i * 5, 240, 2, 60, 0x6a3a14).setDepth(2);
-      this.add.triangle(890 + i * 5, 212, -4, 6, 4, 6, 0, -2, 0xa0a8b8).setDepth(3);
+    // Bow — actual curved bow shape (made of two arc segments + bowstring)
+    // instead of a giant ring. The bow leans against the wall vertically.
+    // Upper limb (curved arc — built from short rectangles for a wood look)
+    const bowX = 810;
+    const bowCy = 250;
+    for (let i = 0; i < 10; i++) {
+      const t = i / 9; // 0 to 1
+      const y = bowCy - 40 + t * 40; // upper half
+      // Curve outward toward the middle, taper at the tip
+      const xOff = Math.sin(t * Math.PI) * 14;
+      const wid = Math.max(2, Math.round(4 - Math.abs(t - 0.5) * 4));
+      this.add.rectangle(bowX + xOff, y, wid, 5, 0x6a3814).setDepth(1);
+      this.add.rectangle(bowX + xOff, y, wid - 1, 4, 0x8a4828).setDepth(2);
     }
-    this.add.rectangle(905, 280, 30, 50, 0x4a2814).setDepth(1);
+    // Lower limb
+    for (let i = 0; i < 10; i++) {
+      const t = i / 9;
+      const y = bowCy + t * 40;
+      const xOff = Math.sin(t * Math.PI) * 14;
+      const wid = Math.max(2, Math.round(4 - Math.abs(t - 0.5) * 4));
+      this.add.rectangle(bowX + xOff, y, wid, 5, 0x6a3814).setDepth(1);
+      this.add.rectangle(bowX + xOff, y, wid - 1, 4, 0x8a4828).setDepth(2);
+    }
+    // Grip wrap in the middle
+    this.add.rectangle(bowX + 13, bowCy, 6, 14, 0x2a1810).setDepth(3);
+    // Bowstring — straight vertical line from top tip to bottom tip
+    this.add.line(0, 0, bowX, bowCy - 40, bowX, bowCy + 40, 0xe8e8e8, 0.85).setDepth(2);
+
+    // Arrows in a quiver — beside the bow
+    const quiverX = 880;
+    this.add.rectangle(quiverX, 290, 32, 60, 0x4a2814).setDepth(1);
+    this.add.rectangle(quiverX, 262, 36, 6, 0x3a1f08).setDepth(2);
+    // Three arrows poking up out of the quiver
+    for (let i = 0; i < 3; i++) {
+      const ax = quiverX - 10 + i * 10;
+      this.add.rectangle(ax, 235, 2, 50, 0x6a3a14).setDepth(2);
+      // Fletching at the bottom
+      this.add.triangle(ax, 218, -3, 4, 3, 4, 0, -3, 0xc8c8c8).setDepth(3);
+      // Arrowhead at the top
+      this.add.triangle(ax, 210, -3, 6, 3, 6, 0, -2, 0xa0a8b8).setDepth(3);
+    }
 
     // Axe
-    this.add.rectangle(980, 250, 6, 80, 0x3a2410).setDepth(1);
-    this.add.triangle(980, 230, 0, -10, 20, 0, 0, 14, 0xb0b0c0).setDepth(2);
-    this.add.triangle(980, 230, 0, -10, -20, 0, 0, 14, 0xb0b0c0).setDepth(2);
+    this.add.rectangle(960, 250, 6, 80, 0x3a2410).setDepth(1);
+    this.add.triangle(960, 230, 0, -10, 20, 0, 0, 14, 0xb0b0c0).setDepth(2);
+    this.add.triangle(960, 230, 0, -10, -20, 0, 0, 14, 0xb0b0c0).setDepth(2);
 
     // Anvil on the floor by the workbench
     this.add.rectangle(620, BUILDING_DOOR_Y + 24, 80, 18, 0x303040).setDepth(1);
