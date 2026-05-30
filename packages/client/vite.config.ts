@@ -30,6 +30,8 @@ export default defineConfig({
       '/models': 'http://localhost:4001',
       '/health': 'http://localhost:4001',
       '/realtime': { target: 'ws://localhost:4001', ws: true },
+      '/council': 'http://localhost:4001',
+      '/fs': 'http://localhost:4001',
       '/showcase': 'http://localhost:4001',
       '/test': 'http://localhost:4001',
     },

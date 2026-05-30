@@ -371,6 +371,26 @@ export const api = {
       postJson(ReturnedModelSchema, '/models', CreateModelSchema.parse(input)),
     delete: (id: string) => deleteRequest(`/models/${id}`),
   },
+  fs: {
+    // Pops the native folder picker on macOS. Returns the absolute path,
+    // or null when the user cancels the dialog.
+    pickFolder: async (startPath?: string): Promise<string | null> => {
+      const res = await fetch(`${BASE_URL}/fs/pick-folder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(startPath ? { startPath } : {}),
+      });
+      if (res.status === 204) return null; // user cancelled
+      if (!res.ok) {
+        const raw: unknown = await res.json().catch(() => ({ error: `${res.statusText}` }));
+        const parsed = ApiErrorBodySchema.safeParse(raw);
+        const msg = parsed.success ? parsed.data.error : `${res.status} ${res.statusText}`;
+        throw new ApiError(msg, { status: res.status, data: raw });
+      }
+      const data = (await res.json()) as { path: string };
+      return data.path;
+    },
+  },
   council: {
     consult: (body: {
       modelId: string;

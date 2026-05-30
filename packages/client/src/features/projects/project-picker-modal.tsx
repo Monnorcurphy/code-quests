@@ -26,6 +26,30 @@ export default function ProjectPickerModal({ onClose }: ProjectPickerModalProps)
   const [path, setPath] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [pathError, setPathError] = useState<string | null>(null);
+  const [browseError, setBrowseError] = useState<string | null>(null);
+  const [browsing, setBrowsing] = useState(false);
+
+  async function handleBrowse() {
+    setBrowseError(null);
+    setBrowsing(true);
+    try {
+      const picked = await api.fs.pickFolder(path || undefined);
+      if (picked) {
+        setPath(picked);
+        setPathError(null);
+        // Auto-fill the name from the folder's basename if empty.
+        if (!name.trim()) {
+          const basename = picked.split('/').filter(Boolean).pop() ?? '';
+          if (basename) setName(basename);
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Folder picker failed';
+      setBrowseError(msg);
+    } finally {
+      setBrowsing(false);
+    }
+  }
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -233,25 +257,44 @@ export default function ProjectPickerModal({ onClose }: ProjectPickerModalProps)
             </div>
             <div className="form-field">
               <label htmlFor="project-path">Absolute path</label>
-              <input
-                id="project-path"
-                type="text"
-                value={path}
-                onChange={(e) => setPath(e.target.value)}
-                onBlur={() => {
-                  if (!path.trim()) return setPathError(null);
-                  const r = CreateProjectSchema.shape.path.safeParse(path);
-                  setPathError(r.success ? null : (r.error.issues[0]?.message ?? 'Invalid'));
-                }}
-                aria-describedby={pathFieldError ? 'project-path-error' : undefined}
-                aria-invalid={pathFieldError ? 'true' : undefined}
-                maxLength={1024}
-                placeholder="/Users/you/Dev/my-project"
-                disabled={isCreating}
-              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  id="project-path"
+                  type="text"
+                  value={path}
+                  onChange={(e) => setPath(e.target.value)}
+                  onBlur={() => {
+                    if (!path.trim()) return setPathError(null);
+                    const r = CreateProjectSchema.shape.path.safeParse(path);
+                    setPathError(r.success ? null : (r.error.issues[0]?.message ?? 'Invalid'));
+                  }}
+                  aria-describedby={pathFieldError ? 'project-path-error' : undefined}
+                  aria-invalid={pathFieldError ? 'true' : undefined}
+                  maxLength={1024}
+                  placeholder="/Users/you/Dev/my-project"
+                  disabled={isCreating || browsing}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => { void handleBrowse(); }}
+                  disabled={isCreating || browsing}
+                  data-testid="browse-folder-btn"
+                  aria-label="Browse for folder"
+                  title="Open the OS folder picker"
+                >
+                  {browsing ? 'Opening…' : 'Browse…'}
+                </button>
+              </div>
               {pathFieldError && (
                 <p id="project-path-error" className="field-error" role="alert">
                   {pathFieldError}
+                </p>
+              )}
+              {browseError && (
+                <p className="field-error" role="alert">
+                  {browseError}
                 </p>
               )}
             </div>
