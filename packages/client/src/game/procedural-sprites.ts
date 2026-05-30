@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
-import type { AdventurerStyle, TunicColor, HairColor } from '@code-quests/shared';
+import type {
+  AdventurerStyle,
+  TunicColor,
+  HairColor,
+  SkinTone,
+  HairStyle,
+} from '@code-quests/shared';
 
 // Procedurally drawn fantasy sprites. Generated once at boot via Graphics →
 // generateTexture, then registered against the same texture keys the rest
@@ -18,6 +24,7 @@ export interface PaletteSpec {
   skin: number;
   skinDark: number;
   hair: number;
+  hairStyle: HairStyle; // controls drawAdventurer hair shape
   tunic: number;
   tunicDark: number;
   belt: number;
@@ -32,6 +39,7 @@ const ADVENTURER_PALETTE: PaletteSpec = {
   skin: 0xf4d0a4,
   skinDark: 0xc99270,
   hair: 0x7a4a18,
+  hairStyle: 'short',
   tunic: 0x3d6e3a, // forest green
   tunicDark: 0x254a23,
   belt: 0x5c3a18,
@@ -59,6 +67,15 @@ const HAIR_COLOR_MAP: Record<HairColor, number> = {
   silver: 0xc8c8d0,
 };
 
+// Skin tone → (base, shadow) pair. Used for face + hands.
+const SKIN_TONE_MAP: Record<SkinTone, { base: number; dark: number }> = {
+  fair: { base: 0xf4d0a4, dark: 0xc99270 },
+  olive: { base: 0xd8b078, dark: 0xa88048 },
+  tan: { base: 0xc89060, dark: 0x946838 },
+  brown: { base: 0x9c6838, dark: 0x6e4422 },
+  dark: { base: 0x603a1c, dark: 0x381e0e },
+};
+
 /**
  * Resolve an AdventurerStyle (tunic + hair choices) into a full PaletteSpec.
  * Falls back to the default forest-green / brown-hair look for any unset
@@ -67,11 +84,15 @@ const HAIR_COLOR_MAP: Record<HairColor, number> = {
 export function paletteForStyle(style: AdventurerStyle | undefined): PaletteSpec {
   const tunic = style?.tunic !== undefined ? TUNIC_COLOR_MAP[style.tunic] : null;
   const hair = style?.hair !== undefined ? HAIR_COLOR_MAP[style.hair] : null;
+  const skin = style?.skin !== undefined ? SKIN_TONE_MAP[style.skin] : null;
   return {
     ...ADVENTURER_PALETTE,
     tunic: tunic?.base ?? ADVENTURER_PALETTE.tunic,
     tunicDark: tunic?.dark ?? ADVENTURER_PALETTE.tunicDark,
     hair: hair ?? ADVENTURER_PALETTE.hair,
+    skin: skin?.base ?? ADVENTURER_PALETTE.skin,
+    skinDark: skin?.dark ?? ADVENTURER_PALETTE.skinDark,
+    hairStyle: style?.hairStyle ?? ADVENTURER_PALETTE.hairStyle,
   };
 }
 
@@ -121,15 +142,40 @@ function drawAdventurer(
   const headCy = 12;
   const headR = 6;
 
-  // Hair cap
-  g.fillStyle(palette.hair);
-  g.fillRect(headCx - 6, headCy - 6, 12, 4);
-  g.fillRect(headCx - 7, headCy - 5, 2, 3);
-  g.fillRect(headCx + 5, headCy - 5, 2, 3);
-
-  // Face
+  // Face goes first so any hair drawn on top can frame it
   g.fillStyle(palette.skin);
   g.fillCircle(headCx, headCy, headR);
+
+  // Hair — shape depends on hairStyle. Color is palette.hair.
+  // 'shaved' draws nothing on the scalp.
+  if (palette.hairStyle !== 'shaved') {
+    g.fillStyle(palette.hair);
+    // Common: top cap covering the crown
+    g.fillRect(headCx - 6, headCy - 6, 12, 4);
+    g.fillRect(headCx - 7, headCy - 5, 2, 3);
+    g.fillRect(headCx + 5, headCy - 5, 2, 3);
+    switch (palette.hairStyle) {
+      case 'short':
+        // Just the cap — nothing else
+        break;
+      case 'long':
+        // Hair falls down behind the shoulders on either side
+        g.fillRect(headCx - 8, headCy - 2, 2, 12);
+        g.fillRect(headCx + 6, headCy - 2, 2, 12);
+        break;
+      case 'bun':
+        // Round bun on top of the head
+        g.fillCircle(headCx, headCy - 8, 3);
+        break;
+      case 'ponytail':
+        // Trailing ponytail behind one side
+        g.fillRect(headCx + 6, headCy - 2, 2, 10);
+        g.fillRect(headCx + 7, headCy + 4, 2, 3);
+        break;
+    }
+  }
+
+  // Face shading on top of hair so cheek shadow + eyes stay visible
   g.fillStyle(palette.skinDark);
   g.fillRect(headCx + 3, headCy - 1, 1, 1); // cheek shadow
   g.fillStyle(outline);

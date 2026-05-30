@@ -8,8 +8,12 @@ export {
   AdventurerStyleSchema,
   TunicColorSchema,
   HairColorSchema,
+  SkinToneSchema,
+  HairStyleSchema,
   TUNIC_COLORS,
   HAIR_COLORS,
+  SKIN_TONES,
+  HAIR_STYLES,
 } from './adventurer';
 export type {
   AdventurerClass,
@@ -18,6 +22,8 @@ export type {
   AdventurerStyle,
   TunicColor,
   HairColor,
+  SkinTone,
+  HairStyle,
 } from './adventurer';
 
 export { EquipmentSchema, SkillStatusSchema, SkillCreatedBySchema, SkillSchema, ToolSchema, MCPServerSchema } from './equipment';

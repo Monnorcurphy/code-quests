@@ -363,7 +363,11 @@ export default function NpcHintPanel({ npcKey, onClose, onPrimary }: NpcHintPane
       aria-modal="true"
       aria-labelledby="npc-hint-title"
     >
-      <div ref={panelRef} className="modal-panel" style={{ maxWidth: 680 }}>
+      <div
+        ref={panelRef}
+        className="modal-panel"
+        style={{ maxWidth: 680, maxHeight: '90vh', overflowY: 'auto' }}
+      >
         <h2 id="npc-hint-title" className="modal-title">
           {content.name}
         </h2>

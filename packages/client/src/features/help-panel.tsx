@@ -27,7 +27,11 @@ export default function HelpPanel({ onClose }: HelpPanelProps) {
       aria-modal="true"
       aria-labelledby="help-title"
     >
-      <div ref={panelRef} className="modal-panel" style={{ maxWidth: 680 }}>
+      <div
+        ref={panelRef}
+        className="modal-panel"
+        style={{ maxWidth: 680, maxHeight: '90vh', overflowY: 'auto' }}
+      >
         <h2 id="help-title" className="modal-title">
           Elder Hawthorne
         </h2>
