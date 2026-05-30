@@ -9,6 +9,10 @@ export interface PlayerBounds {
 export interface PlayerOptions {
   speed?: number;
   reducedMotion?: boolean;
+  // Texture keys to override the default character/adventurer-* sprites.
+  // Used by player-style customization (Help panel wardrobe).
+  textureIdleKey?: string;
+  textureWalkKey?: string;
 }
 
 const DEFAULT_SPEED = 200;
@@ -47,34 +51,37 @@ export class Player {
     this.bounds = bounds;
     this.interactCallbacks = [];
 
-    this.sprite = scene.add.sprite(x, y, ASSET_KEYS.CHARACTER_ADVENTURER_IDLE);
-    this._setupAnimations(scene);
+    const idleKey = options.textureIdleKey ?? ASSET_KEYS.CHARACTER_ADVENTURER_IDLE;
+    const walkKey = options.textureWalkKey ?? ASSET_KEYS.CHARACTER_ADVENTURER_WALK;
+    this.sprite = scene.add.sprite(x, y, idleKey);
+    this._setupAnimations(scene, idleKey, walkKey);
     this.sprite.play('player-idle');
   }
 
-  private _setupAnimations(scene: Phaser.Scene): void {
+  private _setupAnimations(scene: Phaser.Scene, idleKey: string, walkKey: string): void {
     const walkFrameRate = this.reducedMotion ? WALK_FRAME_RATE_REDUCED : WALK_FRAME_RATE_NORMAL;
 
-    if (!scene.anims.exists('player-idle')) {
-      scene.anims.create({
-        key: 'player-idle',
-        frames: [{ key: ASSET_KEYS.CHARACTER_ADVENTURER_IDLE }],
-        frameRate: IDLE_FRAME_RATE,
-        repeat: -1,
-      });
-    }
+    // Reset any prior animations so a re-styled player picks up the new
+    // texture keys instead of replaying the previous palette's frames.
+    if (scene.anims.exists('player-idle')) scene.anims.remove('player-idle');
+    if (scene.anims.exists('player-walk')) scene.anims.remove('player-walk');
 
-    if (!scene.anims.exists('player-walk')) {
-      scene.anims.create({
-        key: 'player-walk',
-        frames: [
-          { key: ASSET_KEYS.CHARACTER_ADVENTURER_IDLE },
-          { key: ASSET_KEYS.CHARACTER_ADVENTURER_WALK },
-        ],
-        frameRate: walkFrameRate,
-        repeat: -1,
-      });
-    }
+    scene.anims.create({
+      key: 'player-idle',
+      frames: [{ key: idleKey }],
+      frameRate: IDLE_FRAME_RATE,
+      repeat: -1,
+    });
+
+    scene.anims.create({
+      key: 'player-walk',
+      frames: [
+        { key: idleKey },
+        { key: walkKey },
+      ],
+      frameRate: walkFrameRate,
+      repeat: -1,
+    });
   }
 
   private _playAnim(key: AnimKey): void {

@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
+import { PlayerWardrobeSection } from './player-wardrobe-section';
 
 interface HelpPanelProps {
   onClose: () => void;
@@ -98,6 +99,16 @@ export default function HelpPanel({ onClose }: HelpPanelProps) {
             listening. Tab cycles between nearby interactives. Esc closes any open
             conversation.
           </p>
+        </section>
+
+        <section style={{ marginBottom: 14 }}>
+          <h3 style={{ color: '#7a1818', marginBottom: 6 }}>Style your avatar</h3>
+          <p style={{ marginTop: 4, lineHeight: 1.6, marginBottom: 10 }}>
+            Pick a tunic and hair colour to mark yourself in the realm. Your
+            choice is saved in this browser and applies the next time you
+            change scenes.
+          </p>
+          <PlayerWardrobeSection />
         </section>
 
         <section style={{ marginBottom: 14 }}>

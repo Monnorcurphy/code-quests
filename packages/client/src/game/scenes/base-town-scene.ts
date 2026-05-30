@@ -3,7 +3,9 @@ import { Player } from '../entities/player';
 import { Door } from '../entities/door';
 import { KeyboardController } from '../input/keyboard-controller';
 import { preloadCommonAssets } from '../asset-loader';
+import { generateAdventurerTextures, adventurerTextureKeys } from '../procedural-sprites';
 import { useTownStore } from '../../stores/town-store';
+import { usePlayerStyleStore } from '../../stores/player-style-store';
 import { sceneRouter } from '../scene-router';
 import type { SceneKey } from '../scene-registry';
 
@@ -70,7 +72,20 @@ export abstract class BaseTownScene extends Phaser.Scene {
       this.drawFacades();
     }
 
-    this.player = new Player(this, this._spawnX, PLAYER_Y, sceneBounds, { reducedMotion });
+    // Re-skin the player from the saved style each time a town scene mounts
+    // so changes from the Help-panel wardrobe land immediately on the next
+    // scene transition. If the style is empty (no customisation yet) we fall
+    // through to the default character/adventurer-* keys.
+    const playerStyle = usePlayerStyleStore.getState().style;
+    const hasCustomStyle = playerStyle.tunic !== undefined || playerStyle.hair !== undefined;
+    if (hasCustomStyle) {
+      generateAdventurerTextures(this, 'player', playerStyle);
+    }
+    const keys = hasCustomStyle ? adventurerTextureKeys('player') : null;
+    this.player = new Player(this, this._spawnX, PLAYER_Y, sceneBounds, {
+      reducedMotion,
+      ...(keys ? { textureIdleKey: keys.idle, textureWalkKey: keys.walk } : {}),
+    });
 
     const camera = this.cameras.main;
     camera.setBounds(0, 0, this.sceneWidth, camera.height);
