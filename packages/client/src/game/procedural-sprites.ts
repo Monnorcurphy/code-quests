@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { AdventurerStyle, TunicColor, HairColor } from '@code-quests/shared';
 
 // Procedurally drawn fantasy sprites. Generated once at boot via Graphics →
 // generateTexture, then registered against the same texture keys the rest
@@ -13,7 +14,7 @@ import Phaser from 'phaser';
 const PLAYER_W = 32;
 const PLAYER_H = 48;
 
-interface PaletteSpec {
+export interface PaletteSpec {
   skin: number;
   skinDark: number;
   hair: number;
@@ -25,6 +26,8 @@ interface PaletteSpec {
   outline: number;
 }
 
+// Default fallback palette used when an adventurer has no saved style yet
+// and as the basis for derivations (only tunic + hair vary in MVP).
 const ADVENTURER_PALETTE: PaletteSpec = {
   skin: 0xf4d0a4,
   skinDark: 0xc99270,
@@ -36,6 +39,75 @@ const ADVENTURER_PALETTE: PaletteSpec = {
   bootsDark: 0x1f130a,
   outline: 0x1a0e08,
 };
+
+// Tunic color → (base, dark shade) tuple. Dark variant is used for the
+// shadow under the hem so the silhouette reads in two tones.
+const TUNIC_COLOR_MAP: Record<TunicColor, { base: number; dark: number }> = {
+  green: { base: 0x3d6e3a, dark: 0x254a23 },
+  blue: { base: 0x2e5a96, dark: 0x183a64 },
+  red: { base: 0x9a2828, dark: 0x5c1414 },
+  gold: { base: 0xd4a83a, dark: 0x8a6a18 },
+  purple: { base: 0x5a3a8a, dark: 0x382258 },
+  brown: { base: 0x6a4a28, dark: 0x3c2814 },
+};
+
+const HAIR_COLOR_MAP: Record<HairColor, number> = {
+  brown: 0x7a4a18,
+  blonde: 0xe6c87a,
+  black: 0x1a1208,
+  red: 0xb04a18,
+  silver: 0xc8c8d0,
+};
+
+/**
+ * Resolve an AdventurerStyle (tunic + hair choices) into a full PaletteSpec.
+ * Falls back to the default forest-green / brown-hair look for any unset
+ * field so partial styles still render coherently.
+ */
+export function paletteForStyle(style: AdventurerStyle | undefined): PaletteSpec {
+  const tunic = style?.tunic !== undefined ? TUNIC_COLOR_MAP[style.tunic] : null;
+  const hair = style?.hair !== undefined ? HAIR_COLOR_MAP[style.hair] : null;
+  return {
+    ...ADVENTURER_PALETTE,
+    tunic: tunic?.base ?? ADVENTURER_PALETTE.tunic,
+    tunicDark: tunic?.dark ?? ADVENTURER_PALETTE.tunicDark,
+    hair: hair ?? ADVENTURER_PALETTE.hair,
+  };
+}
+
+export function adventurerTextureKeys(adventurerId: string): {
+  idle: string;
+  walk: string;
+  attack: string;
+} {
+  return {
+    idle: `adv-${adventurerId}-idle`,
+    walk: `adv-${adventurerId}-walk`,
+    attack: `adv-${adventurerId}-attack`,
+  };
+}
+
+/**
+ * Generate (or regenerate) the three per-adventurer textures keyed by id.
+ * Safe to call multiple times — existing textures are replaced.
+ */
+export function generateAdventurerTextures(
+  scene: Phaser.Scene,
+  adventurerId: string,
+  style: AdventurerStyle | undefined,
+): void {
+  const palette = paletteForStyle(style);
+  const keys = adventurerTextureKeys(adventurerId);
+  generateTexture(scene, keys.idle, PLAYER_W, PLAYER_H, (g) =>
+    drawAdventurer(g, palette, 'idle'),
+  );
+  generateTexture(scene, keys.walk, PLAYER_W, PLAYER_H, (g) =>
+    drawAdventurer(g, palette, 'walk-a'),
+  );
+  generateTexture(scene, keys.attack, PLAYER_W, PLAYER_H, (g) =>
+    drawAdventurer(g, palette, 'attack'),
+  );
+}
 
 function drawAdventurer(
   g: Phaser.GameObjects.Graphics,

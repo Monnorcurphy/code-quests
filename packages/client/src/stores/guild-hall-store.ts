@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AdventurerClass } from '@code-quests/shared';
+import type { AdventurerClass, AdventurerStyle } from '@code-quests/shared';
 
 export type GuildHallAdventurerStatus = 'idle' | 'on-quest';
 
@@ -10,6 +10,8 @@ export interface GuildHallAdventurer {
   status: GuildHallAdventurerStatus;
   /** Title of the active/blocked quest if the adventurer is dispatched. */
   currentQuestTitle: string | null;
+  /** Wardrobe preferences — drives per-adventurer sprite palette. */
+  style: AdventurerStyle;
 }
 
 interface GuildHallState {

@@ -8,6 +8,7 @@ function makeAdventurer(overrides: Partial<GuildHallAdventurer> = {}): GuildHall
     class: 'champion',
     status: 'idle',
     currentQuestTitle: null,
+    style: {},
     ...overrides,
   };
 }

@@ -5,9 +5,10 @@ interface RosterProps {
   adventurers: Adventurer[];
   isLoading: boolean;
   error: Error | null;
+  onStyle?: (adventurer: Adventurer) => void;
 }
 
-export default function Roster({ adventurers, isLoading, error }: RosterProps) {
+export default function Roster({ adventurers, isLoading, error, onStyle }: RosterProps) {
   if (isLoading) {
     return (
       <p className="roster-status" aria-live="polite" aria-busy="true">
@@ -44,6 +45,16 @@ export default function Roster({ adventurers, isLoading, error }: RosterProps) {
             <span className="roster-record" aria-label={`${wins} wins, ${losses} losses`}>
               {wins} W / {losses} L
             </span>
+            {onStyle && (
+              <button
+                type="button"
+                className="btn-secondary roster-style-btn"
+                onClick={() => onStyle(a)}
+                aria-label={`Customize style for ${a.name}`}
+              >
+                Style
+              </button>
+            )}
             <ScarList scars={a.scars} adventurerId={a.id} />
           </li>
         );

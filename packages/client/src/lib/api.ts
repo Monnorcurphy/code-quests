@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   AdventurerSchema,
   AdventurerClassSchema,
+  AdventurerStyleSchema,
   QuestSchema,
   QuestSceneKeySchema,
   QuestStatusSchema,
@@ -20,7 +21,7 @@ import {
   ConfirmCandidateSchema,
   CreateMonsterTypeSchema,
 } from '@code-quests/shared';
-import type { Equipment, AgentEvent, AdventurerClass, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild, ForgeSkillInput, ConfirmCandidateInput, CreateMonsterTypeInput } from '@code-quests/shared';
+import type { Equipment, AgentEvent, AdventurerClass, AdventurerStyle, QuestStatus, FailureSummary, FailureSummaryRecommendation, QuestSceneKey, MonsterType, Monster, MonsterEncounter, MonsterScope, SplitChild, ForgeSkillInput, ConfirmCandidateInput, CreateMonsterTypeInput } from '@code-quests/shared';
 
 const FeedbackSuccessSchema = z.object({}).passthrough();
 
@@ -303,6 +304,10 @@ export const api = {
     get: (id: string) => fetchJson(AdventurerSchema, `/adventurers/${id}`),
     create: (input: CreateAdventurerInput) =>
       postJson(AdventurerSchema, '/adventurers', input),
+    updateStyle: (id: string, style: AdventurerStyle) =>
+      patchJson(AdventurerSchema, `/adventurers/${id}/style`, {
+        style: AdventurerStyleSchema.parse(style),
+      }),
   },
   quests: {
     list: () => fetchJson(z.array(QuestSchema), '/quests'),

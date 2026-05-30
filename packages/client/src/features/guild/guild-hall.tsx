@@ -6,10 +6,12 @@ import { useFocusTrap } from '../../lib/use-focus-trap';
 import { useTownStore } from '../../stores/town-store';
 import Roster from './roster';
 import RecruitModal from './recruit-modal';
+import WardrobePanel from './wardrobe-panel';
 
 export default function GuildHall() {
   const setActiveModal = useTownStore((s) => s.setActiveModal);
   const [showRecruit, setShowRecruit] = useState(false);
+  const [wardrobeFor, setWardrobeFor] = useState<Adventurer | null>(null);
   const recruitBtnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useFocusTrap(() => setActiveModal(null));
 
@@ -49,12 +51,18 @@ export default function GuildHall() {
             onCancel={() => setShowRecruit(false)}
             onSuccess={() => setShowRecruit(false)}
           />
+        ) : wardrobeFor ? (
+          <WardrobePanel
+            adventurer={wardrobeFor}
+            onClose={() => setWardrobeFor(null)}
+          />
         ) : (
           <>
             <Roster
               adventurers={data}
               isLoading={isLoading}
               error={error as Error | null}
+              onStyle={(adv) => setWardrobeFor(adv)}
             />
             <div className="guild-hall-actions">
               <button

@@ -19,6 +19,22 @@ export const ScarRecordSchema = z.object({
 
 export type ScarRecord = z.infer<typeof ScarRecordSchema>;
 
+export const TUNIC_COLORS = ['green', 'blue', 'red', 'gold', 'purple', 'brown'] as const;
+export const HAIR_COLORS = ['brown', 'blonde', 'black', 'red', 'silver'] as const;
+
+export const TunicColorSchema = z.enum(TUNIC_COLORS);
+export const HairColorSchema = z.enum(HAIR_COLORS);
+
+export type TunicColor = z.infer<typeof TunicColorSchema>;
+export type HairColor = z.infer<typeof HairColorSchema>;
+
+export const AdventurerStyleSchema = z.object({
+  tunic: TunicColorSchema.optional(),
+  hair: HairColorSchema.optional(),
+});
+
+export type AdventurerStyle = z.infer<typeof AdventurerStyleSchema>;
+
 export const AdventurerSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -28,6 +44,7 @@ export const AdventurerSchema = z.object({
   stats: z.record(z.unknown()).default({}),
   specializations: z.array(z.string()).default([]),
   scars: z.array(ScarRecordSchema).default([]),
+  style: AdventurerStyleSchema.optional(),
 });
 
 export type Adventurer = z.infer<typeof AdventurerSchema>;

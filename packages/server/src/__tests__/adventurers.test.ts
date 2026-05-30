@@ -166,6 +166,64 @@ describe('PATCH /adventurers/:id', () => {
   });
 });
 
+describe('PATCH /adventurers/:id/style', () => {
+  let db: Database.Database;
+  let app: express.Express;
+
+  beforeEach(() => {
+    ({ app, db } = makeApp());
+    db.prepare('INSERT INTO adventurers (id, name, class, model_id) VALUES (?, ?, ?, ?)').run(
+      'adv-style', 'Fionn', 'champion', 'claude-opus-4-7',
+    );
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('updates style and returns the updated adventurer', async () => {
+    const res = await request(app)
+      .patch('/adventurers/adv-style/style')
+      .send({ style: { tunic: 'blue', hair: 'silver' } });
+    expect(res.status).toBe(200);
+    expect(res.body.style).toEqual({ tunic: 'blue', hair: 'silver' });
+
+    const row = db.prepare('SELECT style_json FROM adventurers WHERE id = ?').get('adv-style') as {
+      style_json: string;
+    };
+    expect(JSON.parse(row.style_json)).toEqual({ tunic: 'blue', hair: 'silver' });
+  });
+
+  it('accepts a partial style (tunic only)', async () => {
+    const res = await request(app)
+      .patch('/adventurers/adv-style/style')
+      .send({ style: { tunic: 'gold' } });
+    expect(res.status).toBe(200);
+    expect(res.body.style).toEqual({ tunic: 'gold' });
+  });
+
+  it('accepts an empty style object (reset)', async () => {
+    const res = await request(app).patch('/adventurers/adv-style/style').send({ style: {} });
+    expect(res.status).toBe(200);
+    expect(res.body.style).toEqual({});
+  });
+
+  it('rejects an invalid tunic color with 400', async () => {
+    const res = await request(app)
+      .patch('/adventurers/adv-style/style')
+      .send({ style: { tunic: 'rainbow' } });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeTruthy();
+  });
+
+  it('returns 404 for unknown id', async () => {
+    const res = await request(app)
+      .patch('/adventurers/ghost/style')
+      .send({ style: { tunic: 'red' } });
+    expect(res.status).toBe(404);
+  });
+});
+
 describe('DELETE /adventurers/:id', () => {
   let db: Database.Database;
   let app: express.Express;

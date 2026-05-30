@@ -12,6 +12,7 @@ function makeAdventurer(overrides: Partial<Adventurer> & { id: string }): Advent
     stats: overrides.stats ?? {},
     specializations: overrides.specializations ?? [],
     scars: overrides.scars ?? [],
+    style: overrides.style ?? {},
   };
 }
 

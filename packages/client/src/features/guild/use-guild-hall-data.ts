@@ -31,6 +31,7 @@ function buildRoster(adventurers: Adventurer[], quests: Quest[]): GuildHallAdven
       class: a.class,
       status: title !== undefined ? 'on-quest' : 'idle',
       currentQuestTitle: title ?? null,
+      style: a.style ?? {},
     };
   });
 }

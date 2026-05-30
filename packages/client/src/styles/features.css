@@ -3272,3 +3272,72 @@ body[data-quest-paused='true'] *:not([class*='pause-bell-flash']):not([role='dia
     transition: none;
   }
 }
+
+/* Wardrobe panel — per-adventurer tunic + hair customization */
+.wardrobe-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.wardrobe-panel h3 {
+  margin: 0;
+}
+
+.wardrobe-preview {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  background: #1a1208;
+  border: 2px solid #4a3018;
+  border-radius: 4px;
+  image-rendering: pixelated;
+}
+
+.wardrobe-preview canvas {
+  image-rendering: pixelated;
+}
+
+.wardrobe-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.wardrobe-option {
+  padding: 0.4rem 0.75rem;
+  background: #2a1f10;
+  color: #e8d9a6;
+  border: 2px solid #5a3818;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.wardrobe-option:hover:not(:disabled) {
+  background: #3a2810;
+  border-color: #8a5818;
+}
+
+.wardrobe-option--selected {
+  background: #6a4828;
+  border-color: #d4a83a;
+  color: #fef9e7;
+}
+
+.wardrobe-option:focus-visible {
+  outline: 2px solid #d4a83a;
+  outline-offset: 2px;
+}
+
+.wardrobe-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.roster-style-btn {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+}

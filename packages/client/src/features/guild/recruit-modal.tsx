@@ -47,6 +47,7 @@ export default function RecruitModal({ onCancel, onSuccess }: RecruitModalProps)
         stats: {},
         specializations: [],
         scars: [],
+        style: {},
       };
       queryClient.setQueryData(['adventurers'], [...(prev ?? []), optimistic]);
       return { prev, optimisticId };

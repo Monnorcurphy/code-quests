@@ -3,7 +3,7 @@ import { BaseBuildingScene, BUILDING_DOOR_Y } from './base-building-scene';
 import { GuideNpc } from '../entities/guide-npc';
 import { registerScene } from '../scene-registry';
 import { sceneRouter } from '../scene-router';
-import { ASSET_KEYS } from '../asset-loader';
+import { generateAdventurerTextures, adventurerTextureKeys } from '../procedural-sprites';
 import { useTownStore } from '../../stores/town-store';
 import {
   useGuildHallStore,
@@ -287,8 +287,13 @@ export class GuildHallScene extends BaseBuildingScene {
     const alpha = onQuest ? ALPHA_ON_QUEST : ALPHA_ROSTER_IDLE;
     const scale = onQuest ? SCALE_ON_QUEST : SCALE_ROSTER_IDLE;
 
+    // Generate (or refresh) per-adventurer textures keyed by id so each
+    // hero on the dais renders with their own tunic + hair palette.
+    generateAdventurerTextures(this, adv.id, adv.style);
+    const idleKey = adventurerTextureKeys(adv.id).idle;
+
     const sprite = this.add
-      .sprite(x, ADVENTURER_Y, ASSET_KEYS.CHARACTER_ADVENTURER_IDLE)
+      .sprite(x, ADVENTURER_Y, idleKey)
       .setDepth(ADVENTURER_DEPTH_BODY)
       .setAlpha(alpha)
       .setScale(scale)

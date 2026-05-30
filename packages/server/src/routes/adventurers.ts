@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import Database from 'better-sqlite3';
 import { z } from 'zod';
-import { AdventurerClassSchema } from '@code-quests/shared';
+import { AdventurerClassSchema, AdventurerStyleSchema } from '@code-quests/shared';
 import { validate } from '../middleware/validate';
 
 const CreateAdventurerSchema = z.object({
@@ -11,12 +11,18 @@ const CreateAdventurerSchema = z.object({
   stats: z.record(z.unknown()).default({}),
   specializations: z.array(z.string()).default([]),
   scars: z.array(z.string()).default([]),
+  style: AdventurerStyleSchema.default({}),
 });
 
 const PatchAdventurerSchema = CreateAdventurerSchema.partial();
 
+const UpdateStyleSchema = z.object({
+  style: AdventurerStyleSchema,
+});
+
 type CreateAdventurer = z.infer<typeof CreateAdventurerSchema>;
 type PatchAdventurer = z.infer<typeof PatchAdventurerSchema>;
+type UpdateStyle = z.infer<typeof UpdateStyleSchema>;
 
 type AdventurerRow = {
   id: string;
@@ -27,7 +33,20 @@ type AdventurerRow = {
   stats_json: string;
   specializations_json: string;
   scars_json: string;
+  style_json: string;
 };
+
+function parseStyleJson(raw: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Fall through to empty object on malformed JSON — never crash a list call.
+  }
+  return {};
+}
 
 function rowToApi(row: AdventurerRow) {
   return {
@@ -39,6 +58,7 @@ function rowToApi(row: AdventurerRow) {
     stats: JSON.parse(row.stats_json) as Record<string, unknown>,
     specializations: JSON.parse(row.specializations_json) as string[],
     scars: JSON.parse(row.scars_json) as string[],
+    style: parseStyleJson(row.style_json ?? '{}'),
   };
 }
 
@@ -54,7 +74,7 @@ export function createAdventurersRouter(db: Database.Database): Router {
     const body = req.body as CreateAdventurer;
     const id = crypto.randomUUID();
     db.prepare(
-      'INSERT INTO adventurers (id, name, class, model_id, stats_json, specializations_json, scars_json) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO adventurers (id, name, class, model_id, stats_json, specializations_json, scars_json, style_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     ).run(
       id,
       body.name,
@@ -63,6 +83,7 @@ export function createAdventurersRouter(db: Database.Database): Router {
       JSON.stringify(body.stats),
       JSON.stringify(body.specializations),
       JSON.stringify(body.scars),
+      JSON.stringify(body.style ?? {}),
     );
     const row = db.prepare('SELECT * FROM adventurers WHERE id = ?').get(id) as AdventurerRow;
     res.status(201).json(rowToApi(row));
@@ -92,10 +113,26 @@ export function createAdventurersRouter(db: Database.Database): Router {
     if (body.stats !== undefined) { cols.push('stats_json = ?'); vals.push(JSON.stringify(body.stats)); }
     if (body.specializations !== undefined) { cols.push('specializations_json = ?'); vals.push(JSON.stringify(body.specializations)); }
     if (body.scars !== undefined) { cols.push('scars_json = ?'); vals.push(JSON.stringify(body.scars)); }
+    if (body.style !== undefined) { cols.push('style_json = ?'); vals.push(JSON.stringify(body.style)); }
     if (cols.length > 0) {
       vals.push(req.params.id);
       db.prepare(`UPDATE adventurers SET ${cols.join(', ')} WHERE id = ?`).run(...(vals as Parameters<typeof db.prepare>));
     }
+    const updated = db.prepare('SELECT * FROM adventurers WHERE id = ?').get(req.params.id) as AdventurerRow;
+    res.json(rowToApi(updated));
+  });
+
+  router.patch('/:id/style', validate(UpdateStyleSchema), (req, res) => {
+    const existing = db.prepare('SELECT id FROM adventurers WHERE id = ?').get(req.params.id);
+    if (!existing) {
+      res.status(404).json({ error: 'Adventurer not found' });
+      return;
+    }
+    const body = req.body as UpdateStyle;
+    db.prepare('UPDATE adventurers SET style_json = ? WHERE id = ?').run(
+      JSON.stringify(body.style),
+      req.params.id,
+    );
     const updated = db.prepare('SELECT * FROM adventurers WHERE id = ?').get(req.params.id) as AdventurerRow;
     res.json(rowToApi(updated));
   });
