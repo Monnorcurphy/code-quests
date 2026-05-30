@@ -365,49 +365,35 @@ const DOOR_W = 64;
 const DOOR_H = 96;
 
 function drawDoor(g: Phaser.GameObjects.Graphics): void {
-  // Stone arch frame
-  g.fillStyle(0x6a6258);
-  g.fillRect(0, 4, DOOR_W, DOOR_H - 4);
-  g.fillStyle(0x4a4640);
-  for (let r = 0; r < 4; r++) {
-    g.fillRect(0, 4 + r * 24, 4, 18);
-    g.fillRect(DOOR_W - 4, 4 + r * 24, 4, 18);
-  }
-  // Arch top
-  g.fillStyle(0x6a6258);
-  g.fillCircle(DOOR_W / 2, 20, 22);
-  g.fillRect(8, 20, DOOR_W - 16, 6);
-  g.fillStyle(0x4a4640);
-  g.fillCircle(DOOR_W / 2, 20, 24);
-  g.fillStyle(0x6a6258);
-  g.fillCircle(DOOR_W / 2, 20, 22);
-  // Door planks
-  const doorTop = 22;
-  const doorH = DOOR_H - doorTop - 4;
+  // The door fills the facade's doorway opening directly — no separate
+  // stone arch frame. The facade already paints stone jambs + lintel
+  // around the opening, so the door is just planks, iron straps, and a
+  // handle ring. This avoids the "door floats below the building" look
+  // where two frames doubled up.
   g.fillStyle(0x6a3e1c);
-  g.fillRect(8, doorTop, DOOR_W - 16, doorH);
+  g.fillRect(0, 0, DOOR_W, DOOR_H);
   // Plank dividers (vertical lines)
   g.fillStyle(0x3c2210);
-  for (let x = 16; x < DOOR_W - 12; x += 12) {
-    g.fillRect(x, doorTop, 1, doorH);
+  for (let x = 8; x < DOOR_W; x += 12) {
+    g.fillRect(x, 0, 1, DOOR_H);
   }
   // Iron strap hinges
   g.fillStyle(0x2a2a2e);
-  g.fillRect(8, doorTop + 6, DOOR_W - 16, 4);
-  g.fillRect(8, doorTop + doorH - 12, DOOR_W - 16, 4);
+  g.fillRect(0, 8, DOOR_W, 4);
+  g.fillRect(0, DOOR_H - 12, DOOR_W, 4);
   // Rivets
   g.fillStyle(0x6a6a72);
-  for (let x = 12; x < DOOR_W - 10; x += 10) {
-    g.fillRect(x, doorTop + 7, 2, 2);
-    g.fillRect(x, doorTop + doorH - 11, 2, 2);
+  for (let x = 4; x < DOOR_W - 2; x += 10) {
+    g.fillRect(x, 9, 2, 2);
+    g.fillRect(x, DOOR_H - 11, 2, 2);
   }
   // Handle ring
   g.fillStyle(0x504830);
-  g.fillCircle(DOOR_W - 18, doorTop + doorH / 2, 4);
+  g.fillCircle(DOOR_W - 12, DOOR_H / 2, 4);
   g.fillStyle(0x9a8a60);
-  g.fillCircle(DOOR_W - 18, doorTop + doorH / 2, 3);
+  g.fillCircle(DOOR_W - 12, DOOR_H / 2, 3);
   g.fillStyle(0x6a3e1c);
-  g.fillCircle(DOOR_W - 18, doorTop + doorH / 2, 1);
+  g.fillCircle(DOOR_W - 12, DOOR_H / 2, 1);
 }
 
 const BOARD_W = 96;
@@ -532,10 +518,9 @@ function drawFacade(g: Phaser.GameObjects.Graphics, spec: FacadeSpec): void {
   for (let x = 8; x < FACADE_W; x += 18) {
     g.fillRect(x, 32, 1, FACADE_H - 34);
   }
-  // Foundation course (bottom band of darker stone) — drawn before doorway
-  // so the doorway cutout punches through it cleanly
-  g.fillStyle(spec.wallDark);
-  g.fillRect(0, FACADE_H - 8, FACADE_W, 8);
+  // (removed foundation band — it was creating a visible "step" between the
+  // wall and the door, making the door read as a separate structure below
+  // the building. Wall now runs continuously down to the doorway opening.)
   // Pitched roof
   g.fillStyle(spec.roof);
   g.fillTriangle(-4, 32, FACADE_W + 4, 32, FACADE_W / 2, 0);

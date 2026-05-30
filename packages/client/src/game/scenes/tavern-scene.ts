@@ -123,10 +123,11 @@ export class TavernScene extends BaseBuildingScene {
       });
     }
 
-    // Innkeep Rorek — tavernkeeper behind the bar, between the tables.
+    // Innkeep Rorek — tavernkeeper IN FRONT of the bar so the player can
+    // walk up and talk to him at floor level (not buried behind the tables).
     new GuideNpc(this, {
       x: 480,
-      y: BUILDING_DOOR_Y + 4 + BACK_Y_OFFSET,
+      y: BUILDING_DOOR_Y + 4,
       textureKey: 'character/npc-villager',
       bubbleText: 'Innkeep Rorek — Tavernkeeper',
       bubbleWidth: 200,

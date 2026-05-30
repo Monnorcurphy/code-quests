@@ -86,6 +86,11 @@ export abstract class BaseTownScene extends Phaser.Scene {
       reducedMotion,
       ...(keys ? { textureIdleKey: keys.idle, textureWalkKey: keys.walk } : {}),
     });
+    // The player should render IN FRONT of building decor (tables, anvils,
+    // bookshelves, weapon racks, etc — those sit at depths 0-5). Anything
+    // truly foreground (modals, HUD overlay) lives on the DOM layer, not
+    // Phaser, so this ceiling is safe.
+    this.player.followTarget.setDepth(8);
 
     const camera = this.cameras.main;
     camera.setBounds(0, 0, this.sceneWidth, camera.height);
