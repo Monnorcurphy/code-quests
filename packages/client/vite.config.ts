@@ -28,6 +28,7 @@ export default defineConfig({
       '/mcp-servers': 'http://localhost:4001',
       '/projects': 'http://localhost:4001',
       '/health': 'http://localhost:4001',
+      '/realtime': { target: 'ws://localhost:4001', ws: true },
       '/showcase': 'http://localhost:4001',
       '/test': 'http://localhost:4001',
     },
