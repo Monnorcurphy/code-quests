@@ -187,5 +187,30 @@ describe('models route', () => {
       const res = await request(app).delete('/models/no-such-id');
       expect(res.status).toBe(404);
     });
+
+    it('refuses with 409 when a quest still references the model', async () => {
+      const created = await request(app)
+        .post('/models')
+        .send({ name: 'In-use', provider: 'ollama', modelId: 'llama3.1' });
+      const modelId = created.body.id;
+      createdIds.push(modelId);
+
+      // Insert a quest that points to this model — adventurer FK is optional.
+      db.prepare(
+        `INSERT INTO quests
+          (id, title, description, model_id, status, acceptance_criteria_json,
+           edge_cases_json, equipment_json, current_scene)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('q-using', 't', '', modelId, 'idle', '[]', '[]', '{}', 'quest-forest');
+
+      const del = await request(app).delete(`/models/${modelId}`);
+      expect(del.status).toBe(409);
+      expect(del.body.code).toBe('MODEL_IN_USE');
+      expect(del.body.questCount).toBe(1);
+
+      // Model row should still exist.
+      const stillThere = await request(app).get(`/models/${modelId}`);
+      expect(stillThere.status).toBe(200);
+    });
   });
 });

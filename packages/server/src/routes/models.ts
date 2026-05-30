@@ -76,9 +76,31 @@ export function createModelsRouter(db: Database.Database): Router {
 
   router.delete('/:id', async (req, res) => {
     const id = req.params['id']!;
-    const removed = deleteModel(db, id);
-    if (!removed) {
-      res.status(404).json({ error: 'model not found' });
+
+    // Refuse the delete if any quest still references this model. The FK
+    // constraint would crash the server otherwise.
+    const usage = db
+      .prepare('SELECT COUNT(*) AS cnt FROM quests WHERE model_id = ?')
+      .get(id) as { cnt: number };
+    if (usage.cnt > 0) {
+      res.status(409).json({
+        error: `Cannot delete: ${usage.cnt} quest(s) still reference this model.`,
+        code: 'MODEL_IN_USE',
+        questCount: usage.cnt,
+      });
+      return;
+    }
+
+    try {
+      const removed = deleteModel(db, id);
+      if (!removed) {
+        res.status(404).json({ error: 'model not found' });
+        return;
+      }
+    } catch (err) {
+      // Defensive: any other constraint failure we didn't anticipate.
+      const msg = err instanceof Error ? err.message : String(err);
+      res.status(409).json({ error: `Cannot delete model: ${msg}`, code: 'CONSTRAINT_FAILED' });
       return;
     }
     await deleteSecret(id);
