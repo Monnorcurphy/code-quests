@@ -50,60 +50,72 @@ export class WarRoomScene extends BaseBuildingScene {
       .text(mapX, mapY - mapH / 2 + 14, 'MAP OF THE REALM', { fontSize: '12px', color: '#f0e0b0', fontStyle: 'bold' })
       .setOrigin(0.5)
       .setDepth(3);
-    // Coastline (left edge water) — curved edge using stacked offset rectangles
-    // so the water doesn't look like a hard cut against the land.
-    const coastX = mapX - mapW / 2 + 50;
-    this.add.rectangle(coastX, mapY + 30, 80, 220, 0x3a72aa, 0.7).setDepth(2);
-    // Curved coastline edge: small offset rectangles trace a soft wavy outline
-    const coastEdges: Array<[number, number, number]> = [
-      [coastX + 38, mapY - 70, 10],
-      [coastX + 42, mapY - 50, 8],
-      [coastX + 46, mapY - 30, 10],
-      [coastX + 40, mapY - 10, 12],
-      [coastX + 44, mapY + 10, 10],
-      [coastX + 48, mapY + 30, 8],
-      [coastX + 42, mapY + 50, 12],
-      [coastX + 38, mapY + 70, 10],
-      [coastX + 44, mapY + 90, 8],
-      [coastX + 40, mapY + 110, 10],
-    ];
-    for (const [ex, ey, eh] of coastEdges) {
-      this.add.rectangle(ex, ey, 6, eh, 0x3a72aa, 0.7).setDepth(2);
+    // Ocean / coast — solid body with a soft jagged eastern edge.
+    // Body is one wide rectangle so it reads as a single mass; the eastern
+    // edge is hidden behind a column of small ellipses that vary in width
+    // per row, breaking the hard rectangle line into a wavy shore.
+    const seaColor = 0x3a72aa;
+    const coastBaseX = mapX - mapW / 2 + 18;
+    const coastHeights = [60, 70, 76, 82, 86, 88, 86, 82, 78, 80, 84, 88, 90, 92, 88, 84, 80, 78, 82, 88, 94, 92, 86, 78, 70, 60];
+    // Solid sea mass — main body
+    const seaTop = mapY - 110;
+    const seaBottom = mapY + 130;
+    const seaH = seaBottom - seaTop;
+    this.add.rectangle(coastBaseX, mapY + 10, 36, seaH, seaColor, 0.85).setDepth(2);
+    // Soft shore edge — wide ellipses at each Y row blend the eastern outline
+    for (let i = 0; i < coastHeights.length; i++) {
+      const sy = seaTop + i * (seaH / coastHeights.length);
+      const sw = coastHeights[i] ?? 80;
+      this.add.ellipse(coastBaseX + sw / 2 - 4, sy, sw, 12, seaColor, 0.85).setDepth(2);
     }
-    // Forests — tree icons (dark green triangle canopy + brown trunk),
-    // scattered in small clusters rather than a polka-dot grid.
-    const treeClusters: Array<[number, number]> = [
-      [mapX - 110, mapY - 50], [mapX - 100, mapY - 38], [mapX - 118, mapY - 32],
-      [mapX - 60, mapY + 50], [mapX - 50, mapY + 60], [mapX - 70, mapY + 62],
-      [mapX - 20, mapY - 80], [mapX - 8, mapY - 72],
-      [mapX + 50, mapY + 60], [mapX + 62, mapY + 70], [mapX + 56, mapY + 82],
-      [mapX - 130, mapY + 80], [mapX - 118, mapY + 92],
+    // Bay nub where the river meets the sea (so the river visibly drains in)
+    const riverMouthY = mapY + 50;
+    this.add.ellipse(coastBaseX + 92, riverMouthY, 24, 18, seaColor, 0.85).setDepth(2);
+
+    // Forests — proper clusters of trees, not 3-4 scattered points
+    const forestRegions: Array<{ cx: number; cy: number; count: number }> = [
+      { cx: mapX - 90, cy: mapY - 40, count: 9 },
+      { cx: mapX - 30, cy: mapY - 70, count: 6 },
+      { cx: mapX - 60, cy: mapY + 60, count: 10 },
+      { cx: mapX + 50, cy: mapY + 50, count: 8 },
+      { cx: mapX - 110, cy: mapY + 90, count: 7 },
     ];
-    for (const [fx, fy] of treeClusters) {
-      // trunk
-      this.add.rectangle(fx, fy + 4, 2, 4, 0x4a2a0c).setDepth(2);
-      // canopy
-      this.add.triangle(fx, fy - 2, -5, 6, 5, 6, 0, -7, 0x2c4a18).setDepth(3);
-      this.add.triangle(fx, fy - 5, -3, 4, 3, 4, 0, -5, 0x1c3a0c).setDepth(4);
+    let treeSeed = 1;
+    const pseudo = () => {
+      treeSeed = (treeSeed * 9301 + 49297) % 233280;
+      return treeSeed / 233280;
+    };
+    for (const region of forestRegions) {
+      for (let i = 0; i < region.count; i++) {
+        const r = 18 * Math.sqrt(pseudo());
+        const theta = pseudo() * Math.PI * 2;
+        const fx = Math.round(region.cx + Math.cos(theta) * r);
+        const fy = Math.round(region.cy + Math.sin(theta) * r * 0.6);
+        // Don't draw trees over the water
+        if (fx < coastBaseX + 50) continue;
+        // trunk
+        this.add.rectangle(fx, fy + 4, 2, 4, 0x4a2a0c).setDepth(2);
+        // layered canopy
+        this.add.triangle(fx, fy - 2, -5, 6, 5, 6, 0, -7, 0x2c4a18).setDepth(3);
+        this.add.triangle(fx, fy - 5, -3, 4, 3, 4, 0, -5, 0x1c3a0c).setDepth(4);
+      }
     }
-    // Mountains — clusters of 2-3 with overlapping bases, scattered properly.
+    // Mountains — clusters of 2-3 with overlapping bases
     const mountainClusters: Array<{ cx: number; cy: number }> = [
       { cx: mapX + 60, cy: mapY - 50 },
       { cx: mapX + 130, cy: mapY - 30 },
       { cx: mapX + 200, cy: mapY + 10 },
     ];
     for (const { cx, cy } of mountainClusters) {
-      // back-left peak (smaller, lower)
       this.add.triangle(cx - 10, cy + 2, -10, 12, 10, 12, 0, -10, 0x6a5a4a).setDepth(2);
-      // center peak (larger)
       this.add.triangle(cx, cy, -14, 16, 14, 16, 0, -16, 0x807060).setDepth(2);
       this.add.triangle(cx, cy, -6, 6, 6, 6, 0, -14, 0xffffff).setDepth(3);
-      // back-right peak (smaller)
       this.add.triangle(cx + 12, cy + 4, -9, 10, 9, 10, 0, -10, 0x6a5a4a).setDepth(2);
     }
-    // River
-    this.add.line(0, 0, mapX - 100, mapY + 90, mapX + 100, mapY + 70, 0x3a72aa).setLineWidth(3).setDepth(2);
-    this.add.line(0, 0, mapX + 100, mapY + 70, mapX + 200, mapY + 100, 0x3a72aa).setLineWidth(3).setDepth(2);
+    // River — connects from the mountains (right) all the way to the sea (left)
+    this.add.line(0, 0, mapX + 200, mapY - 10, mapX + 100, mapY + 30, seaColor).setLineWidth(3).setDepth(2);
+    this.add.line(0, 0, mapX + 100, mapY + 30, mapX + 10, mapY + 50, seaColor).setLineWidth(3).setDepth(2);
+    this.add.line(0, 0, mapX + 10, mapY + 50, coastBaseX + 90, riverMouthY, seaColor).setLineWidth(3).setDepth(2);
     // City markers (red pins)
     const cities = [
       { x: mapX - 40, y: mapY + 30, name: 'Aldenhold' },
@@ -117,44 +129,50 @@ export class WarRoomScene extends BaseBuildingScene {
         .text(c.x + 8, c.y - 4, c.name, { fontSize: '9px', color: '#3a1a08', fontStyle: 'bold' })
         .setDepth(4);
     }
-    // Compass rose — small circle in center with N/S/E/W at matching size & weight.
+    // Compass rose — needle-style, not a clock face. A red north arrow + a
+    // white south arrow forming a vertical dart, with cardinal letters.
     const compassX = mapX + mapW / 2 - 32;
     const compassY = mapY - mapH / 2 + 40;
     this.add.circle(compassX, compassY, 18, 0xe8d9a6).setStrokeStyle(2, 0x5a3a14).setDepth(2);
-    // Inner cross marks
-    this.add.line(0, 0, compassX - 6, compassY, compassX + 6, compassY, 0x5a3a14).setLineWidth(1).setDepth(3);
-    this.add.line(0, 0, compassX, compassY - 6, compassX, compassY + 6, 0x5a3a14).setLineWidth(1).setDepth(3);
-    // Small center dot
-    this.add.circle(compassX, compassY, 2, 0x5a3a14).setDepth(3);
-    const compassFont = { fontSize: '11px', color: '#5a3a14', fontStyle: 'bold' } as const;
-    this.add.text(compassX, compassY - 22, 'N', compassFont).setOrigin(0.5).setDepth(3);
-    this.add.text(compassX, compassY + 22, 'S', compassFont).setOrigin(0.5).setDepth(3);
-    this.add.text(compassX + 22, compassY, 'E', compassFont).setOrigin(0.5).setDepth(3);
-    this.add.text(compassX - 22, compassY, 'W', compassFont).setOrigin(0.5).setDepth(3);
+    // North half of needle — red triangle pointing up
+    this.add
+      .triangle(compassX, compassY - 5, 0, -12, -4, 4, 4, 4, 0xa01818)
+      .setDepth(3);
+    // South half — white triangle pointing down
+    this.add
+      .triangle(compassX, compassY + 5, 0, 12, -4, -4, 4, -4, 0xfaf5e0)
+      .setStrokeStyle(1, 0x5a3a14)
+      .setDepth(3);
+    // Center pin
+    this.add.circle(compassX, compassY, 1.5, 0x5a3a14).setDepth(4);
+    const compassFont = { fontSize: '10px', color: '#5a3a14', fontStyle: 'bold' } as const;
+    this.add.text(compassX, compassY - 24, 'N', compassFont).setOrigin(0.5).setDepth(4);
+    this.add.text(compassX, compassY + 24, 'S', compassFont).setOrigin(0.5).setDepth(4);
+    this.add.text(compassX + 24, compassY, 'E', compassFont).setOrigin(0.5).setDepth(4);
+    this.add.text(compassX - 24, compassY, 'W', compassFont).setOrigin(0.5).setDepth(4);
 
     // Hanging banners on the wall — two on each side at slightly different
     // heights, with a thicker pole at the top, gold-trim left/right edges,
     // and a "wave" effect from two adjacent offset panels.
     const bannerSpots: Array<{ x: number; y: number }> = [
-      { x: 170, y: 195 }, { x: 1110, y: 195 },
+      { x: 170, y: 200 }, { x: 1110, y: 200 },
     ];
     for (const { x: bx, y: by } of bannerSpots) {
-      // Wooden pole at top with end caps
-      this.add.rectangle(bx, by - 60, 60, 6, 0x4a3018).setDepth(0);
-      this.add.rectangle(bx, by - 60, 60, 2, 0x6a4a28).setDepth(1);
-      this.add.circle(bx - 30, by - 60, 4, 0x6a4a28).setDepth(1);
-      this.add.circle(bx + 30, by - 60, 4, 0x6a4a28).setDepth(1);
-      // Banner body — single panel, centered under the pole
-      const BW = 44;
+      const BW = 50;
       const BH = 110;
+      // Wooden pole at top — matched to banner width so it doesn't look
+      // like a clothesline. Slight extension on each side for caps.
+      this.add.rectangle(bx, by - BH / 2 - 4, BW + 8, 5, 0x4a3018).setDepth(0);
+      this.add.rectangle(bx, by - BH / 2 - 4, BW + 8, 2, 0x6a4a28).setDepth(1);
+      this.add.circle(bx - BW / 2 - 4, by - BH / 2 - 4, 3, 0x6a4a28).setDepth(1);
+      this.add.circle(bx + BW / 2 + 4, by - BH / 2 - 4, 3, 0x6a4a28).setDepth(1);
+      // Banner cloth — flat rectangle (no off-axis triangle hem)
       this.add.rectangle(bx, by, BW, BH, 0x8a1818).setDepth(0);
-      // Gold trim on left + right edges, aligned with the banner body
+      // Gold trim along left + right edges
       this.add.rectangle(bx - BW / 2 + 1, by, 2, BH, 0xc4a050).setDepth(1);
       this.add.rectangle(bx + BW / 2 - 1, by, 2, BH, 0xc4a050).setDepth(1);
-      // Triangular hem CENTERED below the banner body (was off-axis before)
-      this.add
-        .triangle(bx, by + BH / 2 + 6, -BW / 2, -6, BW / 2, -6, 0, 12, 0x8a1818)
-        .setDepth(0);
+      // Bottom hem as a clean dark band, no triangle
+      this.add.rectangle(bx, by + BH / 2 - 3, BW, 4, 0x5a0e0e).setDepth(1);
       // Crossed-axes crest centered
       this.add.text(bx, by, '⚔', { fontSize: '22px', color: '#e4c060' }).setOrigin(0.5).setDepth(2);
     }

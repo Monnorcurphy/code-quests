@@ -78,36 +78,57 @@ export class HallOfReturnsScene extends BaseBuildingScene {
       sconceXs.push((a.x + b.x) / 2);
     }
     for (const sx of sconceXs) {
-      const sconceY = 200;
-      // Sconce bracket
-      this.add.rectangle(sx, sconceY + 8, 10, 14, 0x1a1a20).setDepth(2);
-      this.add.rectangle(sx, sconceY, 14, 4, 0x1a1a20).setDepth(2);
-      // Candle
-      this.add.rectangle(sx, sconceY - 6, 4, 10, 0xd0c098).setDepth(3);
-      // Flame halo + flame
-      this.add.circle(sx, sconceY - 14, 6, 0xffa030, 0.35).setDepth(3);
-      this.add.circle(sx, sconceY - 14, 3, 0xffe070, 0.9).setDepth(4);
+      const wallY = 250; // wall mount point — sconce hangs from here
+      // Wrought-iron wall plate
+      this.add.rectangle(sx, wallY - 30, 14, 10, 0x2a2a30).setDepth(2);
+      // Vertical arm coming OUT of the plate (the bracket the user said
+      // was missing — sconces previously floated with no holder)
+      this.add.rectangle(sx, wallY - 14, 4, 22, 0x2a2a30).setDepth(2);
+      // Cup / brazier that holds the flame
+      this.add.rectangle(sx, wallY, 16, 6, 0x3a3038).setDepth(2);
+      this.add.rectangle(sx, wallY - 3, 14, 2, 0x52525e).setDepth(3);
+      // Flame above the cup
+      this.add.circle(sx, wallY - 10, 7, 0xffa030, 0.35).setDepth(3);
+      this.add.circle(sx, wallY - 10, 4, 0xffe070, 0.9).setDepth(4);
+      this.add.circle(sx, wallY - 12, 2, 0xfffacd, 0.95).setDepth(5);
     }
 
-    // Returned Scrolls — redrawn as a stone pedestal with a scroll on top.
-    // The whole thing remains interactive via the modal that the scene opens
-    // automatically; the React layer owns the click handling.
+    // Returned Scrolls — stone pedestal with a scroll on top, CLICKABLE
+    // to open the Hall of Returns modal. Previously the scene auto-opened
+    // the modal on entry; now you click here to open it.
     const pedestalX = 700;
     const pedestalY = BUILDING_DOOR_Y + 10;
-    // Pedestal base (wider)
-    this.add.rectangle(pedestalX, pedestalY + 26, 90, 12, 0x2a2a34).setDepth(1);
-    // Pedestal column
-    this.add.rectangle(pedestalX, pedestalY, 60, 60, 0x3a3a44).setStrokeStyle(2, 0x4a4a54).setDepth(1);
-    // Pedestal top
-    this.add.rectangle(pedestalX, pedestalY - 30, 78, 8, 0x4a4a54).setDepth(2);
+    // Pedestal base (wider) — this is the click target
+    const pedestalBase = this.add
+      .rectangle(pedestalX, pedestalY, 60, 110, 0x3a3a44)
+      .setDepth(1)
+      .setInteractive({ useHandCursor: true });
+    pedestalBase.on('pointerdown', () =>
+      useTownStore.getState().setActiveModal('hall-of-returns'),
+    );
+    this.add.rectangle(pedestalX, pedestalY + 50, 80, 12, 0x2a2a34).setDepth(1);
+    this.add.rectangle(pedestalX, pedestalY - 50, 78, 8, 0x4a4a54).setDepth(2);
     // Scroll on top — body + tied ends
-    this.add.rectangle(pedestalX, pedestalY - 40, 50, 14, 0xd8c890).setStrokeStyle(1, 0x6a5a30).setDepth(3);
-    this.add.circle(pedestalX - 25, pedestalY - 40, 7, 0xa89870).setDepth(3);
-    this.add.circle(pedestalX + 25, pedestalY - 40, 7, 0xa89870).setDepth(3);
+    const scroll = this.add
+      .rectangle(pedestalX, pedestalY - 60, 50, 14, 0xd8c890)
+      .setStrokeStyle(1, 0x6a5a30)
+      .setDepth(3)
+      .setInteractive({ useHandCursor: true });
+    scroll.on('pointerdown', () =>
+      useTownStore.getState().setActiveModal('hall-of-returns'),
+    );
+    this.add.circle(pedestalX - 25, pedestalY - 60, 7, 0xa89870).setDepth(3);
+    this.add.circle(pedestalX + 25, pedestalY - 60, 7, 0xa89870).setDepth(3);
     // Ribbon
-    this.add.rectangle(pedestalX, pedestalY - 40, 4, 18, 0x8a3030).setDepth(4);
+    this.add.rectangle(pedestalX, pedestalY - 60, 4, 18, 0x8a3030).setDepth(4);
     this.add
-      .text(pedestalX, pedestalY - 70, 'Returned\nScrolls', { fontSize: '11px', color: '#9090b8', align: 'center' })
+      .text(pedestalX, pedestalY - 88, 'Returned Scrolls', {
+        fontSize: '12px',
+        color: '#fef9e7',
+        fontStyle: 'bold',
+        backgroundColor: '#1a0e08',
+        padding: { x: 6, y: 2 },
+      })
       .setOrigin(0.5)
       .setDepth(4);
 
@@ -123,6 +144,11 @@ export class HallOfReturnsScene extends BaseBuildingScene {
 
     sceneRouter.setInteractives([
       {
+        id: 'returned-scrolls',
+        label: 'Returned Scrolls',
+        onActivate: () => useTownStore.getState().setActiveModal('hall-of-returns'),
+      },
+      {
         id: 'keeper-vorn',
         label: 'Keeper Vorn (Undertaker)',
         onActivate: () => useTownStore.getState().openNpcHint('keeper-vorn'),
@@ -130,7 +156,8 @@ export class HallOfReturnsScene extends BaseBuildingScene {
       this.returnDoorInteractive,
     ]);
 
-    useTownStore.getState().setActiveModal('hall-of-returns');
+    // No auto-open modal — the user walks in, looks around, then clicks the
+    // Returned Scrolls (or talks to Keeper Vorn) when ready.
 
     this.events.once('shutdown', () => {
       useTownStore.getState().setActiveModal(null);

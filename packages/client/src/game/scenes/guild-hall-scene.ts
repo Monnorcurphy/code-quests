@@ -98,11 +98,22 @@ export class GuildHallScene extends BaseBuildingScene {
 
     // Back wall — dark stone
     this.add.rectangle(700, 240, 1280, 360, 0x1c1408).setDepth(-2);
-    // Wall sconces with glow
-    for (const sx of [180, 420, 980, 1220]) {
-      this.add.rectangle(sx, 200, 6, 28, 0x2a1a0a).setDepth(-1);
-      this.add.circle(sx, 188, 6, 0xffa030, 0.4).setDepth(-1);
-      this.add.circle(sx, 188, 3, 0xffe070, 0.9).setDepth(-1);
+    // Wall sconces — wrought-iron bracket coming out of the wall with a
+    // candle in a cup at the end and a flame above. Properly attached
+    // (no more floating glow orbs).
+    for (const sx of [340, 1060]) {
+      const sconceY = 250;
+      // Wall mount plate
+      this.add.rectangle(sx, sconceY - 28, 12, 8, 0x252028).setDepth(-1);
+      // Vertical bracket from plate down to cup
+      this.add.rectangle(sx, sconceY - 10, 3, 24, 0x252028).setDepth(-1);
+      // Cup / brazier
+      this.add.rectangle(sx, sconceY + 2, 14, 5, 0x383038).setDepth(-1);
+      this.add.rectangle(sx, sconceY - 1, 12, 2, 0x52525e).setDepth(-1);
+      // Flame
+      this.add.circle(sx, sconceY - 8, 7, 0xffa030, 0.35).setDepth(0);
+      this.add.circle(sx, sconceY - 9, 4, 0xffe070, 0.9).setDepth(0);
+      this.add.circle(sx, sconceY - 11, 2, 0xfffacd, 0.95).setDepth(0);
     }
 
     // Five framed guild portraits on the back wall
@@ -129,23 +140,22 @@ export class GuildHallScene extends BaseBuildingScene {
     this.add.rectangle(760, 540, 700, 22, 0x3a2008, 0.8).setDepth(0);
     this.add.rectangle(760, 552, 700, 8, 0x2a1808).setDepth(0);
 
-    // Two hanging guild banners ON the back wall — pole, body, hem,
-    // crest. Triangle hem CENTERED below the banner body (was off-axis).
+    // Two hanging guild banners — flat-rectangle hem (no off-axis triangle).
     for (const bx of [180, 1220]) {
       const by = 180;
-      // Pole
-      this.add.rectangle(bx, by - 70, 56, 5, 0x4a3018).setDepth(-1);
-      this.add.circle(bx - 28, by - 70, 4, 0x6a4a28).setDepth(-1);
-      this.add.circle(bx + 28, by - 70, 4, 0x6a4a28).setDepth(-1);
+      const BW = 44;
+      const BH = 130;
+      // Pole matched to banner width
+      this.add.rectangle(bx, by - BH / 2 - 4, BW + 8, 5, 0x4a3018).setDepth(-1);
+      this.add.circle(bx - BW / 2 - 4, by - BH / 2 - 4, 3, 0x6a4a28).setDepth(-1);
+      this.add.circle(bx + BW / 2 + 4, by - BH / 2 - 4, 3, 0x6a4a28).setDepth(-1);
       // Banner body
-      this.add.rectangle(bx, by, 40, 130, 0x800000, 0.9).setDepth(-1);
+      this.add.rectangle(bx, by, BW, BH, 0x800000, 0.9).setDepth(-1);
       // Gold trim left + right
-      this.add.rectangle(bx - 19, by, 2, 130, 0xc4a050, 0.7).setDepth(-1);
-      this.add.rectangle(bx + 19, by, 2, 130, 0xc4a050, 0.7).setDepth(-1);
-      // Triangular hem CENTERED below the banner
-      this.add
-        .triangle(bx, by + 71, -20, -6, 20, -6, 0, 12, 0x800000, 0.9)
-        .setDepth(-1);
+      this.add.rectangle(bx - BW / 2 + 1, by, 2, BH, 0xc4a050, 0.7).setDepth(-1);
+      this.add.rectangle(bx + BW / 2 - 1, by, 2, BH, 0xc4a050, 0.7).setDepth(-1);
+      // Bottom hem band
+      this.add.rectangle(bx, by + BH / 2 - 3, BW, 4, 0x500000, 0.9).setDepth(-1);
       // Crest centered
       this.add
         .text(bx, by, '⚔', { fontSize: '20px', color: '#d4a030' })

@@ -87,39 +87,38 @@ export class ArmoryScene extends BaseBuildingScene {
     const quiverX = 880;
     this.add.rectangle(quiverX, 290, 32, 60, 0x4a2814).setDepth(1);
     this.add.rectangle(quiverX, 262, 36, 6, 0x3a1f08).setDepth(2);
-    // Three arrows poking up out of the quiver — shaft, fletching, head
+    // Three arrows poking up out of the quiver — shaft, small fletching, head
     for (let i = 0; i < 3; i++) {
       const ax = quiverX - 10 + i * 10;
       // Shaft
       this.add.rectangle(ax, 240, 2, 60, 0x6a3a14).setDepth(2);
-      // Fletching — two angled feathers at the back (bottom)
-      this.add.triangle(ax - 2, 260, 0, -6, -4, 4, 4, 4, 0xd8d8d8).setDepth(3);
-      this.add.triangle(ax + 2, 260, 0, -6, -4, 4, 4, 4, 0xa0a0a0).setDepth(3);
+      // Fletching — small angled feathers (was previously huge triangles)
+      this.add.rectangle(ax - 1, 258, 1, 6, 0xd8d8d8).setDepth(3);
+      this.add.rectangle(ax + 1, 258, 1, 6, 0x808088).setDepth(3);
       // Arrowhead at the top — a clean spearhead
-      this.add.triangle(ax, 208, 0, -6, -3, 4, 3, 4, 0xc0c8d0).setDepth(3);
+      this.add.triangle(ax, 208, 0, -5, -3, 3, 3, 3, 0xc0c8d0).setDepth(3);
     }
 
-    // Axe — clear "double-bit" silhouette: wooden haft + crescent blade on
-    // each side, with a pommel cap so it reads as a weapon
+    // Axe — simple silhouette: vertical haft + a single crescent blade on
+    // each side as a flat triangle. No paper-folded look.
     const axeX = 960;
     const axeY = 250;
-    // Haft (wooden handle)
-    this.add.rectangle(axeX, axeY, 6, 96, 0x4a2814).setDepth(1);
-    this.add.rectangle(axeX - 1, axeY, 2, 96, 0x6a3a18).setDepth(2);
-    // Top + bottom haft caps
-    this.add.rectangle(axeX, axeY - 50, 10, 5, 0x2a1810).setDepth(2);
-    this.add.rectangle(axeX, axeY + 50, 10, 5, 0x2a1810).setDepth(2);
-    // Right-side crescent blade
-    this.add.triangle(axeX + 4, axeY - 14, 0, 0, 18, 4, 4, 18, 0xb0b8c8).setDepth(2);
-    this.add.triangle(axeX + 4, axeY - 14, 4, 18, 18, 4, 18, 22, 0xb0b8c8).setDepth(2);
-    this.add.triangle(axeX + 4, axeY - 14, 4, 18, 18, 22, 0, 26, 0xb0b8c8).setDepth(2);
-    // Left-side crescent blade (mirror)
-    this.add.triangle(axeX - 4, axeY - 14, 0, 0, -18, 4, -4, 18, 0xb0b8c8).setDepth(2);
-    this.add.triangle(axeX - 4, axeY - 14, -4, 18, -18, 4, -18, 22, 0xb0b8c8).setDepth(2);
-    this.add.triangle(axeX - 4, axeY - 14, -4, 18, -18, 22, 0, 26, 0xb0b8c8).setDepth(2);
-    // Blade highlights
-    this.add.rectangle(axeX + 12, axeY - 4, 2, 14, 0xe0e8f0).setDepth(3);
-    this.add.rectangle(axeX - 12, axeY - 4, 2, 14, 0xe0e8f0).setDepth(3);
+    // Wooden haft
+    this.add.rectangle(axeX, axeY, 5, 90, 0x4a2814).setDepth(1);
+    this.add.rectangle(axeX - 1, axeY, 1, 90, 0x6a3a18).setDepth(2);
+    // Haft pommel + cap
+    this.add.rectangle(axeX, axeY + 47, 9, 5, 0x2a1810).setDepth(2);
+    this.add.rectangle(axeX, axeY - 47, 9, 5, 0x2a1810).setDepth(2);
+    // Single triangular blade on each side of the head
+    this.add
+      .triangle(axeX + 12, axeY - 10, -8, -8, 8, 0, -8, 12, 0xb0b8c8)
+      .setDepth(2);
+    this.add
+      .triangle(axeX - 12, axeY - 10, 8, -8, -8, 0, 8, 12, 0xb0b8c8)
+      .setDepth(2);
+    // Polished edge highlights on the blades
+    this.add.rectangle(axeX + 16, axeY - 10, 2, 14, 0xe0e8f0).setDepth(3);
+    this.add.rectangle(axeX - 16, axeY - 10, 2, 14, 0xe0e8f0).setDepth(3);
 
     // Anvil on the floor by the workbench
     this.add.rectangle(620, BUILDING_DOOR_Y + 24, 80, 18, 0x303040).setDepth(1);

@@ -100,7 +100,7 @@ export class LibraryScene extends BaseBuildingScene {
       this.returnDoorInteractive,
     ]);
 
-    useTownStore.getState().setActiveModal('library');
+    // No auto-open — user clicks the Ancient Tome (or Sage Mireldine) when ready.
 
     this.events.once('shutdown', () => {
       useTownStore.getState().setActiveModal(null);

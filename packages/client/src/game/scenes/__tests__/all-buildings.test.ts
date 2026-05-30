@@ -367,8 +367,12 @@ for (const { name, key, module: modulePath, modal } of PHASE3_BUILDING_SCENES) {
       );
     });
 
-    it(`sets activeModal to "${modal}" on create`, () => {
-      expect(mockStore.setActiveModal).toHaveBeenCalledWith(modal);
+    it(`does NOT auto-open the "${modal}" modal on create`, () => {
+      // Building scenes USED to auto-open their modal on entry, which made it
+      // impossible to look around the room before being thrown into a dialog.
+      // Now the user clicks the interactive (Ancient Tome, Crystal Ball, etc.)
+      // to open it. This test guards the regression.
+      expect(mockStore.setActiveModal).not.toHaveBeenCalledWith(modal);
     });
 
     it('shutdown clears activeModal', () => {
@@ -425,8 +429,9 @@ for (const { name, key, module: modulePath } of PLACEHOLDER_SCENES) {
       );
     });
 
-    it('sets activeModal to "hall-of-returns" on create', () => {
-      expect(mockStore.setActiveModal).toHaveBeenCalledWith('hall-of-returns');
+    it('does NOT auto-open the "hall-of-returns" modal on create', () => {
+      // Used to auto-open; now requires explicit click on the Returned Scrolls.
+      expect(mockStore.setActiveModal).not.toHaveBeenCalledWith('hall-of-returns');
     });
 
     it('shutdown clears activeModal', () => {

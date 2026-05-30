@@ -26,25 +26,8 @@ export class OracleScene extends BaseBuildingScene {
       const size = (i % 3) + 1;
       this.add.circle(sx, sy, size, 0xeae0ff, 0.7).setDepth(0);
     }
-    // Constellation lines — constrained to the wall region (x: 100-1200,
-    // y: 80-380) so they don't extend into the top-left corner outside the
-    // intended drawing area.
-    const CONSTELLATION_MIN_X = 100;
-    const CONSTELLATION_MAX_X = 1200;
-    const CONSTELLATION_MIN_Y = 80;
-    const CONSTELLATION_MAX_Y = 380;
-    const inBounds = (x: number, y: number): boolean =>
-      x >= CONSTELLATION_MIN_X && x <= CONSTELLATION_MAX_X &&
-      y >= CONSTELLATION_MIN_Y && y <= CONSTELLATION_MAX_Y;
-    const constellationSegments: Array<[number, number, number, number]> = [
-      [200, 120, 280, 90],
-      [280, 90, 360, 160],
-      [900, 100, 1000, 180],
-    ];
-    for (const [x1, y1, x2, y2] of constellationSegments) {
-      if (!inBounds(x1, y1) || !inBounds(x2, y2)) continue;
-      this.add.line(0, 0, x1, y1, x2, y2, 0x9080ff, 0.5).setDepth(0);
-    }
+    // (Constellation lines removed — they read as random purple noise
+    // rather than a starfield. The star sprinkle above is enough.)
 
     this.add
       .text(760, 80, 'The Oracle', { fontSize: '28px', color: '#c090ff', fontStyle: 'bold' })
@@ -98,7 +81,7 @@ export class OracleScene extends BaseBuildingScene {
       this.returnDoorInteractive,
     ]);
 
-    useTownStore.getState().setActiveModal('oracle');
+    // No auto-open — user clicks the Crystal Ball (or Seer Caelis) when ready.
 
     this.events.once('shutdown', () => {
       useTownStore.getState().setActiveModal(null);

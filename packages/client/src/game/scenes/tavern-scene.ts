@@ -148,7 +148,7 @@ export class TavernScene extends BaseBuildingScene {
       this.returnDoorInteractive,
     ]);
 
-    useTownStore.getState().setActiveModal('tavern');
+    // No auto-open — user clicks the Ale Barrel (or Innkeep Rorek) when ready.
 
     this.events.once('shutdown', () => {
       useTownStore.getState().setActiveModal(null);
