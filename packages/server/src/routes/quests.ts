@@ -138,8 +138,13 @@ export function createQuestsRouter(
   const router = Router();
 
   router.get('/active', (_req, res) => {
+    // "Active" in the product sense = any in-progress state the Party Map needs to surface.
+    // The founding doc (§Party Map) says the peek lists every adventurer who is currently on
+    // a quest, regardless of whether the agent is mid-step (active), awaiting the user
+    // (paused_input), or blocked by the user (user_blocked). Filtering on `status = 'active'`
+    // hides paused/blocked quests and breaks parallel-quest navigation.
     const questRows = db.prepare(
-      "SELECT q.*, a.id AS a_id, a.adventurer_id AS a_adv_id, a.started_at AS a_started_at, a.ended_at AS a_ended_at, a.pid AS a_pid, a.exit_code AS a_exit_code FROM quests q LEFT JOIN agents a ON a.quest_id = q.id AND a.ended_at IS NULL WHERE q.status = 'active' ORDER BY q.created_at",
+      "SELECT q.*, a.id AS a_id, a.adventurer_id AS a_adv_id, a.started_at AS a_started_at, a.ended_at AS a_ended_at, a.pid AS a_pid, a.exit_code AS a_exit_code FROM quests q LEFT JOIN agents a ON a.quest_id = q.id AND a.ended_at IS NULL WHERE q.status IN ('active', 'paused_input', 'user_blocked') ORDER BY q.created_at",
     ).all() as (QuestRow & {
       a_id: string | null;
       a_adv_id: string | null;

@@ -262,6 +262,30 @@ describe('GET /quests/active', () => {
     expect(res.body).toHaveLength(1);
     expect(res.body[0].id).toBe('q-active');
   });
+
+  it('includes paused_input and user_blocked quests so the Party Map can surface them', async () => {
+    // Active list is what the Party Map peek consumes — it must show every in-progress quest,
+    // not just the strict 'active' status. Paused/blocked are still "in motion" from the user's
+    // perspective; hiding them breaks parallel-quest navigation.
+    db.prepare(
+      `INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json, status, adventurer_id, equipment_json, ac_locked_at)
+       VALUES (?, ?, ?, ?, ?, 'paused_input', 'adv-1', ?, datetime('now'))`,
+    ).run('q-paused', GOOD_QUEST_PROPS.title, GOOD_QUEST_PROPS.description,
+      GOOD_QUEST_PROPS.acceptance_criteria_json, GOOD_QUEST_PROPS.edge_cases_json,
+      JSON.stringify({ skillIds: [], toolIds: [], mcpServerIds: [] }));
+    db.prepare(
+      `INSERT INTO quests (id, title, description, acceptance_criteria_json, edge_cases_json, status, adventurer_id, equipment_json, ac_locked_at)
+       VALUES (?, ?, ?, ?, ?, 'user_blocked', 'adv-1', ?, datetime('now'))`,
+    ).run('q-blocked', GOOD_QUEST_PROPS.title, GOOD_QUEST_PROPS.description,
+      GOOD_QUEST_PROPS.acceptance_criteria_json, GOOD_QUEST_PROPS.edge_cases_json,
+      JSON.stringify({ skillIds: [], toolIds: [], mcpServerIds: [] }));
+    insertActiveQuest(db, 'q-running', 'adv-1');
+
+    const res = await request(app).get('/quests/active');
+    expect(res.status).toBe(200);
+    const ids = (res.body as Array<{ id: string }>).map((q) => q.id).sort();
+    expect(ids).toEqual(['q-blocked', 'q-paused', 'q-running']);
+  });
 });
 
 describe('POST /quests/:id/dispatch — guard re-dispatch', () => {
