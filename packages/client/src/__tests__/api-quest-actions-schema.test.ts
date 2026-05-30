@@ -18,6 +18,7 @@ const repostServerResponse = {
   id: 'new-quest-id',
   epicId: null,
     projectId: null,
+    modelId: null,
   title: 'Slay the Dragon (revised)',
   description: 'Original description',
   acceptanceCriteria: ['AC 1'],

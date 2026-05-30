@@ -98,6 +98,7 @@ beforeEach(() => {
     context: '',
     epicId: null,
     projectId: null,
+    modelId: null,
     adventurerId: null,
     agentId: null,
     equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },

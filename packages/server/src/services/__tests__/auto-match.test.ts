@@ -33,6 +33,7 @@ function makeQuest(overrides: Partial<Quest> = {}): Quest {
     id: 'q-1',
     epicId: null,
     projectId: null,
+    modelId: null,
     title: 'Test Quest',
     description: overrides.description ?? 'A simple quest',
     acceptanceCriteria: overrides.acceptanceCriteria ?? [],

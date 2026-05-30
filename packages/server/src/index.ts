@@ -10,6 +10,7 @@ import { createSkillsRouter } from './routes/skills';
 import { createToolsRouter } from './routes/tools';
 import { createMCPServersRouter } from './routes/mcp-servers';
 import { createProjectsRouter } from './routes/projects';
+import { createModelsRouter } from './routes/models';
 import { createTestEmitRouter } from './routes/test-emit';
 import { createMonstersRouter } from './routes/monsters';
 import { createHallOfReturnsRouter } from './routes/hall-of-returns';
@@ -31,6 +32,7 @@ export function createApp(db: Database.Database) {
   app.use('/tools', createToolsRouter(db));
   app.use('/mcp-servers', createMCPServersRouter(db));
   app.use('/projects', createProjectsRouter(db));
+  app.use('/models', createModelsRouter(db));
   app.use('/', createMonstersRouter(db));
   app.use('/showcase', createShowcaseRouter(db));
   if (process.env.NODE_ENV === 'test') {

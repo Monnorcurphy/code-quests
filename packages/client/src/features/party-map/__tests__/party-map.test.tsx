@@ -41,6 +41,7 @@ function makeQuest(overrides: Partial<Quest> = {}): Quest {
     id: 'q-1',
     epicId: null,
     projectId: null,
+    modelId: null,
     title: 'Slay the Shadow',
     description: '',
     acceptanceCriteria: [],

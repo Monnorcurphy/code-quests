@@ -28,6 +28,7 @@ function makeQuest(overrides: Partial<Quest> = {}): Quest {
     id: 'q-tavern',
     epicId: null,
     projectId: null,
+    modelId: null,
     title: 'Test Quest',
     description: 'A test quest description',
     acceptanceCriteria: ['AC one'],

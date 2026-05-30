@@ -68,6 +68,7 @@ function loadMonsters(db: Database.Database): Monster[] {
     name: '',
     scope: 'project' as const,
     projectId: null,
+    modelId: null,
     firstSeenAt: '',
     lastSeenAt: '',
     encounters: 0,

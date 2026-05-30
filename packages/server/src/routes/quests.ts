@@ -40,6 +40,7 @@ const CreateQuestSchema = z.object({
   title: z.string().min(1),
   epicId: z.string().min(1).nullable().default(null),
   projectId: z.string().min(1).nullable().default(null),
+  modelId: z.string().min(1).nullable().default(null),
   description: z.string().default(''),
   acceptanceCriteria: QuestAcListSchema.default([]),
   edgeCases: QuestAcListSchema.default([]),
@@ -60,6 +61,7 @@ type QuestRow = {
   id: string;
   epic_id: string | null;
   project_id: string | null;
+  model_id: string | null;
   title: string;
   description: string;
   acceptance_criteria_json: string;
@@ -84,6 +86,7 @@ function rowToApi(row: QuestRow) {
     id: row.id,
     epicId: row.epic_id,
     projectId: row.project_id,
+    modelId: row.model_id,
     title: row.title,
     description: row.description,
     acceptanceCriteria: JSON.parse(row.acceptance_criteria_json) as string[],
@@ -106,7 +109,7 @@ function rowToApi(row: QuestRow) {
 
 function assertReferenceExists(
   db: Database.Database,
-  table: 'epics' | 'adventurers' | 'projects',
+  table: 'epics' | 'adventurers' | 'projects' | 'models',
   id: string | null | undefined,
   field: string,
   res: Response,
@@ -186,19 +189,21 @@ export function createQuestsRouter(
     const body = req.body as CreateQuest;
     if (!assertReferenceExists(db, 'epics', body.epicId, 'epicId', res)) return;
     if (!assertReferenceExists(db, 'projects', body.projectId, 'projectId', res)) return;
+    if (!assertReferenceExists(db, 'models', body.modelId, 'modelId', res)) return;
     if (!assertReferenceExists(db, 'adventurers', body.adventurerId, 'adventurerId', res)) return;
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     db.prepare(
       `INSERT INTO quests
-        (id, epic_id, project_id, title, description, acceptance_criteria_json, edge_cases_json,
+        (id, epic_id, project_id, model_id, title, description, acceptance_criteria_json, edge_cases_json,
          context, status, adventurer_id, agent_id, equipment_json, spec_audit_json,
          created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
       body.epicId,
       body.projectId,
+      body.modelId,
       body.title,
       body.description,
       JSON.stringify(body.acceptanceCriteria),
@@ -289,6 +294,7 @@ export function createQuestsRouter(
     const body = req.body as PatchQuest;
     if (!assertReferenceExists(db, 'epics', body.epicId, 'epicId', res)) return;
     if (!assertReferenceExists(db, 'projects', body.projectId, 'projectId', res)) return;
+    if (!assertReferenceExists(db, 'models', body.modelId, 'modelId', res)) return;
     if (!assertReferenceExists(db, 'adventurers', body.adventurerId, 'adventurerId', res)) return;
     if (body.acceptanceCriteria !== undefined && existing.ac_locked_at !== null) {
       res.status(400).json({
@@ -302,6 +308,7 @@ export function createQuestsRouter(
     if (body.title !== undefined) { cols.push('title = ?'); vals.push(body.title); }
     if (body.epicId !== undefined) { cols.push('epic_id = ?'); vals.push(body.epicId); }
     if (body.projectId !== undefined) { cols.push('project_id = ?'); vals.push(body.projectId); }
+    if (body.modelId !== undefined) { cols.push('model_id = ?'); vals.push(body.modelId); }
     if (body.description !== undefined) { cols.push('description = ?'); vals.push(body.description); }
     if (body.acceptanceCriteria !== undefined) { cols.push('acceptance_criteria_json = ?'); vals.push(JSON.stringify(body.acceptanceCriteria)); }
     if (body.edgeCases !== undefined) { cols.push('edge_cases_json = ?'); vals.push(JSON.stringify(body.edgeCases)); }
@@ -386,6 +393,7 @@ export function createQuestsRouter(
       name: '',
       scope: 'project' as const,
       projectId: null,
+    modelId: null,
       firstSeenAt: '',
       lastSeenAt: '',
       encounters: 0,
@@ -485,6 +493,7 @@ export function createQuestsRouter(
             name: '',
             scope: 'project' as const,
             projectId: null,
+    modelId: null,
             firstSeenAt: '',
             lastSeenAt: '',
             encounters: 0,

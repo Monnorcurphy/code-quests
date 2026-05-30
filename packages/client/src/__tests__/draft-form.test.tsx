@@ -30,6 +30,7 @@ const mockQuest: Quest = {
   id: 'quest-1',
   epicId: null,
     projectId: null,
+    modelId: null,
   title: 'Implement dark mode toggle',
   description: '',
   acceptanceCriteria: [],

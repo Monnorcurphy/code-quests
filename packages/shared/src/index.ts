@@ -53,6 +53,16 @@ export { ProjectSchema, CreateProjectSchema } from './project';
 export type { Project, CreateProjectInput } from './project';
 
 export {
+  ModelSchema,
+  ModelProviderSchema,
+  ModelConfigSchema,
+  CreateModelSchema,
+  PROVIDERS_REQUIRING_KEY,
+  providerNeedsKey,
+} from './model';
+export type { Model, ModelProvider, ModelConfig, CreateModelInput } from './model';
+
+export {
   RepostAdjustmentsSchema,
   RepostBodySchema,
   SplitChildSchema,

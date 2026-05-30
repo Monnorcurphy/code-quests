@@ -7,6 +7,7 @@ function makeQuest(id = 'q-1'): Quest {
     id,
     epicId: null,
     projectId: null,
+    modelId: null,
     title: 'Test Quest',
     description: 'A test quest',
     acceptanceCriteria: [],

@@ -28,6 +28,7 @@ function quest(adventurerId: string | null, status: Quest['status']): Quest {
     agentId: null,
     epicId: null,
     projectId: null,
+    modelId: null,
     equipment: { skillIds: [], toolIds: [], mcpServerIds: [] },
     specAudit: null,
     failureSummary: null,
