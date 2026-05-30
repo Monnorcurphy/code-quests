@@ -8,6 +8,7 @@ import ProjectPickerModal from '../projects/project-picker-modal';
 import { useProjects } from '../projects/use-projects';
 import { useModels } from '../models/use-models';
 import { useTownStore } from '../../stores/town-store';
+import CouncilModal from '../council/council-modal';
 
 const TitleSchema = z
   .string()
@@ -39,6 +40,7 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
   const [newEpicGoal, setNewEpicGoal] = useState('');
   const [newEpicError, setNewEpicError] = useState<string | null>(null);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
+  const [councilOpen, setCouncilOpen] = useState(false);
 
   const activeProjectId = useActiveProjectStore((s) => s.activeProjectId);
   const { data: projectsData } = useProjects();
@@ -458,6 +460,15 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
           <button
             type="button"
             className="btn-secondary"
+            onClick={() => setCouncilOpen(true)}
+            disabled={disabled || models.length === 0}
+            data-testid="convene-council-btn"
+          >
+            Convene Council
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
             onClick={onCancel}
             disabled={disabled}
           >
@@ -465,6 +476,17 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
           </button>
         </div>
       </form>
+      {councilOpen && (
+        <CouncilModal
+          draftQuest={{
+            title,
+            description,
+            acceptanceCriteria: acs.filter((ac) => ac.trim()),
+          }}
+          defaultModelId={modelId || null}
+          onClose={() => setCouncilOpen(false)}
+        />
+      )}
     </div>
   );
 }

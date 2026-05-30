@@ -174,6 +174,24 @@ async function patchJson<S extends z.ZodTypeAny>(schema: S, path: string, body: 
   return schema.parse(data) as z.output<S>;
 }
 
+// Special-case POST that does not validate the response (used for endpoints
+// whose response shape is loosely structured / model-dependent).
+async function postRaw<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const raw: unknown = await res.json().catch(() => ({ error: `${res.statusText}` }));
+    const parsed = ApiErrorBodySchema.safeParse(raw);
+    const msg = parsed.success ? parsed.data.error : `${res.status} ${res.statusText}`;
+    const field = parsed.success ? parsed.data.field : undefined;
+    throw new ApiError(msg, { field, status: res.status, data: raw });
+  }
+  return (await res.json()) as T;
+}
+
 async function deleteRequest(path: string): Promise<void> {
   const res = await fetch(`${BASE_URL}${path}`, { method: 'DELETE' });
   if (!res.ok) {
@@ -352,6 +370,23 @@ export const api = {
     create: (input: CreateModelInput): Promise<ReturnedModel> =>
       postJson(ReturnedModelSchema, '/models', CreateModelSchema.parse(input)),
     delete: (id: string) => deleteRequest(`/models/${id}`),
+  },
+  council: {
+    consult: (body: {
+      modelId: string;
+      draftQuest: {
+        title?: string;
+        description?: string;
+        acceptanceCriteria?: string[];
+      };
+      history: Array<{ role: 'user' | 'assistant'; content: string }>;
+      userMessage: string;
+    }): Promise<{
+      reply: string;
+      modelName: string;
+      provider: string;
+      tokenUsage?: { input?: number; output?: number };
+    }> => postRaw('/council/consult', body),
   },
   quests: {
     list: () => fetchJson(z.array(QuestSchema), '/quests'),
