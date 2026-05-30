@@ -3,6 +3,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 vi.mock('@anthropic-ai/sdk', () => ({ default: vi.fn() }));
 vi.mock('../agents/select-adapter', () => ({
   getQuestAdapter: vi.fn(),
+  getDefaultQuestAdapter: vi.fn(),
+  getAdapterForModel: vi.fn(),
   getAuditAdapter: vi.fn(),
 }));
 
@@ -21,7 +23,7 @@ import { runMigrations } from '../db/migrator';
 import { createQuestsRouter } from '../routes/quests';
 import { errorHandler } from '../middleware/errors';
 import { runQuest } from '../services/quest-runner';
-import { getQuestAdapter } from '../agents/select-adapter';
+import { getDefaultQuestAdapter } from '../agents/select-adapter';
 import { offlineAdapter } from '../agents/offline-adapter';
 import { frameUserBlocker } from '../services/adventure-framing';
 
@@ -105,7 +107,7 @@ describe('POST /quests/:id/respond-input', () => {
   beforeEach(() => {
     db = openDb(':memory:');
     runMigrations(db);
-    vi.mocked(getQuestAdapter).mockReturnValue(offlineAdapter);
+    vi.mocked(getDefaultQuestAdapter).mockReturnValue(offlineAdapter);
   });
 
   afterEach(() => {
@@ -308,7 +310,7 @@ describe('POST /quests/:id/block', () => {
     let releasePause!: () => void;
     const pausePromise = new Promise<void>((resolve) => { releasePause = resolve; });
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-block-cancel',
       async spawn() {
         return {
@@ -395,7 +397,7 @@ describe('POST /quests/:id/unblock', () => {
     );
 
     // instant-complete adapter so runQuest exits cleanly
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-unblock',
       async spawn() {
         return {
@@ -431,7 +433,7 @@ describe('POST /quests/:id/unblock', () => {
       'q-ub-spawn',
     );
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-unblock-spawn',
       async spawn() {
         return {
@@ -466,7 +468,7 @@ describe('POST /quests/:id/unblock', () => {
       'q-ub-ch',
     );
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-unblock-ch',
       async spawn() {
         return {
@@ -510,7 +512,7 @@ describe('POST /quests/:id/unblock', () => {
     expect(blockRes.body.status).toBe('user_blocked');
 
     // Unblock with instant-complete adapter
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-full-cycle',
       async spawn() {
         return {
@@ -552,7 +554,7 @@ describe('POST /quests/:id/unblock', () => {
     const framingPromise = new Promise<string>((resolve) => { resolveFraming = resolve; });
     vi.mocked(frameUserBlocker).mockReturnValueOnce(framingPromise);
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-race',
       async spawn() {
         return {

@@ -3,6 +3,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 vi.mock('@anthropic-ai/sdk', () => ({ default: vi.fn() }));
 vi.mock('../agents/select-adapter', () => ({
   getQuestAdapter: vi.fn(),
+  getDefaultQuestAdapter: vi.fn(),
+  getAdapterForModel: vi.fn(),
   getAuditAdapter: vi.fn(),
 }));
 
@@ -12,7 +14,7 @@ import { QuestSchema, AdventurerSchema } from '@code-quests/shared';
 import { openDb } from '../db/connection';
 import { runMigrations } from '../db/migrator';
 import { runQuest, PROGRESS_EVENTS_PER_SCENE, LICH_REPEAT_THRESHOLD, getActiveHandle } from '../services/quest-runner';
-import { getQuestAdapter } from '../agents/select-adapter';
+import { getDefaultQuestAdapter } from '../agents/select-adapter';
 import { offlineAdapter } from '../agents/offline-adapter';
 
 function insertAdventurer(db: Database.Database, id: string) {
@@ -78,7 +80,7 @@ describe('runQuest (offline adapter)', () => {
   beforeEach(() => {
     db = openDb(':memory:');
     runMigrations(db);
-    vi.mocked(getQuestAdapter).mockReturnValue(offlineAdapter);
+    vi.mocked(getDefaultQuestAdapter).mockReturnValue(offlineAdapter);
   });
 
   afterEach(() => {
@@ -275,7 +277,7 @@ describe('runQuest error recovery (bug regression)', () => {
     insertAdventurer(db, 'adv-err');
     insertQuest(db, 'q-err', 'adv-err');
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-throw',
       async spawn() {
         return {
@@ -324,7 +326,7 @@ describe('runQuest error recovery (bug regression)', () => {
       releaseFailedEvent = resolve;
     });
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-race',
       async spawn() {
         return {
@@ -380,7 +382,7 @@ describe('runQuest scene progression heuristic', () => {
     insertAdventurer(db, 'adv-heuristic');
     insertQuest(db, 'q-heuristic', 'adv-heuristic');
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-progress',
       async spawn() {
         return {
@@ -424,7 +426,7 @@ describe('runQuest scene progression heuristic', () => {
     insertAdventurer(db, 'adv-nodelay');
     insertQuest(db, 'q-nodelay', 'adv-nodelay');
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-early',
       async spawn() {
         return {
@@ -464,7 +466,7 @@ describe('runQuest scene progression heuristic', () => {
     insertAdventurer(db, 'adv-complete');
     insertQuest(db, 'q-complete', 'adv-complete'); // starts at quest-forest
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-complete',
       async spawn() {
         return {
@@ -510,7 +512,7 @@ describe('runQuest scene progression heuristic', () => {
     insertAdventurer(db, 'adv-persist');
     insertQuest(db, 'q-persist', 'adv-persist');
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-persist',
       async spawn() {
         return {
@@ -567,7 +569,7 @@ describe('runQuest scene progression heuristic', () => {
     insertQuest(db, 'q-atboss', 'adv-atboss');
     db.prepare("UPDATE quests SET current_scene = 'quest-boss-room' WHERE id = ?").run('q-atboss');
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-atboss',
       async spawn() {
         return {
@@ -613,7 +615,7 @@ describe('runQuest combat/encounter integration', () => {
     insertAdventurer(db, 'adv-vic');
     insertQuest(db, 'q-vic', 'adv-vic');
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-victory',
       async spawn() {
         return {
@@ -677,7 +679,7 @@ describe('runQuest combat/encounter integration', () => {
     insertAdventurer(db, 'adv-def');
     insertQuest(db, 'q-def', 'adv-def');
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-defeat',
       async spawn() {
         return {
@@ -738,7 +740,7 @@ describe('runQuest combat/encounter integration', () => {
     const ts = new Date().toISOString();
 
     // First quest: one combat then completed
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-clear-a',
       async spawn() {
         return {
@@ -762,7 +764,7 @@ describe('runQuest combat/encounter integration', () => {
     // Second quest: no combat, just completed — should emit zero monster_resolved events
     db.prepare("UPDATE quests SET status = 'active' WHERE id = ?").run('q-clear-b');
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-clear-b',
       async spawn() {
         return {
@@ -808,7 +810,7 @@ describe('runQuest lich aggregator', () => {
     const ts = new Date().toISOString();
     const impMsg = 'TS2345: type error found';
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-lich',
       async spawn() {
         return {
@@ -866,7 +868,7 @@ describe('runQuest lich aggregator', () => {
 
     const ts = new Date().toISOString();
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-two-lich',
       async spawn() {
         return {
@@ -910,7 +912,7 @@ describe('runQuest lich aggregator', () => {
 
     const ts = new Date().toISOString();
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-no-lich',
       async spawn() {
         return {
@@ -962,7 +964,7 @@ describe('runQuest paused_input / resumed handling', () => {
     insertAdventurer(db, 'adv-pause');
     insertQuest(db, 'q-pause', 'adv-pause');
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-pause',
       async spawn() {
         let resolveRespond!: (text: string) => void;
@@ -1017,7 +1019,7 @@ describe('runQuest paused_input / resumed handling', () => {
     const respondPromise = new Promise<string>((res) => { resolveRespond = res; });
     let pausedInputPublished = false;
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-irq',
       async spawn() {
         return {
@@ -1075,7 +1077,7 @@ describe('runQuest paused_input / resumed handling', () => {
     const completePromise = new Promise<void>((res) => { resolveComplete = res; });
     let resumedEventsSnapshot: AgentEvent[] | null = null;
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-resume-persist',
       async spawn() {
         return {
@@ -1135,7 +1137,7 @@ describe('runQuest paused_input / resumed handling', () => {
     const respondPromise = new Promise<string>((res) => { resolveRespond = res; });
     let settled = false;
 
-    vi.mocked(getQuestAdapter).mockReturnValueOnce({
+    vi.mocked(getDefaultQuestAdapter).mockReturnValueOnce({
       name: 'mock-cancel-pause',
       async spawn() {
         return {
@@ -1189,7 +1191,7 @@ describe('runQuest adventure framing integration', () => {
   beforeEach(() => {
     db = openDb(':memory:');
     runMigrations(db);
-    vi.mocked(getQuestAdapter).mockReturnValue(offlineAdapter);
+    vi.mocked(getDefaultQuestAdapter).mockReturnValue(offlineAdapter);
   });
 
   afterEach(() => {

@@ -3,6 +3,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 vi.mock('@anthropic-ai/sdk', () => ({ default: vi.fn() }));
 vi.mock('../agents/select-adapter', () => ({
   getQuestAdapter: vi.fn(),
+  getDefaultQuestAdapter: vi.fn(),
+  getAdapterForModel: vi.fn(),
   getAuditAdapter: vi.fn(),
 }));
 
@@ -15,7 +17,7 @@ import { openDb } from '../db/connection';
 import { runMigrations } from '../db/migrator';
 import { seedShowcase } from '../scripts/seed-showcase';
 import { runQuest } from '../services/quest-runner';
-import { getQuestAdapter } from '../agents/select-adapter';
+import { getDefaultQuestAdapter } from '../agents/select-adapter';
 import { createQuestActionsRouter } from '../routes/quest-actions';
 import { errorHandler } from '../middleware/errors';
 import type { AgentAdapter, AgentHandle } from '../agents/adapter';
@@ -153,7 +155,7 @@ describe('Repost cycle: fail → scar → repost → complete', () => {
   });
 
   it('records a scar after quest failure and completes after repost with new equipment', async () => {
-    vi.mocked(getQuestAdapter).mockReturnValue(makeFailAdapter());
+    vi.mocked(getDefaultQuestAdapter).mockReturnValue(makeFailAdapter());
 
     const quest = parseQuest(db, 'quest-showcase-jwt');
     const brielle = parseAdventurer(db, 'adv-showcase-brielle');
@@ -190,7 +192,7 @@ describe('Repost cycle: fail → scar → repost → complete', () => {
       newQuestId,
     );
 
-    vi.mocked(getQuestAdapter).mockReturnValue(makeSucceedAdapter());
+    vi.mocked(getDefaultQuestAdapter).mockReturnValue(makeSucceedAdapter());
 
     const repostedQuest = parseQuest(db, newQuestId);
     const brielleForRepost = parseAdventurer(db, 'adv-showcase-brielle');
@@ -208,7 +210,7 @@ describe('Repost cycle: fail → scar → repost → complete', () => {
   });
 
   it('scar records questId, monsterIdAtFatal, and occurredAt with correct shape', async () => {
-    vi.mocked(getQuestAdapter).mockReturnValue(makeFailAdapter());
+    vi.mocked(getDefaultQuestAdapter).mockReturnValue(makeFailAdapter());
 
     const quest = parseQuest(db, 'quest-showcase-jwt');
     const brielle = parseAdventurer(db, 'adv-showcase-brielle');

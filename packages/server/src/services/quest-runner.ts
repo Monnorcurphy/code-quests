@@ -2,7 +2,10 @@ import type Database from 'better-sqlite3';
 import type { AgentEvent, Quest, Adventurer, Agent, InputRequest } from '@code-quests/shared';
 import type { AgentHandle } from '../agents/adapter';
 import { createAgent, endAgent } from './agents-service';
-import { getQuestAdapter } from '../agents/select-adapter';
+import { getDefaultQuestAdapter, getAdapterForModel } from '../agents/select-adapter';
+import { getModel, touchModel } from '../db/model-repository';
+import { getSecret } from '../lib/secret-store';
+import { providerNeedsKey } from '@code-quests/shared';
 import { transitionQuestStatus, InvalidTransitionError } from './quest-status';
 import { advanceQuestScene } from './quest-scene-progression';
 import { classifyCombatEvent, recordEncounter, resolveEncounter } from './monster-detection';
@@ -44,9 +47,36 @@ export async function runQuest(
   deps: RunQuestDeps,
 ): Promise<QuestRunResult> {
   const { db, publishEvent, cwd } = deps;
-  const adapter = getQuestAdapter();
+
+  // Pick the adapter from the quest's chosen model. Falls back to the
+  // environment-controlled default chain (offline / stub / cc-default)
+  // when the quest has no model linked — useful for legacy quests, the
+  // demo env, and tests.
+  let model = null;
+  if (quest.modelId) {
+    model = getModel(db, quest.modelId);
+    if (!model) {
+      throw new Error(`Quest is linked to model ${quest.modelId} but no such model exists`);
+    }
+  }
+
+  const adapter = model ? getAdapterForModel(model) : getDefaultQuestAdapter();
   if (!adapter.spawn) {
     throw new Error(`Quest adapter '${adapter.name}' does not support spawning agents`);
+  }
+
+  // Providers that need a key get one from the keychain. Adapters that
+  // don't (claude_cli, ollama) ignore it.
+  let apiKey: string | undefined;
+  if (model && providerNeedsKey(model.provider)) {
+    const stored = await getSecret(model.id);
+    if (!stored) {
+      throw new Error(
+        `Model "${model.name}" requires an API key but none is stored in the keychain. ` +
+          `Edit the model in Settings to add one.`,
+      );
+    }
+    apiKey = stored;
   }
 
   const handle = await adapter.spawn({
@@ -55,11 +85,18 @@ export async function runQuest(
     adventurerName: adventurer.name,
     adventurerClass: adventurer.class,
     modelId: adventurer.modelId,
+    model: model ?? undefined,
+    apiKey,
     description: quest.description,
     acceptanceCriteria: quest.acceptanceCriteria,
     equipment: quest.equipment,
     cwd,
   });
+
+  // Mark the model as recently used so the picker can sort by last_used.
+  if (model) {
+    touchModel(db, model.id);
+  }
 
   const agent = createAgent(db, {
     adventurerId: adventurer.id,

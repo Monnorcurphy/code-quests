@@ -2,7 +2,7 @@ import { spawn as nodeSpawn } from 'child_process';
 import { delimiter, join } from 'path';
 import { writeFile, unlink } from 'fs/promises';
 import { accessSync, constants } from 'fs';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { tmpdir } from 'os';
 import type { AgentEvent, MCPServer } from '@code-quests/shared';
 import type { AgentAdapter, AgentHandle, AgentSpawnInput } from './adapter';
@@ -96,19 +96,28 @@ async function writeTempMcpConfig(servers: MCPServer[]): Promise<string> {
   return filePath;
 }
 
-function buildArgs(_cwd: string | undefined, tmpFile: string): string[] {
-  // --dangerously-skip-permissions is required for non-interactive --print mode
-  // to actually execute file edits / tool calls. Without it the subprocess
-  // tries to prompt for permission, has no TTY, and silently fails to do
-  // any real work. Operators who want a stricter mode can override this by
-  // setting CODE_QUESTS_CLAUDE_SAFE=1 (then real edits won't work but the
-  // agent can still read).
-  //
-  // We DO NOT pass --cwd here: the `claude` CLI does not accept that flag and
-  // exits 1 immediately if it sees an unknown argument. The agent's working
-  // directory comes from the spawn options (`cwd: input.cwd`) below, which
-  // Node passes through to the subprocess.
-  const args = ['--print', '--output-format', 'stream-json', '--mcp-config', tmpFile];
+function buildArgs(
+  _cwd: string | undefined,
+  tmpFile: string,
+  opts: { sessionId: string; modelName?: string },
+): string[] {
+  // --dangerously-skip-permissions: required so the subprocess actually
+  //   executes tool calls without prompting (no TTY in --print mode).
+  //   CODE_QUESTS_CLAUDE_SAFE=1 to disable.
+  // --session-id <uuid>: assign an id to the session up front so we can
+  //   resume it later (planned follow-up: chat-dock continuations).
+  // --model <name>: select the model the user picked in Settings.
+  //   Accepts aliases ("sonnet", "opus", "haiku") or full IDs.
+  // No --cwd: the claude CLI rejects it. Node's spawn cwd handles it.
+  const args = [
+    '--print',
+    '--output-format', 'stream-json',
+    '--mcp-config', tmpFile,
+    '--session-id', opts.sessionId,
+  ];
+  if (opts.modelName) {
+    args.push('--model', opts.modelName);
+  }
   if (process.env['CODE_QUESTS_CLAUDE_SAFE'] !== '1') {
     args.push('--dangerously-skip-permissions');
   }
@@ -190,7 +199,12 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
     exitResolve = r;
   });
 
-  const proc = nodeSpawn(binPath, buildArgs(input.cwd, tmpFile), {
+  const sessionId = randomUUID();
+  // The model record's modelId is the user-friendly alias or full id
+  // ("sonnet" / "claude-sonnet-4-6"). Fall back to no --model flag when
+  // unset so claude uses whichever model the user's CLI is configured for.
+  const modelName = input.model?.modelId;
+  const proc = nodeSpawn(binPath, buildArgs(input.cwd, tmpFile, { sessionId, modelName }), {
     cwd: input.cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
