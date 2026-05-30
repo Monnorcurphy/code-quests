@@ -60,52 +60,66 @@ export class ArmoryScene extends BaseBuildingScene {
       this.add.rectangle(sx, 250, 30, 4, 0xc4a050).setDepth(3);
     }
 
-    // Bow — actual curved bow shape (made of two arc segments + bowstring)
-    // instead of a giant ring. The bow leans against the wall vertically.
-    // Upper limb (curved arc — built from short rectangles for a wood look)
+    // Bow — D-shape leaning vertically, with a taut bowstring along the
+    // straight (left) edge connecting the two tips. Built from short
+    // rectangles tracing a half-ellipse that bulges to the right.
     const bowX = 810;
     const bowCy = 250;
-    for (let i = 0; i < 10; i++) {
-      const t = i / 9; // 0 to 1
-      const y = bowCy - 40 + t * 40; // upper half
-      // Curve outward toward the middle, taper at the tip
-      const xOff = Math.sin(t * Math.PI) * 14;
-      const wid = Math.max(2, Math.round(4 - Math.abs(t - 0.5) * 4));
-      this.add.rectangle(bowX + xOff, y, wid, 5, 0x6a3814).setDepth(1);
-      this.add.rectangle(bowX + xOff, y, wid - 1, 4, 0x8a4828).setDepth(2);
+    const bowHalfH = 50;
+    // Draw the wood limb as a curve from top tip to bottom tip
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20; // 0 to 1
+      // y goes from -bowHalfH (top tip) to +bowHalfH (bottom tip)
+      const y = bowCy - bowHalfH + t * bowHalfH * 2;
+      // xOff bulges outward (to the right) at the middle, tapers to 0 at tips
+      const xOff = Math.sin(t * Math.PI) * 18;
+      this.add.rectangle(bowX + xOff, y, 4, 5, 0x6a3814).setDepth(1);
+      this.add.rectangle(bowX + xOff - 1, y, 2, 4, 0x8a4828).setDepth(2);
     }
-    // Lower limb
-    for (let i = 0; i < 10; i++) {
-      const t = i / 9;
-      const y = bowCy + t * 40;
-      const xOff = Math.sin(t * Math.PI) * 14;
-      const wid = Math.max(2, Math.round(4 - Math.abs(t - 0.5) * 4));
-      this.add.rectangle(bowX + xOff, y, wid, 5, 0x6a3814).setDepth(1);
-      this.add.rectangle(bowX + xOff, y, wid - 1, 4, 0x8a4828).setDepth(2);
-    }
-    // Grip wrap in the middle
-    this.add.rectangle(bowX + 13, bowCy, 6, 14, 0x2a1810).setDepth(3);
-    // Bowstring — straight vertical line from top tip to bottom tip
-    this.add.line(0, 0, bowX, bowCy - 40, bowX, bowCy + 40, 0xe8e8e8, 0.85).setDepth(2);
+    // Bowstring runs straight from top tip to bottom tip (both at bowX since
+    // sin(0)=sin(π)=0). Slight visible width so it reads as taut string.
+    this.add.rectangle(bowX, bowCy, 1, bowHalfH * 2, 0xe8e8e8).setDepth(2);
+    // Grip wrap in the middle of the bow's belly (out to the right where the
+    // archer's hand would hold)
+    this.add.rectangle(bowX + 18, bowCy, 6, 14, 0x2a1810).setDepth(3);
 
     // Arrows in a quiver — beside the bow
     const quiverX = 880;
     this.add.rectangle(quiverX, 290, 32, 60, 0x4a2814).setDepth(1);
     this.add.rectangle(quiverX, 262, 36, 6, 0x3a1f08).setDepth(2);
-    // Three arrows poking up out of the quiver
+    // Three arrows poking up out of the quiver — shaft, fletching, head
     for (let i = 0; i < 3; i++) {
       const ax = quiverX - 10 + i * 10;
-      this.add.rectangle(ax, 235, 2, 50, 0x6a3a14).setDepth(2);
-      // Fletching at the bottom
-      this.add.triangle(ax, 218, -3, 4, 3, 4, 0, -3, 0xc8c8c8).setDepth(3);
-      // Arrowhead at the top
-      this.add.triangle(ax, 210, -3, 6, 3, 6, 0, -2, 0xa0a8b8).setDepth(3);
+      // Shaft
+      this.add.rectangle(ax, 240, 2, 60, 0x6a3a14).setDepth(2);
+      // Fletching — two angled feathers at the back (bottom)
+      this.add.triangle(ax - 2, 260, 0, -6, -4, 4, 4, 4, 0xd8d8d8).setDepth(3);
+      this.add.triangle(ax + 2, 260, 0, -6, -4, 4, 4, 4, 0xa0a0a0).setDepth(3);
+      // Arrowhead at the top — a clean spearhead
+      this.add.triangle(ax, 208, 0, -6, -3, 4, 3, 4, 0xc0c8d0).setDepth(3);
     }
 
-    // Axe
-    this.add.rectangle(960, 250, 6, 80, 0x3a2410).setDepth(1);
-    this.add.triangle(960, 230, 0, -10, 20, 0, 0, 14, 0xb0b0c0).setDepth(2);
-    this.add.triangle(960, 230, 0, -10, -20, 0, 0, 14, 0xb0b0c0).setDepth(2);
+    // Axe — clear "double-bit" silhouette: wooden haft + crescent blade on
+    // each side, with a pommel cap so it reads as a weapon
+    const axeX = 960;
+    const axeY = 250;
+    // Haft (wooden handle)
+    this.add.rectangle(axeX, axeY, 6, 96, 0x4a2814).setDepth(1);
+    this.add.rectangle(axeX - 1, axeY, 2, 96, 0x6a3a18).setDepth(2);
+    // Top + bottom haft caps
+    this.add.rectangle(axeX, axeY - 50, 10, 5, 0x2a1810).setDepth(2);
+    this.add.rectangle(axeX, axeY + 50, 10, 5, 0x2a1810).setDepth(2);
+    // Right-side crescent blade
+    this.add.triangle(axeX + 4, axeY - 14, 0, 0, 18, 4, 4, 18, 0xb0b8c8).setDepth(2);
+    this.add.triangle(axeX + 4, axeY - 14, 4, 18, 18, 4, 18, 22, 0xb0b8c8).setDepth(2);
+    this.add.triangle(axeX + 4, axeY - 14, 4, 18, 18, 22, 0, 26, 0xb0b8c8).setDepth(2);
+    // Left-side crescent blade (mirror)
+    this.add.triangle(axeX - 4, axeY - 14, 0, 0, -18, 4, -4, 18, 0xb0b8c8).setDepth(2);
+    this.add.triangle(axeX - 4, axeY - 14, -4, 18, -18, 4, -18, 22, 0xb0b8c8).setDepth(2);
+    this.add.triangle(axeX - 4, axeY - 14, -4, 18, -18, 22, 0, 26, 0xb0b8c8).setDepth(2);
+    // Blade highlights
+    this.add.rectangle(axeX + 12, axeY - 4, 2, 14, 0xe0e8f0).setDepth(3);
+    this.add.rectangle(axeX - 12, axeY - 4, 2, 14, 0xe0e8f0).setDepth(3);
 
     // Anvil on the floor by the workbench
     this.add.rectangle(620, BUILDING_DOOR_Y + 24, 80, 18, 0x303040).setDepth(1);

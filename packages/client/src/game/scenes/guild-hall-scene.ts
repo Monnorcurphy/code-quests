@@ -129,16 +129,29 @@ export class GuildHallScene extends BaseBuildingScene {
     this.add.rectangle(760, 540, 700, 22, 0x3a2008, 0.8).setDepth(0);
     this.add.rectangle(760, 552, 700, 8, 0x2a1808).setDepth(0);
 
-    // Two hanging guild banners ON the back wall (smaller, decorative)
-    this.add.rectangle(180, 180, 40, 130, 0x800000, 0.9).setDepth(-1);
-    this.add.triangle(180, 245, -20, 0, 20, 0, 0, 12, 0x800000, 0.9).setDepth(-1);
-    this.add.rectangle(180, 180, 4, 130, 0xc4a050, 0.7).setDepth(-1);
-    this.add.text(180, 200, '⚔', { fontSize: '20px', color: '#d4a030' }).setOrigin(0.5).setDepth(-1);
-
-    this.add.rectangle(1220, 180, 40, 130, 0x800000, 0.9).setDepth(-1);
-    this.add.triangle(1220, 245, -20, 0, 20, 0, 0, 12, 0x800000, 0.9).setDepth(-1);
-    this.add.rectangle(1220, 180, 4, 130, 0xc4a050, 0.7).setDepth(-1);
-    this.add.text(1220, 200, '⚔', { fontSize: '20px', color: '#d4a030' }).setOrigin(0.5).setDepth(-1);
+    // Two hanging guild banners ON the back wall — pole, body, hem,
+    // crest. Triangle hem CENTERED below the banner body (was off-axis).
+    for (const bx of [180, 1220]) {
+      const by = 180;
+      // Pole
+      this.add.rectangle(bx, by - 70, 56, 5, 0x4a3018).setDepth(-1);
+      this.add.circle(bx - 28, by - 70, 4, 0x6a4a28).setDepth(-1);
+      this.add.circle(bx + 28, by - 70, 4, 0x6a4a28).setDepth(-1);
+      // Banner body
+      this.add.rectangle(bx, by, 40, 130, 0x800000, 0.9).setDepth(-1);
+      // Gold trim left + right
+      this.add.rectangle(bx - 19, by, 2, 130, 0xc4a050, 0.7).setDepth(-1);
+      this.add.rectangle(bx + 19, by, 2, 130, 0xc4a050, 0.7).setDepth(-1);
+      // Triangular hem CENTERED below the banner
+      this.add
+        .triangle(bx, by + 71, -20, -6, 20, -6, 0, 12, 0x800000, 0.9)
+        .setDepth(-1);
+      // Crest centered
+      this.add
+        .text(bx, by, '⚔', { fontSize: '20px', color: '#d4a030' })
+        .setOrigin(0.5)
+        .setDepth(0);
+    }
 
     this.add.text(700, 100, 'Guild Hall', { fontSize: '28px', color: '#d4a030', fontStyle: 'bold' }).setOrigin(0.5).setDepth(2);
 

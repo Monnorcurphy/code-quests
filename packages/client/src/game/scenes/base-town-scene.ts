@@ -156,14 +156,18 @@ export abstract class BaseTownScene extends Phaser.Scene {
         .ellipse(x, hillsFrontY + wob, 260, 90, hillsFrontColor)
         .setDepth(-8);
     }
-    // Grass strip above ground
+    // Grass strip above ground — at depth -3 so building facades (depth -2)
+    // render OVER it. Otherwise the grass covered the bottom 40px of every
+    // facade, which is exactly where the door opening sits, making the door
+    // look like a separate structure planted on the dirt below the building.
     this.add
       .rectangle(this.sceneWidth / 2, 620, this.sceneWidth, 40, 0x4f6a3a)
-      .setDepth(-1);
-    // Grass tufts (subtle)
+      .setDepth(-3);
+    // Grass tufts (subtle) — also pushed back so they don't poke through
+    // the facade's wall at ground level.
     for (let x = 30; x < this.sceneWidth; x += 70) {
       const tuftX = x + ((x * 31) % 50) - 25;
-      this.add.ellipse(tuftX, 630, 10, 4, 0x3a5028).setDepth(0);
+      this.add.ellipse(tuftX, 630, 10, 4, 0x3a5028).setDepth(-3);
     }
   }
 

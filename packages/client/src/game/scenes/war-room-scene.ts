@@ -136,25 +136,26 @@ export class WarRoomScene extends BaseBuildingScene {
     // heights, with a thicker pole at the top, gold-trim left/right edges,
     // and a "wave" effect from two adjacent offset panels.
     const bannerSpots: Array<{ x: number; y: number }> = [
-      { x: 170, y: 195 }, { x: 240, y: 215 },
-      { x: 1040, y: 215 }, { x: 1110, y: 195 },
+      { x: 170, y: 195 }, { x: 1110, y: 195 },
     ];
     for (const { x: bx, y: by } of bannerSpots) {
-      // Thick wooden pole at top
-      this.add.rectangle(bx, by - 60, 64, 8, 0x4a3018).setDepth(0);
-      this.add.rectangle(bx, by - 60, 64, 2, 0x6a4a28).setDepth(1);
-      // Pole end caps
-      this.add.circle(bx - 32, by - 60, 5, 0x6a4a28).setDepth(1);
-      this.add.circle(bx + 32, by - 60, 5, 0x6a4a28).setDepth(1);
-      // Banner body — two adjacent panels offset 2px for a wave effect
-      this.add.rectangle(bx - 12, by, 24, 110, 0x7a1818).setDepth(0);
-      this.add.rectangle(bx + 12, by + 2, 24, 110, 0x8a2020).setDepth(0);
-      // Gold trim on left + right edges
-      this.add.rectangle(bx - 24, by, 2, 110, 0xc4a050).setDepth(1);
-      this.add.rectangle(bx + 24, by + 2, 2, 110, 0xc4a050).setDepth(1);
-      // Triangular hem at bottom (slightly wider, two-tone to match wave)
-      this.add.triangle(bx, by + 64, -25, -8, 25, -8, 0, 14, 0x7a1818).setDepth(0);
-      // Crossed-axes crest centered on the banner
+      // Wooden pole at top with end caps
+      this.add.rectangle(bx, by - 60, 60, 6, 0x4a3018).setDepth(0);
+      this.add.rectangle(bx, by - 60, 60, 2, 0x6a4a28).setDepth(1);
+      this.add.circle(bx - 30, by - 60, 4, 0x6a4a28).setDepth(1);
+      this.add.circle(bx + 30, by - 60, 4, 0x6a4a28).setDepth(1);
+      // Banner body — single panel, centered under the pole
+      const BW = 44;
+      const BH = 110;
+      this.add.rectangle(bx, by, BW, BH, 0x8a1818).setDepth(0);
+      // Gold trim on left + right edges, aligned with the banner body
+      this.add.rectangle(bx - BW / 2 + 1, by, 2, BH, 0xc4a050).setDepth(1);
+      this.add.rectangle(bx + BW / 2 - 1, by, 2, BH, 0xc4a050).setDepth(1);
+      // Triangular hem CENTERED below the banner body (was off-axis before)
+      this.add
+        .triangle(bx, by + BH / 2 + 6, -BW / 2, -6, BW / 2, -6, 0, 12, 0x8a1818)
+        .setDepth(0);
+      // Crossed-axes crest centered
       this.add.text(bx, by, '⚔', { fontSize: '22px', color: '#e4c060' }).setOrigin(0.5).setDepth(2);
     }
 
