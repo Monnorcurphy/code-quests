@@ -22,6 +22,11 @@ vi.mock('../lib/api', async (importOriginal) => {
         create: vi.fn(),
         delete: vi.fn(),
       },
+      models: {
+        list: vi.fn().mockResolvedValue([]),
+        create: vi.fn(),
+        delete: vi.fn(),
+      },
     },
   };
 });

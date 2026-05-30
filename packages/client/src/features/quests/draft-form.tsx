@@ -6,6 +6,8 @@ import { api } from '../../lib/api';
 import { useActiveProjectStore } from '../../stores/active-project-store';
 import ProjectPickerModal from '../projects/project-picker-modal';
 import { useProjects } from '../projects/use-projects';
+import { useModels } from '../models/use-models';
+import { useTownStore } from '../../stores/town-store';
 
 const TitleSchema = z
   .string()
@@ -29,6 +31,7 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
   const [description, setDescription] = useState('');
   const [acs, setAcs] = useState<string[]>(['']);
   const [epicId, setEpicId] = useState<string>('');
+  const [modelId, setModelId] = useState<string>('');
   const [titleError, setTitleError] = useState<string | null>(null);
   const [acErrors, setAcErrors] = useState<(string | null)[]>([null]);
   const [newEpicOpen, setNewEpicOpen] = useState(false);
@@ -56,6 +59,16 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
     queryFn: api.epics.list,
   });
   const epics: Epic[] = (rawEpics as Epic[] | undefined) ?? [];
+
+  const { data: rawModels } = useModels();
+  const models = rawModels ?? [];
+  // Default to the most-recently-used model when none is picked yet.
+  useEffect(() => {
+    if (!modelId && models.length > 0) {
+      setModelId(models[0]!.id);
+    }
+  }, [modelId, models]);
+  const setActiveModal = useTownStore((s) => s.setActiveModal);
 
   const mutation = useMutation({
     mutationFn: api.quests.create,
@@ -151,6 +164,7 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
       acceptanceCriteria: filledAcs,
       epicId: epicId || null,
       projectId: effectiveProjectId,
+      modelId: modelId || null,
     });
   }
 
@@ -388,6 +402,47 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
                 {epicMutation.isPending ? 'Creating…' : 'Create Epic'}
               </button>
             </div>
+          )}
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="quest-model">Model</label>
+          {models.length === 0 ? (
+            <div
+              data-testid="no-models-banner"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: 12, padding: '10px 12px',
+                background: '#fbe6c4', border: '1px solid #a06a18',
+                borderLeft: '4px solid #7a1818', borderRadius: 4, color: '#5a3818',
+              }}
+            >
+              <span>
+                <strong>No models configured.</strong> Add one in Settings → Models so an
+                adventurer has something to think with.
+              </span>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setActiveModal('models')}
+              >
+                Open Models
+              </button>
+            </div>
+          ) : (
+            <select
+              id="quest-model"
+              value={modelId}
+              onChange={(e) => setModelId(e.target.value)}
+              disabled={disabled}
+              data-testid="quest-model-select"
+            >
+              {models.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} — {m.provider} · {m.modelId}
+                </option>
+              ))}
+            </select>
           )}
         </div>
 

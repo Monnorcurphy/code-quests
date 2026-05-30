@@ -30,6 +30,7 @@ vi.mock('../lib/api', async (importOriginal) => {
       adventurers: { list: vi.fn().mockResolvedValue([]) },
       quests: { list: vi.fn().mockResolvedValue([]), create: vi.fn(), returned: vi.fn().mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 }) },
       epics: { list: vi.fn().mockResolvedValue([]) },
+      models: { list: vi.fn().mockResolvedValue([]), create: vi.fn(), delete: vi.fn() },
       projects: {
         list: vi.fn().mockResolvedValue([]),
         create: vi.fn(),

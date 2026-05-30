@@ -25,6 +25,7 @@ vi.mock('../../lib/api', async (importOriginal) => {
         tools: vi.fn().mockResolvedValue([]),
         mcpServers: vi.fn().mockResolvedValue([]),
       },
+      models: { list: vi.fn().mockResolvedValue([]), create: vi.fn(), delete: vi.fn() },
       projects: {
         list: vi.fn().mockResolvedValue([]),
         create: vi.fn(),

@@ -214,6 +214,7 @@ const CreateQuestInputSchema = z.object({
   acceptanceCriteria: z.array(z.string()).optional(),
   epicId: z.string().nullable().optional(),
   projectId: z.string().nullable().optional(),
+  modelId: z.string().nullable().optional(),
 });
 
 export type CreateQuestInput = z.infer<typeof CreateQuestInputSchema>;
