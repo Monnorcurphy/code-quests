@@ -5,6 +5,7 @@ import { AC_MAX_COUNT, AC_MAX_LENGTH } from '@code-quests/shared';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
 import { api } from '../lib/api';
+import QuestSelector from './quest-selector/quest-selector';
 
 const MAX_ACS = AC_MAX_COUNT;
 const AcItemSchema = z
@@ -189,7 +190,10 @@ export default function Oracle() {
 
         {!selectedQuestId ? (
           <>
-            <p className="modal-body">No quest selected. Select a quest from the Quest Board first.</p>
+            <QuestSelector
+              label="Sharpen which quest's acceptance criteria?"
+              onDraftClick={() => setActiveModal('draft')}
+            />
             <div className="form-actions">
               <button className="btn-secondary" onClick={() => setActiveModal(null)}>
                 Close

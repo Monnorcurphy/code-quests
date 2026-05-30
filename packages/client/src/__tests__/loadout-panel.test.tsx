@@ -219,11 +219,13 @@ describe('LoadoutPanel', () => {
     expect(screen.getByText('Network error')).toBeDefined();
   });
 
-  it('shows message when no quest is selected', () => {
+  it('shows a quest selector when no quest is selected', async () => {
     useTownStore.setState({ selectedQuestId: null });
     renderPanel();
 
-    expect(screen.getByText(/No quest selected/)).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByLabelText(/equip which quest/i)).toBeDefined();
+    });
   });
 
   it('pre-populates checkboxes from existing quest equipment', async () => {

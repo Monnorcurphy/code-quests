@@ -3361,6 +3361,57 @@ body[data-quest-paused='true'] *:not([class*='pause-bell-flash']):not([role='dia
   font-size: 0.85rem;
 }
 
+.quest-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+}
+
+.quest-selector-label {
+  font-weight: 600;
+  color: #4a2a08;
+}
+
+.quest-selector-input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #5a3818;
+  border-radius: 4px;
+  background-color: #f5ecd6;
+  color: #2a1a08;
+  font-size: 0.95rem;
+}
+
+.quest-selector-input:focus {
+  outline: 2px solid #7a4a18;
+  outline-offset: 1px;
+}
+
+.quest-selector--empty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  padding: 0.8rem;
+  background-color: rgba(122, 24, 24, 0.08);
+  border-left: 3px solid #7a1818;
+  border-radius: 4px;
+}
+
+.quest-selector-empty-text {
+  margin: 0;
+  color: #4a2a08;
+}
+
+.quest-selector-status {
+  margin: 0 0 1rem;
+  color: #4a2a08;
+}
+
+.quest-selector-error {
+  color: #7a1818;
+}
+
 .roster-dismiss-error {
   flex-basis: 100%;
   margin: 0.5rem 0 0;

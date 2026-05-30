@@ -5,6 +5,7 @@ import { AC_MAX_COUNT, AC_MAX_LENGTH } from '@code-quests/shared';
 import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
 import { api } from '../lib/api';
+import QuestSelector from './quest-selector/quest-selector';
 
 const MAX_EDGE_CASES = AC_MAX_COUNT;
 const EdgeCaseSchema = z
@@ -188,7 +189,10 @@ export default function Tavern() {
 
         {!selectedQuestId ? (
           <>
-            <p className="modal-body">No quest selected. Select a quest from the Quest Board first.</p>
+            <QuestSelector
+              label="Talk over which quest's edge cases?"
+              onDraftClick={() => setActiveModal('draft')}
+            />
             <div className="form-actions">
               <button className="btn-secondary" onClick={() => setActiveModal(null)}>
                 Close

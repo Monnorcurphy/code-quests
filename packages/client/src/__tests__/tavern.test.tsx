@@ -17,6 +17,7 @@ vi.mock('../lib/api', async (importOriginal) => {
         ...actual.api.quests,
         get: vi.fn(),
         patch: vi.fn(),
+        list: vi.fn().mockResolvedValue([]),
       },
     },
   };
@@ -70,10 +71,12 @@ describe('Tavern', () => {
     vi.clearAllMocks();
   });
 
-  it('shows "no quest selected" message when selectedQuestId is null', () => {
+  it('shows a quest selector when selectedQuestId is null', async () => {
     useTownStore.setState({ selectedQuestId: null });
     renderTavern();
-    expect(screen.getByText(/no quest selected/i)).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText(/no quests ready to prepare/i)).toBeDefined();
+    });
   });
 
   it('renders edge case inputs when quest loads', async () => {

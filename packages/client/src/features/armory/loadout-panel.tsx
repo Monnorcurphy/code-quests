@@ -4,6 +4,7 @@ import { useFocusTrap } from '../../lib/use-focus-trap';
 import { useTownStore } from '../../stores/town-store';
 import { api } from '../../lib/api';
 import { useEquipmentMutation } from './use-equipment-mutation';
+import QuestSelector from '../quest-selector/quest-selector';
 
 type SaveStatus = 'idle' | 'saving' | 'success' | 'error';
 
@@ -112,9 +113,7 @@ export default function LoadoutPanel({ onClose }: Props) {
 
         {!selectedQuestId ? (
           <>
-            <p className="modal-body">
-              No quest selected. Select a quest from the Quest Board before equipping.
-            </p>
+            <QuestSelector label="Equip which quest?" />
             <div className="form-actions">
               <button className="btn-secondary" onClick={onClose}>
                 Close

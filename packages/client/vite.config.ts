@@ -26,6 +26,7 @@ export default defineConfig({
       '/skills': 'http://localhost:4001',
       '/tools': 'http://localhost:4001',
       '/mcp-servers': 'http://localhost:4001',
+      '/projects': 'http://localhost:4001',
       '/health': 'http://localhost:4001',
       '/showcase': 'http://localhost:4001',
       '/test': 'http://localhost:4001',
