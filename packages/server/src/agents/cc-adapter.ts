@@ -96,18 +96,22 @@ async function writeTempMcpConfig(servers: MCPServer[]): Promise<string> {
   return filePath;
 }
 
-function buildArgs(cwd: string | undefined, tmpFile: string): string[] {
+function buildArgs(_cwd: string | undefined, tmpFile: string): string[] {
   // --dangerously-skip-permissions is required for non-interactive --print mode
   // to actually execute file edits / tool calls. Without it the subprocess
   // tries to prompt for permission, has no TTY, and silently fails to do
   // any real work. Operators who want a stricter mode can override this by
   // setting CODE_QUESTS_CLAUDE_SAFE=1 (then real edits won't work but the
   // agent can still read).
+  //
+  // We DO NOT pass --cwd here: the `claude` CLI does not accept that flag and
+  // exits 1 immediately if it sees an unknown argument. The agent's working
+  // directory comes from the spawn options (`cwd: input.cwd`) below, which
+  // Node passes through to the subprocess.
   const args = ['--print', '--output-format', 'stream-json', '--mcp-config', tmpFile];
   if (process.env['CODE_QUESTS_CLAUDE_SAFE'] !== '1') {
     args.push('--dangerously-skip-permissions');
   }
-  if (cwd) args.push('--cwd', cwd);
   return args;
 }
 
