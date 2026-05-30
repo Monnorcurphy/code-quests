@@ -219,14 +219,16 @@ async function spawnHandle(input: AgentSpawnInput): Promise<AgentHandle> {
 
   const stdinStream = proc.stdin!;
   try {
-    stdinStream.write(buildPrompt(input));
-    // Intentionally keep stdin open so respond() can write back during pause/resume.
-    // This assumes the claude subprocess processes stdin incrementally rather than waiting
-    // for EOF before starting (i.e., interactive mode). If claude --print requires EOF to
-    // begin processing, leaving stdin open will stall the subprocess. In that case, switch to
-    // an interactive session mode or a separate stdin pipe opened only after a paused_input
-    // marker is detected. TODO: verify against the real binary or add an integration test
-    // gated behind CODE_QUESTS_RUN_INTEGRATION_TESTS=1.
+    // claude --print waits for EOF on stdin before it starts processing.
+    // Empirically verified: leaving stdin open stalls the subprocess
+    // indefinitely (agent stays alive for tens of minutes emitting nothing).
+    // Close stdin after the prompt is written.
+    //
+    // Trade-off: this means respond() can no longer feed user input back to
+    // the same subprocess during a pause. Mid-quest user-input replies are
+    // currently disabled in this adapter; reintroducing them will require an
+    // interactive session mode (long-lived stdin), not --print.
+    stdinStream.end(buildPrompt(input));
   } catch {
     // 'error' handler will fire and finalize; nothing to do here.
   }
