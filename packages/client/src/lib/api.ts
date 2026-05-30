@@ -370,6 +370,40 @@ export const api = {
     create: (input: CreateModelInput): Promise<ReturnedModel> =>
       postJson(ReturnedModelSchema, '/models', CreateModelSchema.parse(input)),
     delete: (id: string) => deleteRequest(`/models/${id}`),
+    probe: async (
+      provider: 'claude_cli' | 'ollama' | 'openrouter',
+      baseUrl?: string,
+    ): Promise<{
+      provider: 'claude_cli';
+      installed: boolean;
+      binPath?: string;
+      version?: string;
+      suggestedIds: string[];
+      hint: string;
+    } | {
+      provider: 'ollama';
+      reachable: boolean;
+      baseUrl: string;
+      installedModels: Array<{ name: string; size?: string }>;
+      hint: string;
+    } | {
+      provider: 'openrouter';
+      hint: string;
+      catalogueUrl: string;
+      popularIds: string[];
+    }> => {
+      const qs = new URLSearchParams({ provider });
+      if (baseUrl) qs.set('baseUrl', baseUrl);
+      const res = await fetch(`${BASE_URL}/models/probe?${qs.toString()}`);
+      if (!res.ok) {
+        const raw: unknown = await res.json().catch(() => ({ error: `${res.statusText}` }));
+        const parsed = ApiErrorBodySchema.safeParse(raw);
+        throw new ApiError(parsed.success ? parsed.data.error : `${res.status}`, {
+          status: res.status, data: raw,
+        });
+      }
+      return res.json();
+    },
   },
   fs: {
     // Pops the native folder picker on macOS. Returns the absolute path,

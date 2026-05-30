@@ -1,3 +1,6 @@
+import { spawn } from 'node:child_process';
+import { accessSync, constants } from 'node:fs';
+import { delimiter, join } from 'node:path';
 import type { Model } from '@code-quests/shared';
 
 // Council = a pre-dispatch chat where a (cheap) model helps the user
@@ -142,6 +145,99 @@ async function callOllama(turn: CouncilTurn): Promise<CouncilReply> {
   };
 }
 
+function findClaudeBin(): string | null {
+  const envBin = process.env['CODE_QUESTS_CLAUDE_BIN'];
+  if (envBin) {
+    try {
+      accessSync(envBin, constants.X_OK);
+      return envBin;
+    } catch {
+      return null;
+    }
+  }
+  const dirs = (process.env['PATH'] ?? '').split(delimiter);
+  for (const dir of dirs) {
+    const candidate = join(dir, 'claude');
+    try {
+      accessSync(candidate, constants.X_OK);
+      return candidate;
+    } catch {
+      // not here
+    }
+  }
+  return null;
+}
+
+// claude --print one-shot. Concatenate the messages into a single prompt
+// (no native multi-turn here — CLI conversations need --resume against a
+// session id and we're aiming for stateless per-turn for council). The
+// chat history is folded into the user message as "Previously you said …".
+function flattenForCli(messages: ChatMessage[]): string {
+  const sys = messages.find((m) => m.role === 'system')?.content ?? '';
+  const rest = messages.filter((m) => m.role !== 'system');
+  const lines: string[] = [];
+  if (sys) lines.push(sys, '');
+  for (const m of rest) {
+    const tag = m.role === 'user' ? 'USER' : 'COUNCIL';
+    lines.push(`[${tag}]`);
+    lines.push(m.content);
+    lines.push('');
+  }
+  lines.push('[COUNCIL]');
+  return lines.join('\n');
+}
+
+async function callClaudeCli(turn: CouncilTurn): Promise<CouncilReply> {
+  const binPath = findClaudeBin();
+  if (!binPath) {
+    throw new CouncilProviderError(
+      'The `claude` binary was not found on PATH. Install Claude Code from https://claude.com/claude-code, or use an Ollama / OpenRouter model for Council instead.',
+      400,
+    );
+  }
+  const prompt = flattenForCli(turn.messages);
+  const args = ['--print', '--output-format', 'text'];
+  // --model selects the user-picked CLI model (alias or full id).
+  if (turn.model.modelId) {
+    args.push('--model', turn.model.modelId);
+  }
+
+  return await new Promise<CouncilReply>((resolve, reject) => {
+    const proc = spawn(binPath, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    const timer = setTimeout(() => {
+      proc.kill('SIGKILL');
+      reject(new CouncilProviderError('Claude CLI timed out after 90s', 504));
+    }, 90_000);
+    proc.stdout.on('data', (c: Buffer) => { stdout += c.toString('utf8'); });
+    proc.stderr.on('data', (c: Buffer) => { stderr += c.toString('utf8'); });
+    proc.on('error', (err) => {
+      clearTimeout(timer);
+      reject(new CouncilProviderError(`Failed to spawn claude: ${err.message}`, 500));
+    });
+    proc.on('close', (code) => {
+      clearTimeout(timer);
+      if (code !== 0) {
+        reject(
+          new CouncilProviderError(
+            `claude exited with code ${String(code)}${stderr ? `: ${stderr.trim().slice(0, 400)}` : ''}`,
+            502,
+          ),
+        );
+        return;
+      }
+      const reply = stdout.trim();
+      if (!reply) {
+        reject(new CouncilProviderError('claude returned no content', 502));
+        return;
+      }
+      resolve({ reply });
+    });
+    proc.stdin.end(prompt);
+  });
+}
+
 export async function runCouncilTurn(turn: CouncilTurn): Promise<CouncilReply> {
   switch (turn.model.provider) {
     case 'openrouter':
@@ -149,10 +245,7 @@ export async function runCouncilTurn(turn: CouncilTurn): Promise<CouncilReply> {
     case 'ollama':
       return callOllama(turn);
     case 'claude_cli':
-      throw new CouncilProviderError(
-        'Claude CLI is too heavy for council work. Add a cheap model in Settings (e.g. an Ollama llama3.1, or OpenRouter haiku) and pick it as your Council model.',
-        400,
-      );
+      return callClaudeCli(turn);
     case 'anthropic_api':
     case 'openai':
       throw new CouncilProviderError(

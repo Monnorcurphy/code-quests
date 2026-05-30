@@ -52,12 +52,12 @@ describe('CouncilModal', () => {
     mountModal();
     await waitFor(() => {
       expect(
-        screen.getByText(/no model available for council/i),
+        screen.getByText(/no models registered/i),
       ).toBeInTheDocument();
     });
   });
 
-  it('skips claude_cli models in the picker', async () => {
+  it('lists every registered model including claude_cli (no opinionated filtering)', async () => {
     vi.mocked(api.models.list).mockResolvedValue([
       {
         id: 'cc-1', name: 'CLI Sonnet', provider: 'claude_cli', modelId: 'sonnet',
@@ -71,9 +71,26 @@ describe('CouncilModal', () => {
     mountModal();
     await waitFor(() => {
       const select = screen.getByTestId('council-model-select') as HTMLSelectElement;
-      expect(select.options).toHaveLength(1);
-      expect(select.options[0]!.text).toContain('Local Llama');
+      expect(select.options).toHaveLength(2);
+      const texts = Array.from(select.options).map((o) => o.text);
+      expect(texts.some((t) => t.includes('CLI Sonnet'))).toBe(true);
+      expect(texts.some((t) => t.includes('Local Llama'))).toBe(true);
     });
+  });
+
+  it('shows a latency hint when the picked model is claude_cli', async () => {
+    vi.mocked(api.models.list).mockResolvedValue([
+      {
+        id: 'cc-1', name: 'CLI Sonnet', provider: 'claude_cli', modelId: 'sonnet',
+        config: {}, createdAt: '2026-01-01', lastUsedAt: null, hasKey: false,
+      },
+    ]);
+    mountModal();
+    await waitFor(() => {
+      const select = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      expect(select.value).toBe('cc-1');
+    });
+    expect(screen.getByText(/claude_cli responses can take/i)).toBeInTheDocument();
   });
 
   it('auto-picks an ollama model as default council', async () => {

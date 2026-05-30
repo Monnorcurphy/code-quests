@@ -88,6 +88,30 @@ export default function ModelsModal({ onClose }: ModelsModalProps) {
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
 
+  type ProbeData = Awaited<ReturnType<typeof api.models.probe>>;
+  const [probeData, setProbeData] = useState<ProbeData | null>(null);
+  const [probing, setProbing] = useState(false);
+  const [probeError, setProbeError] = useState<string | null>(null);
+
+  // Clear the probe panel when the user switches providers.
+  useEffect(() => {
+    setProbeData(null);
+    setProbeError(null);
+  }, [provider]);
+
+  async function handleProbe() {
+    setProbeError(null);
+    setProbing(true);
+    try {
+      const data = await api.models.probe(provider, baseUrl || undefined);
+      setProbeData(data);
+    } catch (err) {
+      setProbeError(err instanceof ApiError ? err.message : 'Probe failed.');
+    } finally {
+      setProbing(false);
+    }
+  }
+
   useEffect(() => {
     closeRef.current?.focus();
   }, []);
@@ -269,6 +293,114 @@ export default function ModelsModal({ onClose }: ModelsModalProps) {
                   </label>
                 ))}
               </div>
+              <div style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => { void handleProbe(); }}
+                  disabled={probing}
+                  data-testid="probe-provider-btn"
+                  aria-label={`Detect ${option.label} setup on this machine`}
+                  title="Check whether this provider is installed/reachable and discover available models"
+                >
+                  {probing ? 'Detecting…' : `Detect ${option.label} setup`}
+                </button>
+              </div>
+              {probeError && (
+                <p className="field-error" role="alert" style={{ marginTop: 6 }}>
+                  {probeError}
+                </p>
+              )}
+              {probeData && probeData.provider === provider && (
+                <div
+                  role="region"
+                  aria-label="Probe results"
+                  data-testid="probe-result"
+                  style={{
+                    marginTop: 8,
+                    padding: 10,
+                    background: '#fbe6c4',
+                    border: '1px solid #b5a07a',
+                    borderLeft: '3px solid #5a3818',
+                    borderRadius: 4,
+                    fontSize: '0.85rem',
+                    color: '#3a2410',
+                  }}
+                >
+                  <p style={{ margin: '0 0 6px' }}>{probeData.hint}</p>
+                  {probeData.provider === 'claude_cli' && probeData.installed && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {probeData.suggestedIds.map((id) => (
+                        <button
+                          key={id}
+                          type="button"
+                          className="btn-secondary"
+                          style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+                          onClick={() => {
+                            setModelIdValue(id);
+                            if (!name.trim()) {
+                              setName(`Claude ${id.charAt(0).toUpperCase()}${id.slice(1)}`);
+                            }
+                          }}
+                        >
+                          Use “{id}”
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {probeData.provider === 'ollama' && probeData.installedModels.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {probeData.installedModels.map((m) => (
+                        <button
+                          key={m.name}
+                          type="button"
+                          className="btn-secondary"
+                          style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+                          onClick={() => {
+                            setModelIdValue(m.name);
+                            if (!name.trim()) {
+                              setName(m.name.split(':')[0] ?? m.name);
+                            }
+                          }}
+                        >
+                          Use “{m.name}”{m.size ? ` (${m.size})` : ''}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {probeData.provider === 'openrouter' && (
+                    <>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+                        {probeData.popularIds.map((id) => (
+                          <button
+                            key={id}
+                            type="button"
+                            className="btn-secondary"
+                            style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+                            onClick={() => {
+                              setModelIdValue(id);
+                              if (!name.trim()) {
+                                const last = id.split('/').pop() ?? id;
+                                setName(last);
+                              }
+                            }}
+                          >
+                            Use “{id}”
+                          </button>
+                        ))}
+                      </div>
+                      <a
+                        href={probeData.catalogueUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: '#7a1818', textDecoration: 'underline' }}
+                      >
+                        Browse the full catalogue →
+                      </a>
+                    </>
+                  )}
+                </div>
+              )}
             </fieldset>
 
             <div className="form-field">

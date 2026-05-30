@@ -10,6 +10,7 @@ import {
   listModels,
 } from '../db/model-repository';
 import { deleteSecret, hasSecret, setSecret } from '../lib/secret-store';
+import { probeProvider } from '../services/model-probe';
 
 // API surface for the model registry. The actual API key never round-trips
 // from the server — only the boolean `hasKey` is reported.
@@ -19,6 +20,23 @@ function withKeyFlag<T extends { id: string }>(model: T, hasKey: boolean): T & {
 
 export function createModelsRouter(db: Database.Database): Router {
   const router = Router();
+
+  // Detect-what's-installed for the Add form. No DB writes, no auth.
+  router.get('/probe', async (req, res) => {
+    const provider = req.query['provider'];
+    const baseUrl = typeof req.query['baseUrl'] === 'string' ? req.query['baseUrl'] : undefined;
+    if (provider !== 'claude_cli' && provider !== 'ollama' && provider !== 'openrouter') {
+      res.status(400).json({ error: 'unknown provider' });
+      return;
+    }
+    try {
+      const probe = await probeProvider(provider, baseUrl);
+      res.json(probe);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: `probe failed: ${msg}` });
+    }
+  });
 
   router.get('/', async (_req, res) => {
     const models = listModels(db);

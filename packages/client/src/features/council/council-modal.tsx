@@ -38,8 +38,9 @@ export default function CouncilModal({
   const transcriptRef = useRef<HTMLDivElement>(null);
   const lastReplyRef = useRef<HTMLParagraphElement>(null);
 
-  // Auto-pick a sensible default council model: prefer ollama (free local)
-  // → openrouter (probably cheap) → first available. Skip claude_cli.
+  // Auto-pick a sensible default council model: prefer ollama (free local,
+  // fast) → openrouter (cheap pay-per-token) → claude_cli (works fine, just
+  // slower since it's typically Sonnet/Opus).
   useEffect(() => {
     if (councilModelId || !models || models.length === 0) return;
     const ollama = models.find((m) => m.provider === 'ollama');
@@ -55,7 +56,12 @@ export default function CouncilModal({
     setCouncilModelId(models[0]!.id);
   }, [councilModelId, models]);
 
-  const eligibleModels = (models ?? []).filter((m) => m.provider !== 'claude_cli');
+  // Any registered model can serve as Council. We surface a hint when the
+  // user picks claude_cli that it'll be slower, but we don't block — your
+  // models, your call.
+  const eligibleModels = models ?? [];
+  const pickedModel = eligibleModels.find((m) => m.id === councilModelId);
+  const showCliLatencyHint = pickedModel?.provider === 'claude_cli';
 
   const mutation = useMutation({
     mutationFn: (text: string) =>
@@ -128,22 +134,37 @@ export default function CouncilModal({
             <p style={{ color: '#5a3818' }}>Loading…</p>
           ) : eligibleModels.length === 0 ? (
             <p style={{ color: '#7a1818' }}>
-              No model available for council. Add an OpenRouter or Ollama model
-              in Settings → Models.
+              No models registered. Add one in Settings → Models.
             </p>
           ) : (
-            <select
-              id="council-model"
-              value={councilModelId}
-              onChange={(e) => setCouncilModelId(e.target.value)}
-              data-testid="council-model-select"
-            >
-              {eligibleModels.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} — {m.provider} · {m.modelId}
-                </option>
-              ))}
-            </select>
+            <>
+              <select
+                id="council-model"
+                value={councilModelId}
+                onChange={(e) => setCouncilModelId(e.target.value)}
+                data-testid="council-model-select"
+              >
+                {eligibleModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} — {m.provider} · {m.modelId}
+                  </option>
+                ))}
+              </select>
+              {showCliLatencyHint && (
+                <p
+                  style={{
+                    margin: '4px 0 0',
+                    fontSize: '0.8rem',
+                    color: '#7a4a18',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  Heads up: claude_cli responses can take 30s+ per turn. If
+                  you want snappier council back-and-forth, register an Ollama
+                  or OpenRouter model and pick that instead.
+                </p>
+              )}
+            </>
           )}
         </div>
 

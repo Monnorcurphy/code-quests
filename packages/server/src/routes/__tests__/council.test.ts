@@ -74,7 +74,10 @@ describe('POST /council/consult', () => {
     expect(res.body.code).toBe('NO_KEY');
   });
 
-  it('returns 400 when council model is claude_cli', async () => {
+  it('accepts a claude_cli council model (regression: was blocked with 400)', async () => {
+    // We don't actually spawn `claude` here — we just verify the route
+    // does NOT short-circuit with a 400 anymore. Real CLI execution is
+    // tested via integration tests that require the binary.
     const m = createModel(db, {
       id: 'cc-1',
       name: 'Claude Sonnet',
@@ -83,13 +86,25 @@ describe('POST /council/consult', () => {
       config: {},
     });
 
-    const res = await request(app).post('/council/consult').send({
-      modelId: m.id,
-      draftQuest: {},
-      userMessage: 'hi',
-    });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/cheap model/i);
+    // Point CODE_QUESTS_CLAUDE_BIN at a fake binary that exits cleanly so
+    // we don't actually invoke the real claude binary in tests.
+    const fakeBin = '/nonexistent-claude-bin';
+    const originalEnv = process.env['CODE_QUESTS_CLAUDE_BIN'];
+    process.env['CODE_QUESTS_CLAUDE_BIN'] = fakeBin;
+    try {
+      const res = await request(app).post('/council/consult').send({
+        modelId: m.id,
+        draftQuest: {},
+        userMessage: 'hi',
+      });
+      // We expect a 400 with the "not on PATH" message (since the fake
+      // binary doesn't exist) — NOT the old "cheap model" rejection.
+      expect([400, 500, 502]).toContain(res.status);
+      expect(res.body.error).not.toMatch(/cheap model/i);
+    } finally {
+      if (originalEnv === undefined) delete process.env['CODE_QUESTS_CLAUDE_BIN'];
+      else process.env['CODE_QUESTS_CLAUDE_BIN'] = originalEnv;
+    }
   });
 
   it('returns the OpenRouter reply when the call succeeds', async () => {
