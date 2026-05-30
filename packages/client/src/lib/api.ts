@@ -273,9 +273,11 @@ const HallOfReturnsListSchema = z.object({
 const PostMortemAttemptSchema = z.object({
   id: z.string(),
   startedAt: z.string(),
-  endedAt: z.string().nullable(),
-  events: z.array(AgentEventSchema),
-});
+  // Server may omit endedAt on a still-running attempt and may not include
+  // events at all (the events_json blob is fetched separately when needed).
+  endedAt: z.string().nullish(),
+  events: z.array(AgentEventSchema).default([]),
+}).passthrough();
 
 const PostMortemAdventurerSchema = z.object({
   id: z.string(),
