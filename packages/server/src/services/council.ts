@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { accessSync, constants } from 'node:fs';
 import { delimiter, join } from 'node:path';
 import type { Model } from '@code-quests/shared';
+import { ADVISOR_PRESETS, type AdvisorKind, type ProposalField } from './advisor-presets';
 
 // Council = a pre-dispatch chat where a (cheap) model helps the user
 // refine a draft quest into a precise spec. Not a quest itself — no
@@ -20,12 +21,36 @@ export interface CouncilTurn {
   model: Model;
   apiKey?: string;
   messages: ChatMessage[];
+  // Which advisor preset this turn belongs to. Determines which fields
+  // extractProposal accepts. Defaults to 'council' for back-compat with
+  // the original Council-only flow.
+  kind?: AdvisorKind;
+}
+
+function allowedFields(turn: CouncilTurn): ProposalField[] {
+  const kind: AdvisorKind = turn.kind ?? 'council';
+  return ADVISOR_PRESETS[kind].proposalFields;
+}
+
+export interface SkillCandidate {
+  name: string;
+  description: string;
+}
+
+export interface ProposedEquipment {
+  skillIds?: string[];
+  toolIds?: string[];
+  mcpServerIds?: string[];
 }
 
 export interface ProposedRefinements {
   title?: string;
   description?: string;
   acceptanceCriteria?: string[];
+  edgeCases?: string[];
+  context?: string;
+  skillCandidates?: SkillCandidate[];
+  equipment?: ProposedEquipment;
 }
 
 export interface CouncilReply {
@@ -36,11 +61,61 @@ export interface CouncilReply {
 
 const PROPOSAL_RE = /\[\[PROPOSAL\]\]\s*([\s\S]*?)\s*\[\[\/PROPOSAL\]\]/;
 
-// Pull the structured proposal block off the end of a Council reply,
-// returning the cleaned prose and the parsed proposal (if any was valid).
-// Anything malformed gets swallowed — better to surface no proposal than
-// to crash the whole turn.
-export function extractProposal(raw: string): {
+function sanitizeStringList(input: unknown, max: number): string[] | null {
+  if (!Array.isArray(input)) return null;
+  const list = input
+    .filter((x): x is string => typeof x === 'string')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && s.length <= 500)
+    .slice(0, max);
+  return list.length > 0 ? list : null;
+}
+
+function sanitizeSkillCandidates(input: unknown): SkillCandidate[] | null {
+  if (!Array.isArray(input)) return null;
+  const candidates: SkillCandidate[] = [];
+  for (const item of input) {
+    if (typeof item !== 'object' || item === null) continue;
+    const obj = item as Record<string, unknown>;
+    const name = typeof obj['name'] === 'string' ? obj['name'].trim() : '';
+    const description = typeof obj['description'] === 'string' ? obj['description'].trim() : '';
+    if (name.length > 0 && name.length <= 100 && description.length > 0 && description.length <= 1000) {
+      candidates.push({ name, description });
+    }
+    if (candidates.length >= 10) break;
+  }
+  return candidates.length > 0 ? candidates : null;
+}
+
+function sanitizeEquipment(input: unknown): ProposedEquipment | null {
+  if (typeof input !== 'object' || input === null) return null;
+  const obj = input as Record<string, unknown>;
+  const out: ProposedEquipment = {};
+  const fields: Array<keyof ProposedEquipment> = ['skillIds', 'toolIds', 'mcpServerIds'];
+  for (const f of fields) {
+    const raw = obj[f];
+    if (Array.isArray(raw)) {
+      const ids = raw
+        .filter((x): x is string => typeof x === 'string')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0 && s.length <= 200)
+        .slice(0, 50);
+      if (ids.length > 0) out[f] = ids;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+// Pull the structured proposal block off the end of an advisor's reply.
+// Restricts to the allowed fields for the given advisor kind so a Tavern
+// advisor proposing a new title gets that field silently dropped.
+//
+// Defaults to all council fields if no kind is passed — preserves the
+// original extractProposal behaviour for back-compat with existing tests.
+export function extractProposal(
+  raw: string,
+  allowed: ProposalField[] = ['title', 'description', 'acceptanceCriteria'],
+): {
   prose: string;
   proposal?: ProposedRefinements;
 } {
@@ -52,16 +127,34 @@ export function extractProposal(raw: string): {
     if (typeof parsed !== 'object' || parsed === null) return { prose };
     const obj = parsed as Record<string, unknown>;
     const result: ProposedRefinements = {};
-    if (typeof obj['title'] === 'string') result.title = obj['title'];
-    if (typeof obj['description'] === 'string') result.description = obj['description'];
-    if (Array.isArray(obj['acceptanceCriteria'])) {
-      const list = obj['acceptanceCriteria']
-        .filter((x): x is string => typeof x === 'string')
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0 && s.length <= 500)
-        .slice(0, 15);
-      if (list.length > 0) result.acceptanceCriteria = list;
+    const allowedSet = new Set(allowed);
+
+    if (allowedSet.has('title') && typeof obj['title'] === 'string') {
+      result.title = obj['title'];
     }
+    if (allowedSet.has('description') && typeof obj['description'] === 'string') {
+      result.description = obj['description'];
+    }
+    if (allowedSet.has('context') && typeof obj['context'] === 'string') {
+      result.context = obj['context'];
+    }
+    if (allowedSet.has('acceptanceCriteria')) {
+      const list = sanitizeStringList(obj['acceptanceCriteria'], 15);
+      if (list) result.acceptanceCriteria = list;
+    }
+    if (allowedSet.has('edgeCases')) {
+      const list = sanitizeStringList(obj['edgeCases'], 15);
+      if (list) result.edgeCases = list;
+    }
+    if (allowedSet.has('skillCandidates')) {
+      const candidates = sanitizeSkillCandidates(obj['skillCandidates']);
+      if (candidates) result.skillCandidates = candidates;
+    }
+    if (allowedSet.has('equipment')) {
+      const equipment = sanitizeEquipment(obj['equipment']);
+      if (equipment) result.equipment = equipment;
+    }
+
     if (Object.keys(result).length === 0) return { prose };
     return { prose, proposal: result };
   } catch {
@@ -69,48 +162,9 @@ export function extractProposal(raw: string): {
   }
 }
 
-export const COUNCIL_SYSTEM_PROMPT = `You are the Council — five retired adventurers who gather in the War Room before any quest is dispatched. You have buried too many promising heroes who marched out with vague orders. You will not bury another.
-
-You speak as one voice, in the cadence of seasoned campaigners. Your tone is dry, plainspoken, and warm. You favour the old fantasy register:
-- "quest" not "task", "hero" / "adventurer" not "agent"
-- "acceptance criteria" → "the conditions of victory"
-- "edge cases" → "the traps a careless hero would walk into"
-- "ambiguity" → "fog in the orders"
-- "dispatchable" → "ready to ride"
-- "the spec" → "the quest as written"
-- "shippable" → "worthy of the road"
-
-Your duty, in order:
-1. Read the quest as drafted. Hold it up to the firelight.
-2. Surface the fog — the unspoken assumptions, the words doing too much work, the conditions of victory that no hero could actually verify in the field.
-3. Ask one or two sharp questions at a time. The Council does not interrogate. It probes.
-4. When the quest-giver answers, propose specific tightenings: a sharper title, a victory condition no fool could misread, a trap they hadn't named.
-5. When the quest reads clean enough that you'd send your own apprentice on it, say so plainly: "The quest is ready to ride." Then summarise the final form as a short bulleted scroll the quest-giver can copy back into the parchment.
-
-Things the Council does NOT do:
-- We do not march. Heroes march. Our job is the planning hearth, not the boss chamber.
-- We do not write the code, draw the art, or compose the prose. We only sharpen what's asked of those who will.
-- We do not flatter. A vague quest is a dangerous one; we say so.
-
-When the quest-giver asks a direct factual question ("what stack should I use?", "is HTML enough?"), answer it like a tradesperson — concrete, brief, no hedging — then return to sharpening.
-
-# A proposed-scroll appendix (for the quest-giver to apply with one click)
-
-Whenever you can suggest a concrete change to the quest as written — a sharper title, a new condition of victory, a refined description — append a small machine-readable block to the END of your message, after your prose:
-
-[[PROPOSAL]]
-{"title":"...optional...","description":"...optional...","acceptanceCriteria":["...","..."]}
-[[/PROPOSAL]]
-
-Rules for this block:
-- Include only the fields you are confidently proposing. Omit fields you're not suggesting changes to.
-- acceptanceCriteria, when present, is the COMPLETE new list (not a diff). Each item is a single string under 500 characters.
-- The JSON must be valid and parseable. No comments, no trailing commas.
-- The block goes at the very end of your message, after a blank line.
-- Omit the block entirely if you have nothing to propose this turn (e.g. you're only asking a question).
-- The prose above the block is what the quest-giver reads in-character. The block is silent — they'll see a button to apply your proposed scroll.
-
-When you declare the quest ready to ride, emit the proposal block as your final, locked-in version of the scroll.`;
+// Back-compat alias — pre-refactor code imported COUNCIL_SYSTEM_PROMPT. Now
+// it's just the council preset's voice. Each other room has its own preset.
+export const COUNCIL_SYSTEM_PROMPT = ADVISOR_PRESETS.council.voice;
 
 export class CouncilProviderError extends Error {
   status: number;
@@ -160,7 +214,7 @@ async function callOpenRouter(turn: CouncilTurn): Promise<CouncilReply> {
   if (!content) {
     throw new CouncilProviderError('OpenRouter returned no content', 502);
   }
-  const { prose, proposal } = extractProposal(content);
+  const { prose, proposal } = extractProposal(content, allowedFields(turn));
   return {
     reply: prose,
     ...(proposal ? { proposedRefinements: proposal } : {}),
@@ -213,7 +267,7 @@ async function callOllama(turn: CouncilTurn): Promise<CouncilReply> {
   if (!content) {
     throw new CouncilProviderError('Ollama returned no content', 502);
   }
-  const { prose, proposal } = extractProposal(content);
+  const { prose, proposal } = extractProposal(content, allowedFields(turn));
   return {
     reply: prose,
     ...(proposal ? { proposedRefinements: proposal } : {}),
@@ -311,7 +365,7 @@ async function callClaudeCli(turn: CouncilTurn): Promise<CouncilReply> {
         reject(new CouncilProviderError('claude returned no content', 502));
         return;
       }
-      const { prose, proposal } = extractProposal(raw);
+      const { prose, proposal } = extractProposal(raw, allowedFields(turn));
       resolve({
         reply: prose,
         ...(proposal ? { proposedRefinements: proposal } : {}),
