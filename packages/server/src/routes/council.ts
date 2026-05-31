@@ -94,6 +94,9 @@ export function createCouncilRouter(db: Database.Database): Router {
         modelName: model.name,
         provider: model.provider,
         tokenUsage: result.tokenUsage,
+        ...(result.proposedRefinements
+          ? { proposedRefinements: result.proposedRefinements }
+          : {}),
       });
     } catch (err) {
       if (err instanceof CouncilProviderError) {

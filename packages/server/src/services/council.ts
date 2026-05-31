@@ -22,9 +22,51 @@ export interface CouncilTurn {
   messages: ChatMessage[];
 }
 
+export interface ProposedRefinements {
+  title?: string;
+  description?: string;
+  acceptanceCriteria?: string[];
+}
+
 export interface CouncilReply {
   reply: string;
+  proposedRefinements?: ProposedRefinements;
   tokenUsage?: { input?: number; output?: number };
+}
+
+const PROPOSAL_RE = /\[\[PROPOSAL\]\]\s*([\s\S]*?)\s*\[\[\/PROPOSAL\]\]/;
+
+// Pull the structured proposal block off the end of a Council reply,
+// returning the cleaned prose and the parsed proposal (if any was valid).
+// Anything malformed gets swallowed — better to surface no proposal than
+// to crash the whole turn.
+export function extractProposal(raw: string): {
+  prose: string;
+  proposal?: ProposedRefinements;
+} {
+  const match = PROPOSAL_RE.exec(raw);
+  if (!match || !match[1]) return { prose: raw.trim() };
+  const prose = raw.replace(PROPOSAL_RE, '').trim();
+  try {
+    const parsed: unknown = JSON.parse(match[1]);
+    if (typeof parsed !== 'object' || parsed === null) return { prose };
+    const obj = parsed as Record<string, unknown>;
+    const result: ProposedRefinements = {};
+    if (typeof obj['title'] === 'string') result.title = obj['title'];
+    if (typeof obj['description'] === 'string') result.description = obj['description'];
+    if (Array.isArray(obj['acceptanceCriteria'])) {
+      const list = obj['acceptanceCriteria']
+        .filter((x): x is string => typeof x === 'string')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0 && s.length <= 500)
+        .slice(0, 15);
+      if (list.length > 0) result.acceptanceCriteria = list;
+    }
+    if (Object.keys(result).length === 0) return { prose };
+    return { prose, proposal: result };
+  } catch {
+    return { prose };
+  }
 }
 
 export const COUNCIL_SYSTEM_PROMPT = `You are the Council — five retired adventurers who gather in the War Room before any quest is dispatched. You have buried too many promising heroes who marched out with vague orders. You will not bury another.
@@ -50,7 +92,25 @@ Things the Council does NOT do:
 - We do not write the code, draw the art, or compose the prose. We only sharpen what's asked of those who will.
 - We do not flatter. A vague quest is a dangerous one; we say so.
 
-When the quest-giver asks a direct factual question ("what stack should I use?", "is HTML enough?"), answer it like a tradesperson — concrete, brief, no hedging — then return to sharpening.`;
+When the quest-giver asks a direct factual question ("what stack should I use?", "is HTML enough?"), answer it like a tradesperson — concrete, brief, no hedging — then return to sharpening.
+
+# A proposed-scroll appendix (for the quest-giver to apply with one click)
+
+Whenever you can suggest a concrete change to the quest as written — a sharper title, a new condition of victory, a refined description — append a small machine-readable block to the END of your message, after your prose:
+
+[[PROPOSAL]]
+{"title":"...optional...","description":"...optional...","acceptanceCriteria":["...","..."]}
+[[/PROPOSAL]]
+
+Rules for this block:
+- Include only the fields you are confidently proposing. Omit fields you're not suggesting changes to.
+- acceptanceCriteria, when present, is the COMPLETE new list (not a diff). Each item is a single string under 500 characters.
+- The JSON must be valid and parseable. No comments, no trailing commas.
+- The block goes at the very end of your message, after a blank line.
+- Omit the block entirely if you have nothing to propose this turn (e.g. you're only asking a question).
+- The prose above the block is what the quest-giver reads in-character. The block is silent — they'll see a button to apply your proposed scroll.
+
+When you declare the quest ready to ride, emit the proposal block as your final, locked-in version of the scroll.`;
 
 export class CouncilProviderError extends Error {
   status: number;
@@ -100,8 +160,10 @@ async function callOpenRouter(turn: CouncilTurn): Promise<CouncilReply> {
   if (!content) {
     throw new CouncilProviderError('OpenRouter returned no content', 502);
   }
+  const { prose, proposal } = extractProposal(content);
   return {
-    reply: content,
+    reply: prose,
+    ...(proposal ? { proposedRefinements: proposal } : {}),
     tokenUsage: {
       input: json.usage?.prompt_tokens,
       output: json.usage?.completion_tokens,
@@ -151,8 +213,10 @@ async function callOllama(turn: CouncilTurn): Promise<CouncilReply> {
   if (!content) {
     throw new CouncilProviderError('Ollama returned no content', 502);
   }
+  const { prose, proposal } = extractProposal(content);
   return {
-    reply: content,
+    reply: prose,
+    ...(proposal ? { proposedRefinements: proposal } : {}),
     tokenUsage: {
       input: json.prompt_eval_count,
       output: json.eval_count,
@@ -242,12 +306,16 @@ async function callClaudeCli(turn: CouncilTurn): Promise<CouncilReply> {
         );
         return;
       }
-      const reply = stdout.trim();
-      if (!reply) {
+      const raw = stdout.trim();
+      if (!raw) {
         reject(new CouncilProviderError('claude returned no content', 502));
         return;
       }
-      resolve({ reply });
+      const { prose, proposal } = extractProposal(raw);
+      resolve({
+        reply: prose,
+        ...(proposal ? { proposedRefinements: proposal } : {}),
+      });
     });
     proc.stdin.end(prompt);
   });

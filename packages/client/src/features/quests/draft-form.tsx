@@ -42,6 +42,46 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
   const [councilOpen, setCouncilOpen] = useState(false);
 
+  interface RefinementEntry {
+    appliedAt: string;
+    changes: Array<{ field: 'title' | 'description' | 'acceptanceCriteria'; before: string; after: string }>;
+  }
+  const [refinementLog, setRefinementLog] = useState<RefinementEntry[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  function applyCouncilRefinements(p: {
+    title?: string;
+    description?: string;
+    acceptanceCriteria?: string[];
+  }): void {
+    const entry: RefinementEntry = { appliedAt: new Date().toISOString(), changes: [] };
+    if (p.title !== undefined && p.title !== title) {
+      entry.changes.push({ field: 'title', before: title, after: p.title });
+      setTitle(p.title);
+      setTitleError(null);
+    }
+    if (p.description !== undefined && p.description !== description) {
+      entry.changes.push({ field: 'description', before: description, after: p.description });
+      setDescription(p.description);
+    }
+    if (p.acceptanceCriteria !== undefined) {
+      const beforeStr = acs.filter((a) => a.trim()).join('\n');
+      const afterStr = p.acceptanceCriteria.join('\n');
+      if (beforeStr !== afterStr) {
+        entry.changes.push({
+          field: 'acceptanceCriteria',
+          before: beforeStr,
+          after: afterStr,
+        });
+        setAcs(p.acceptanceCriteria.length > 0 ? p.acceptanceCriteria : ['']);
+        setAcErrors(new Array(p.acceptanceCriteria.length || 1).fill(null) as null[]);
+      }
+    }
+    if (entry.changes.length > 0) {
+      setRefinementLog((prev) => [...prev, entry]);
+    }
+  }
+
   const activeProjectId = useActiveProjectStore((s) => s.activeProjectId);
   const { data: projectsData } = useProjects();
   const activeProject = (projectsData ?? []).find((p) => p.id === activeProjectId) ?? null;
@@ -485,7 +525,68 @@ export default function DraftForm({ onSuccess, onCancel }: DraftFormProps) {
           }}
           defaultModelId={modelId || null}
           onClose={() => setCouncilOpen(false)}
+          onApplyRefinements={applyCouncilRefinements}
         />
+      )}
+      {refinementLog.length > 0 && (
+        <div
+          data-testid="refinement-history"
+          style={{
+            marginTop: 12,
+            padding: 10,
+            background: '#fbe6c4',
+            border: '1px solid #b5a07a',
+            borderLeft: '3px solid #5a8a3a',
+            borderRadius: 4,
+            color: '#3a2410',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setHistoryOpen((v) => !v)}
+            aria-expanded={historyOpen}
+            aria-controls="refinement-history-list"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              color: '#3a5a1a',
+              cursor: 'pointer',
+              font: 'inherit',
+              fontWeight: 600,
+            }}
+          >
+            Council refinements applied: {refinementLog.length}{' '}
+            <span aria-hidden="true">{historyOpen ? '▾' : '▸'}</span>
+          </button>
+          {historyOpen && (
+            <ol
+              id="refinement-history-list"
+              style={{ margin: '8px 0 0 18px', padding: 0, fontSize: '0.85rem' }}
+            >
+              {refinementLog.map((entry, i) => (
+                <li key={i} style={{ marginBottom: 6 }}>
+                  <em style={{ color: '#5a3818' }}>
+                    {new Date(entry.appliedAt).toLocaleTimeString()}
+                  </em>
+                  <ul style={{ margin: '2px 0 0 16px', padding: 0 }}>
+                    {entry.changes.map((c, j) => (
+                      <li key={j}>
+                        <strong>{c.field}</strong>:{' '}
+                        <span style={{ color: '#7a1818', textDecoration: 'line-through' }}>
+                          {c.before.length > 60 ? `${c.before.slice(0, 60)}…` : c.before || '(empty)'}
+                        </span>{' '}
+                        → <span style={{ color: '#3a5a1a' }}>
+                          {c.after.length > 100 ? `${c.after.slice(0, 100)}…` : c.after}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
       )}
     </div>
   );

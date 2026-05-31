@@ -440,6 +440,11 @@ export const api = {
       modelName: string;
       provider: string;
       tokenUsage?: { input?: number; output?: number };
+      proposedRefinements?: {
+        title?: string;
+        description?: string;
+        acceptanceCriteria?: string[];
+      };
     }> => postRaw('/council/consult', body),
   },
   quests: {

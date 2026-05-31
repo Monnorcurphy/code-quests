@@ -213,6 +213,106 @@ describe('CouncilModal', () => {
     });
   });
 
+  it('renders an Apply button for assistant turns that include a proposal', async () => {
+    vi.mocked(api.models.list).mockResolvedValue([
+      {
+        id: 'ol-1', name: 'Local Llama', provider: 'ollama', modelId: 'llama3.1:70b',
+        config: {}, createdAt: '2026-01-02', lastUsedAt: null, hasKey: false,
+      },
+    ]);
+    vi.mocked(api.council.consult).mockResolvedValue({
+      reply: 'A sharper take.',
+      modelName: 'Local Llama',
+      provider: 'ollama',
+      proposedRefinements: {
+        title: 'Sharper Hello World',
+        acceptanceCriteria: ['File opens in a browser', 'Says hello world centered'],
+      },
+    });
+    const onApply = vi.fn();
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CouncilModal
+          draftQuest={{ title: 'Original', description: '', acceptanceCriteria: [] }}
+          defaultModelId={null}
+          onClose={vi.fn()}
+          onApplyRefinements={onApply}
+        />
+      </QueryClientProvider>,
+    );
+
+    const user = userEvent.setup();
+    await waitFor(() => {
+      const sel = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      expect(sel.value).toBe('ol-1');
+    });
+    await user.type(screen.getByTestId('council-input'), 'go');
+    await user.click(screen.getByRole('button', { name: /send to council/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('council-proposal')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('apply-proposal-btn')).toBeInTheDocument();
+    // The diff line shows both old + new title.
+    expect(screen.getByText(/Original/)).toBeInTheDocument();
+    expect(screen.getByText(/Sharper Hello World/)).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('apply-proposal-btn'));
+    expect(onApply).toHaveBeenCalledWith({
+      title: 'Sharper Hello World',
+      acceptanceCriteria: ['File opens in a browser', 'Says hello world centered'],
+    });
+    // Button enters "Applied" state and disables.
+    await waitFor(() => {
+      expect(screen.getByTestId('apply-proposal-btn')).toBeDisabled();
+    });
+  });
+
+  it('does NOT render the Apply panel when proposal changes are no-ops vs current draft', async () => {
+    vi.mocked(api.models.list).mockResolvedValue([
+      {
+        id: 'ol-1', name: 'Local Llama', provider: 'ollama', modelId: 'llama3.1:70b',
+        config: {}, createdAt: '2026-01-02', lastUsedAt: null, hasKey: false,
+      },
+    ]);
+    vi.mocked(api.council.consult).mockResolvedValue({
+      reply: 'No changes here.',
+      modelName: 'Local Llama',
+      provider: 'ollama',
+      proposedRefinements: { title: 'Same title' }, // matches current draft
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CouncilModal
+          draftQuest={{ title: 'Same title' }}
+          defaultModelId={null}
+          onClose={vi.fn()}
+          onApplyRefinements={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await waitFor(() => {
+      const sel = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      expect(sel.value).toBe('ol-1');
+    });
+    await user.type(screen.getByTestId('council-input'), 'go');
+    await user.click(screen.getByRole('button', { name: /send to council/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('No changes here.')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('council-proposal')).not.toBeInTheDocument();
+  });
+
   it('disables Send while a turn is in flight', async () => {
     vi.mocked(api.models.list).mockResolvedValue([
       {

@@ -4,6 +4,12 @@ import { useFocusTrap } from '../../lib/use-focus-trap';
 import { api, ApiError } from '../../lib/api';
 import { useModels } from '../models/use-models';
 
+export interface ProposedRefinements {
+  title?: string;
+  description?: string;
+  acceptanceCriteria?: string[];
+}
+
 interface CouncilModalProps {
   draftQuest: {
     title?: string;
@@ -12,22 +18,29 @@ interface CouncilModalProps {
   };
   defaultModelId?: string | null;
   onClose: () => void;
+  // Called when the user accepts a Council proposal. The parent updates
+  // the draft form state with whichever fields the proposal includes.
+  onApplyRefinements?: (refinements: ProposedRefinements) => void;
 }
 
 interface CouncilMessage {
   role: 'user' | 'assistant';
   content: string;
+  // Structured proposal attached to assistant messages when Council
+  // suggests concrete changes. Surfaced as an Apply button beneath the
+  // bubble.
+  proposal?: ProposedRefinements;
 }
 
 // Council = a pre-dispatch chat with a cheap model that helps refine the
-// quest spec. Does not auto-apply changes to the form — the user reads the
-// suggestions and edits the draft themselves. Optimised for "ask sharp
-// questions, suggest concrete improvements" rather than open-ended chat.
+// quest spec. Council emits a structured [[PROPOSAL]] JSON block per turn;
+// the user can one-click apply those refinements to the draft form.
 
 export default function CouncilModal({
   draftQuest,
   defaultModelId,
   onClose,
+  onApplyRefinements,
 }: CouncilModalProps) {
   const panelRef = useFocusTrap(onClose);
   const { data: models, isLoading: modelsLoading } = useModels();
@@ -75,7 +88,11 @@ export default function CouncilModal({
       setHistory((prev) => [
         ...prev,
         { role: 'user', content: text },
-        { role: 'assistant', content: data.reply },
+        {
+          role: 'assistant',
+          content: data.reply,
+          ...(data.proposedRefinements ? { proposal: data.proposedRefinements } : {}),
+        },
       ]);
       setError(null);
       setInput('');
@@ -191,22 +208,34 @@ export default function CouncilModal({
             </p>
           )}
           {history.map((m, idx) => (
-            <p
+            <div
               key={idx}
               ref={idx === history.length - 1 ? lastReplyRef : null}
-              style={{
-                margin: '8px 0',
-                padding: '6px 10px',
-                borderRadius: 4,
-                background: m.role === 'user' ? '#f5ecd6' : '#fff8e7',
-                borderLeft: `3px solid ${m.role === 'user' ? '#7a4a18' : '#5a3818'}`,
-              }}
+              style={{ margin: '8px 0' }}
             >
-              <strong style={{ display: 'block', fontSize: '0.85rem', color: '#5a3818' }}>
-                {m.role === 'user' ? 'You' : 'The Council'}
-              </strong>
-              <span style={{ whiteSpace: 'pre-wrap' }}>{m.content}</span>
-            </p>
+              <div
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: 4,
+                  background: m.role === 'user' ? '#f5ecd6' : '#fff8e7',
+                  borderLeft: `3px solid ${m.role === 'user' ? '#7a4a18' : '#5a3818'}`,
+                }}
+              >
+                <strong style={{ display: 'block', fontSize: '0.85rem', color: '#5a3818' }}>
+                  {m.role === 'user' ? 'You' : 'The Council'}
+                </strong>
+                <span style={{ whiteSpace: 'pre-wrap' }}>{m.content}</span>
+              </div>
+              {m.proposal && onApplyRefinements && (
+                <ProposalPreview
+                  proposal={m.proposal}
+                  draftQuest={draftQuest}
+                  onApply={() => {
+                    onApplyRefinements(m.proposal!);
+                  }}
+                />
+              )}
+            </div>
           ))}
           {mutation.isPending && (
             <p style={{ color: '#5a3818', fontStyle: 'italic' }} aria-live="polite">
@@ -260,6 +289,103 @@ export default function CouncilModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ProposalPreview({
+  proposal,
+  draftQuest,
+  onApply,
+}: {
+  proposal: ProposedRefinements;
+  draftQuest: {
+    title?: string;
+    description?: string;
+    acceptanceCriteria?: string[];
+  };
+  onApply: () => void;
+}) {
+  const [applied, setApplied] = useState(false);
+
+  // Compute which fields actually differ from the current draft so we don't
+  // surface "Apply" for no-op proposals.
+  const changes: Array<{ field: string; before: string; after: string }> = [];
+  if (proposal.title !== undefined && proposal.title !== (draftQuest.title ?? '')) {
+    changes.push({
+      field: 'Title',
+      before: draftQuest.title ?? '(empty)',
+      after: proposal.title,
+    });
+  }
+  if (
+    proposal.description !== undefined &&
+    proposal.description !== (draftQuest.description ?? '')
+  ) {
+    changes.push({
+      field: 'Description',
+      before: draftQuest.description ?? '(empty)',
+      after: proposal.description,
+    });
+  }
+  if (proposal.acceptanceCriteria !== undefined) {
+    const beforeStr = (draftQuest.acceptanceCriteria ?? []).join('\n• ');
+    const afterStr = proposal.acceptanceCriteria.join('\n• ');
+    if (beforeStr !== afterStr) {
+      changes.push({
+        field: 'Conditions of victory',
+        before: beforeStr ? `• ${beforeStr}` : '(none)',
+        after: `• ${afterStr}`,
+      });
+    }
+  }
+
+  if (changes.length === 0) return null;
+
+  return (
+    <div
+      data-testid="council-proposal"
+      style={{
+        marginTop: 6,
+        padding: '8px 10px',
+        background: '#f0e6c8',
+        border: '1px solid #b5a07a',
+        borderLeft: '3px solid #5a8a3a',
+        borderRadius: 4,
+        fontSize: '0.85rem',
+        color: '#2a1404',
+      }}
+    >
+      <strong style={{ display: 'block', marginBottom: 4, color: '#3a5a1a' }}>
+        Proposed scroll — {changes.length} change{changes.length === 1 ? '' : 's'}
+      </strong>
+      <ul style={{ margin: '0 0 8px 16px', padding: 0 }}>
+        {changes.map((c) => (
+          <li key={c.field} style={{ marginBottom: 4 }}>
+            <em>{c.field}:</em>{' '}
+            <span style={{ color: '#7a1818', textDecoration: 'line-through' }}>
+              {c.before.length > 80 ? `${c.before.slice(0, 80)}…` : c.before}
+            </span>{' '}
+            <span aria-hidden="true">→</span>{' '}
+            <span style={{ color: '#3a5a1a', whiteSpace: 'pre-wrap' }}>
+              {c.after.length > 200 ? `${c.after.slice(0, 200)}…` : c.after}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        className="btn-primary"
+        style={{ padding: '4px 10px', fontSize: '0.85rem' }}
+        disabled={applied}
+        data-testid="apply-proposal-btn"
+        onClick={() => {
+          onApply();
+          setApplied(true);
+        }}
+      >
+        {applied ? '✓ Applied to scroll' : 'Apply to scroll'}
+      </button>
     </div>
   );
 }
