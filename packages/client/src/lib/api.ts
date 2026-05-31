@@ -447,6 +447,49 @@ export const api = {
       };
     }> => postRaw('/council/consult', body),
   },
+  advisors: {
+    consult: (
+      kind: 'council' | 'oracle' | 'tavern' | 'library' | 'armory',
+      body: {
+        modelId: string;
+        draftQuest: {
+          title?: string;
+          description?: string;
+          acceptanceCriteria?: string[];
+          edgeCases?: string[];
+          context?: string;
+        };
+        history: Array<{ role: 'user' | 'assistant'; content: string }>;
+        userMessage: string;
+        catalogue?: {
+          skills?: Array<{ id: string; name: string }>;
+          tools?: Array<{ id: string; name: string }>;
+          mcpServers?: Array<{ id: string; name: string }>;
+        };
+      },
+    ): Promise<{
+      reply: string;
+      modelName: string;
+      provider: string;
+      kind: string;
+      npcName: string;
+      npcRole: string;
+      tokenUsage?: { input?: number; output?: number };
+      proposedRefinements?: {
+        title?: string;
+        description?: string;
+        acceptanceCriteria?: string[];
+        edgeCases?: string[];
+        context?: string;
+        skillCandidates?: Array<{ name: string; description: string }>;
+        equipment?: {
+          skillIds?: string[];
+          toolIds?: string[];
+          mcpServerIds?: string[];
+        };
+      };
+    }> => postRaw(`/advisors/${kind}/consult`, body),
+  },
   quests: {
     list: () => fetchJson(z.array(QuestSchema), '/quests'),
     active: () => fetchJson(z.array(QuestSchema), '/quests/active'),

@@ -19,6 +19,9 @@ vi.mock('../lib/api', async (importOriginal) => {
       council: {
         consult: vi.fn(),
       },
+      advisors: {
+        consult: vi.fn(),
+      },
     },
   };
 });
@@ -70,7 +73,7 @@ describe('CouncilModal', () => {
     ]);
     mountModal();
     await waitFor(() => {
-      const select = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      const select = screen.getByTestId('advisor-model-select') as HTMLSelectElement;
       expect(select.options).toHaveLength(2);
       const texts = Array.from(select.options).map((o) => o.text);
       expect(texts.some((t) => t.includes('CLI Sonnet'))).toBe(true);
@@ -87,7 +90,7 @@ describe('CouncilModal', () => {
     ]);
     mountModal();
     await waitFor(() => {
-      const select = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      const select = screen.getByTestId('advisor-model-select') as HTMLSelectElement;
       expect(select.value).toBe('cc-1');
     });
     expect(screen.getByText(/claude_cli responses can take/i)).toBeInTheDocument();
@@ -106,7 +109,7 @@ describe('CouncilModal', () => {
     ]);
     mountModal();
     await waitFor(() => {
-      const select = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      const select = screen.getByTestId('advisor-model-select') as HTMLSelectElement;
       expect(select.value).toBe('ol-1');
     });
   });
@@ -118,7 +121,7 @@ describe('CouncilModal', () => {
         config: {}, createdAt: '2026-01-02', lastUsedAt: null, hasKey: false,
       },
     ]);
-    vi.mocked(api.council.consult).mockResolvedValue({
+    vi.mocked(api.advisors.consult).mockResolvedValue({
       reply: 'Sharpen the title and add a stack to the description.',
       modelName: 'Local Llama',
       provider: 'ollama',
@@ -129,17 +132,17 @@ describe('CouncilModal', () => {
 
     // Wait for the auto-picked model so the Send button is enabled.
     await waitFor(() => {
-      const sel = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      const sel = screen.getByTestId('advisor-model-select') as HTMLSelectElement;
       expect(sel.value).toBe('ol-1');
     });
-    const input = await screen.findByTestId('council-input');
+    const input = await screen.findByTestId('advisor-input');
     await user.type(input, 'What should I sharpen?');
     await user.click(screen.getByRole('button', { name: /send to council/i }));
 
     await waitFor(() => {
-      expect(api.council.consult).toHaveBeenCalledTimes(1);
+      expect(api.advisors.consult).toHaveBeenCalledTimes(1);
     });
-    const arg = vi.mocked(api.council.consult).mock.calls[0]![0];
+    const arg = vi.mocked(api.advisors.consult).mock.calls[0]![1];
     expect(arg.modelId).toBe('ol-1');
     expect(arg.userMessage).toBe('What should I sharpen?');
     expect(arg.draftQuest.title).toBe('Make a hello world');
@@ -157,17 +160,17 @@ describe('CouncilModal', () => {
         config: {}, createdAt: '2026-01-02', lastUsedAt: null, hasKey: false,
       },
     ]);
-    vi.mocked(api.council.consult)
+    vi.mocked(api.advisors.consult)
       .mockResolvedValueOnce({ reply: 'First reply.', modelName: 'L', provider: 'ollama' })
       .mockResolvedValueOnce({ reply: 'Second reply.', modelName: 'L', provider: 'ollama' });
 
     mountModal();
     const user = userEvent.setup();
     await waitFor(() => {
-      const sel = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      const sel = screen.getByTestId('advisor-model-select') as HTMLSelectElement;
       expect(sel.value).toBe('ol-1');
     });
-    const input = await screen.findByTestId('council-input');
+    const input = await screen.findByTestId('advisor-input');
 
     await user.type(input, 'first');
     await user.click(screen.getByRole('button', { name: /send to council/i }));
@@ -177,7 +180,7 @@ describe('CouncilModal', () => {
     await user.click(screen.getByRole('button', { name: /send to council/i }));
     await waitFor(() => screen.getByText('Second reply.'));
 
-    const lastArg = vi.mocked(api.council.consult).mock.calls[1]![0];
+    const lastArg = vi.mocked(api.advisors.consult).mock.calls[1]![1];
     expect(lastArg.history).toEqual([
       { role: 'user', content: 'first' },
       { role: 'assistant', content: 'First reply.' },
@@ -191,7 +194,7 @@ describe('CouncilModal', () => {
         config: {}, createdAt: '2026-01-01', lastUsedAt: null, hasKey: false,
       },
     ]);
-    vi.mocked(api.council.consult).mockRejectedValue(
+    vi.mocked(api.advisors.consult).mockRejectedValue(
       new ApiError('Model "OR Sonnet" requires an API key', {
         status: 409,
         data: { code: 'NO_KEY' },
@@ -201,10 +204,10 @@ describe('CouncilModal', () => {
     mountModal();
     const user = userEvent.setup();
     await waitFor(() => {
-      const sel = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      const sel = screen.getByTestId('advisor-model-select') as HTMLSelectElement;
       expect(sel.value).toBe('or-1');
     });
-    const input = await screen.findByTestId('council-input');
+    const input = await screen.findByTestId('advisor-input');
     await user.type(input, 'hello');
     await user.click(screen.getByRole('button', { name: /send to council/i }));
 
@@ -220,7 +223,7 @@ describe('CouncilModal', () => {
         config: {}, createdAt: '2026-01-02', lastUsedAt: null, hasKey: false,
       },
     ]);
-    vi.mocked(api.council.consult).mockResolvedValue({
+    vi.mocked(api.advisors.consult).mockResolvedValue({
       reply: 'A sharper take.',
       modelName: 'Local Llama',
       provider: 'ollama',
@@ -247,14 +250,14 @@ describe('CouncilModal', () => {
 
     const user = userEvent.setup();
     await waitFor(() => {
-      const sel = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      const sel = screen.getByTestId('advisor-model-select') as HTMLSelectElement;
       expect(sel.value).toBe('ol-1');
     });
-    await user.type(screen.getByTestId('council-input'), 'go');
+    await user.type(screen.getByTestId('advisor-input'), 'go');
     await user.click(screen.getByRole('button', { name: /send to council/i }));
 
     await waitFor(() => {
-      expect(screen.getByTestId('council-proposal')).toBeInTheDocument();
+      expect(screen.getByTestId('advisor-proposal')).toBeInTheDocument();
     });
     expect(screen.getByTestId('apply-proposal-btn')).toBeInTheDocument();
     // The diff line shows both old + new title.
@@ -279,7 +282,7 @@ describe('CouncilModal', () => {
         config: {}, createdAt: '2026-01-02', lastUsedAt: null, hasKey: false,
       },
     ]);
-    vi.mocked(api.council.consult).mockResolvedValue({
+    vi.mocked(api.advisors.consult).mockResolvedValue({
       reply: 'No changes here.',
       modelName: 'Local Llama',
       provider: 'ollama',
@@ -301,16 +304,16 @@ describe('CouncilModal', () => {
     );
     const user = userEvent.setup();
     await waitFor(() => {
-      const sel = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      const sel = screen.getByTestId('advisor-model-select') as HTMLSelectElement;
       expect(sel.value).toBe('ol-1');
     });
-    await user.type(screen.getByTestId('council-input'), 'go');
+    await user.type(screen.getByTestId('advisor-input'), 'go');
     await user.click(screen.getByRole('button', { name: /send to council/i }));
 
     await waitFor(() => {
       expect(screen.getByText('No changes here.')).toBeInTheDocument();
     });
-    expect(screen.queryByTestId('council-proposal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('advisor-proposal')).not.toBeInTheDocument();
   });
 
   it('disables Send while a turn is in flight', async () => {
@@ -323,7 +326,7 @@ describe('CouncilModal', () => {
     let resolve!: (v: {
       reply: string; modelName: string; provider: string;
     }) => void;
-    vi.mocked(api.council.consult).mockReturnValue(
+    vi.mocked(api.advisors.consult).mockReturnValue(
       new Promise((r) => {
         resolve = r;
       }),
@@ -332,10 +335,10 @@ describe('CouncilModal', () => {
     mountModal();
     const user = userEvent.setup();
     await waitFor(() => {
-      const sel = screen.getByTestId('council-model-select') as HTMLSelectElement;
+      const sel = screen.getByTestId('advisor-model-select') as HTMLSelectElement;
       expect(sel.value).toBe('ol-1');
     });
-    const input = await screen.findByTestId('council-input');
+    const input = await screen.findByTestId('advisor-input');
     await user.type(input, 'hi');
     await user.click(screen.getByRole('button', { name: /send to council/i }));
 
