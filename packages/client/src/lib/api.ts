@@ -471,9 +471,12 @@ export const api = {
       reply: string;
       modelName: string;
       provider: string;
-      kind: string;
-      npcName: string;
-      npcRole: string;
+      // Server sends these too; declared optional so test mocks aren't
+      // forced to populate them (the UI gets these strings from props,
+      // not from this response).
+      kind?: string;
+      npcName?: string;
+      npcRole?: string;
       tokenUsage?: { input?: number; output?: number };
       proposedRefinements?: {
         title?: string;

@@ -6,6 +6,7 @@ import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
 import { api } from '../lib/api';
 import QuestSelector from './quest-selector/quest-selector';
+import AdvisorModal from './advisors/advisor-modal';
 
 const MAX_EDGE_CASES = AC_MAX_COUNT;
 const EdgeCaseSchema = z
@@ -84,6 +85,7 @@ export default function Tavern() {
   const [initialized, setInitialized] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [saveError, setSaveError] = useState('');
+  const [advisorOpen, setAdvisorOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const queryClient = useQueryClient();
@@ -258,6 +260,15 @@ export default function Tavern() {
               >
                 {isSaving ? 'Saving…' : 'Save Edge Cases'}
               </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setAdvisorOpen(true)}
+                disabled={isSaving}
+                data-testid="consult-tavern-btn"
+              >
+                Consult Innkeep Rorek
+              </button>
               <button className="btn-secondary" onClick={() => setActiveModal('draft')}>
                 ← Back to War Room
               </button>
@@ -265,6 +276,30 @@ export default function Tavern() {
           </>
         )}
       </div>
+      {advisorOpen && quest && (
+        <AdvisorModal
+          kind="tavern"
+          npcName="Innkeep Rorek"
+          npcRole="Tavernkeeper"
+          intro="Rorek has heard every story of a hero tripped by something nobody warned them about. He'll suggest the traps your draft doesn't name."
+          starterPrompt={`Ask Rorek: "What could go sideways?" or "What's the careful traveller worried about?"`}
+          inputPlaceholder="Ask Rorek about edge cases. Ctrl/Cmd+Enter to send."
+          draftQuest={{
+            title: quest.title,
+            description: quest.description,
+            acceptanceCriteria: quest.acceptanceCriteria ?? [],
+            edgeCases: items.filter((i) => i.trim()),
+          }}
+          onClose={() => setAdvisorOpen(false)}
+          onApplyRefinements={(p) => {
+            if (p.edgeCases) {
+              const next = p.edgeCases.length > 0 ? p.edgeCases : [''];
+              setItems(next);
+              setErrors(new Array(next.length).fill(null) as null[]);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

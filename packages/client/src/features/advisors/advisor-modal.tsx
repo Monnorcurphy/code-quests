@@ -361,7 +361,38 @@ function ProposalPreview({
     }
   }
 
-  if (changes.length === 0) return null;
+  // No-op proposals are hidden — UNLESS the user has already applied this
+  // proposal once. After Apply, the draft equals the proposal so changes
+  // computes empty; we still want to render a small "applied" confirmation
+  // chip so the user can see what they accepted.
+  if (changes.length === 0 && !applied) return null;
+
+  if (changes.length === 0 && applied) {
+    return (
+      <div
+        data-testid="advisor-proposal"
+        style={{
+          marginTop: 6,
+          padding: '6px 10px',
+          background: '#e6e8d8',
+          border: '1px solid #5a8a3a',
+          borderRadius: 4,
+          fontSize: '0.8rem',
+          color: '#3a5a1a',
+        }}
+      >
+        <button
+          type="button"
+          className="btn-primary"
+          style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+          disabled
+          data-testid="apply-proposal-btn"
+        >
+          ✓ Applied to scroll
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div

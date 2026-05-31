@@ -6,6 +6,7 @@ import { useFocusTrap } from '../lib/use-focus-trap';
 import { useTownStore } from '../stores/town-store';
 import { api } from '../lib/api';
 import QuestSelector from './quest-selector/quest-selector';
+import AdvisorModal from './advisors/advisor-modal';
 
 const MAX_ACS = AC_MAX_COUNT;
 const AcItemSchema = z
@@ -84,6 +85,7 @@ export default function Oracle() {
   const [initialized, setInitialized] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [saveError, setSaveError] = useState('');
+  const [advisorOpen, setAdvisorOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const queryClient = useQueryClient();
@@ -266,14 +268,25 @@ export default function Oracle() {
 
             <div className="form-actions">
               {!isLocked && (
-                <button
-                  className="btn-primary"
-                  onClick={() => { void handleSave(); }}
-                  disabled={isSaving}
-                  aria-busy={isSaving}
-                >
-                  {isSaving ? 'Saving…' : 'Save Criteria'}
-                </button>
+                <>
+                  <button
+                    className="btn-primary"
+                    onClick={() => { void handleSave(); }}
+                    disabled={isSaving}
+                    aria-busy={isSaving}
+                  >
+                    {isSaving ? 'Saving…' : 'Save Criteria'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setAdvisorOpen(true)}
+                    disabled={isSaving}
+                    data-testid="consult-oracle-btn"
+                  >
+                    Consult Seer Caelis
+                  </button>
+                </>
               )}
               <button className="btn-secondary" onClick={() => setActiveModal('draft')}>
                 ← Back to War Room
@@ -282,6 +295,29 @@ export default function Oracle() {
           </>
         )}
       </div>
+      {advisorOpen && quest && (
+        <AdvisorModal
+          kind="oracle"
+          npcName="Seer Caelis"
+          npcRole="Priestess of the Oracle"
+          intro="She reads the conditions of victory and tells you which are clear, which are misty, and which a careless hero would misread."
+          starterPrompt={`Ask Seer Caelis: "Are these conditions visible in the field?" or "Which condition is the haziest?"`}
+          inputPlaceholder="Ask Seer Caelis about your conditions of victory. Ctrl/Cmd+Enter to send."
+          draftQuest={{
+            title: quest.title,
+            description: quest.description,
+            acceptanceCriteria: acs.filter((a) => a.trim()),
+          }}
+          onClose={() => setAdvisorOpen(false)}
+          onApplyRefinements={(p) => {
+            if (p.acceptanceCriteria) {
+              const next = p.acceptanceCriteria.length > 0 ? p.acceptanceCriteria : [''];
+              setAcs(next);
+              setAcErrors(new Array(next.length).fill(null) as null[]);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
